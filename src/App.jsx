@@ -641,7 +641,13 @@ function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl
   const modeColor=mode==="citizen"?"var(--green)":mode==="expert"?"var(--purple)":"var(--blue)";
   const alertsOn=notif?.enabled&&notif?.perm==="granted";
   const alertsLabel=notif?.perm==="denied"?"🔕 Blocked":alertsOn?"🔔 Alerts on":"🔔 Enable alerts";
+  // iOS detection for PWA guidance
+  const isIOS=typeof navigator!=="undefined"&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const isStandalone=typeof window!=="undefined"&&(window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true);
+  const showIOSInstall=isIOS&&!isStandalone&&!notif?.supported;
+  const[showIOSHelp,setShowIOSHelp]=useState(false);
   const handleAlerts=()=>{
+    if(showIOSInstall){setShowIOSHelp(true);return;}
     if(!notif?.supported)return;
     if(alertsOn)notif.disable();else notif.request();
   };
@@ -664,10 +670,27 @@ function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl
       {fScope==="district"&&<input value={fDist} onChange={e=>setFDist(e.target.value)} placeholder={t.district} style={{padding:"3px 8px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:9.5,outline:"none",width:90,fontFamily:"var(--font-b)"}}/>}
     </div>
     {rl&&<span style={{fontSize:8.5,color:"var(--red)",background:"var(--red-s)",border:"1px solid var(--red-b)",borderRadius:99,padding:"2px 6px",flexShrink:0,fontWeight:700}}>⏸ RL</span>}
-    {notif?.supported&&<button onClick={handleAlerts} disabled={notif.perm==="denied"} className={"alerts-btn"+(alertsOn?" enabled":"")} style={{opacity:notif.perm==="denied"?0.5:1,cursor:notif.perm==="denied"?"not-allowed":"pointer",flexShrink:0}} title={notif.perm==="denied"?"Notifications blocked in browser settings — enable them in site settings":alertsOn?"Click to turn off alerts":"Get notified on every new story"}>
-      <span className="hide-xs">{alertsLabel}</span>
-      <span style={{fontSize:12}} className="only-xs">🔔</span>
+    {(notif?.supported||showIOSInstall)&&<button onClick={handleAlerts} disabled={notif?.perm==="denied"} className={"alerts-btn"+(alertsOn?" enabled":"")} style={{opacity:notif?.perm==="denied"?0.5:1,cursor:notif?.perm==="denied"?"not-allowed":"pointer",flexShrink:0}} title={showIOSInstall?"Tap to see iOS install steps":notif?.perm==="denied"?"Notifications blocked in browser settings":alertsOn?"Click to turn off alerts":"Get notified on every new story"}>
+      <span className="hide-xs">{showIOSInstall?"📱 Install for alerts":alertsLabel}</span>
+      <span style={{fontSize:12}} className="only-xs">{showIOSInstall?"📱":"🔔"}</span>
     </button>}
+    {showIOSHelp&&<div onClick={()=>setShowIOSHelp(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",border:"1px solid var(--border2)",borderRadius:16,padding:22,maxWidth:420,width:"100%"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+          <div style={{width:36,height:36,borderRadius:9,background:"var(--amber-s)",border:"1px solid var(--amber-b)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📱</div>
+          <div style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)"}}>Enable alerts on iPhone</div>
+        </div>
+        <p style={{fontSize:12.5,color:"var(--t2)",lineHeight:1.7,marginBottom:14}}>Apple requires installing this site as an app before notifications work. Takes 10 seconds:</p>
+        <ol style={{paddingLeft:18,marginBottom:16}}>
+          <li style={{fontSize:12,color:"var(--t1)",marginBottom:8,lineHeight:1.6}}>Tap the <b>Share</b> button <span style={{display:"inline-block",padding:"1px 6px",background:"var(--blue-s)",border:"1px solid var(--blue-b)",borderRadius:4,color:"var(--blue)",fontWeight:600}}>⎋</span> at the bottom of Safari</li>
+          <li style={{fontSize:12,color:"var(--t1)",marginBottom:8,lineHeight:1.6}}>Scroll and tap <b>"Add to Home Screen"</b></li>
+          <li style={{fontSize:12,color:"var(--t1)",marginBottom:8,lineHeight:1.6}}>Tap <b>Add</b> in top right</li>
+          <li style={{fontSize:12,color:"var(--t1)",marginBottom:8,lineHeight:1.6}}>Open <b>DTN Mythos</b> from your home screen</li>
+          <li style={{fontSize:12,color:"var(--t1)",lineHeight:1.6}}>You'll now see <b>🔔 Enable alerts</b> in the topbar</li>
+        </ol>
+        <button onClick={()=>setShowIOSHelp(false)} style={{width:"100%",padding:"10px",borderRadius:10,border:"none",background:"var(--grad)",color:"#0B0C10",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"var(--font-b)"}}>Got it</button>
+      </div>
+    </div>}
     <Btn onClick={onFetch} disabled={fetching||rl} style={{padding:"5px 11px",fontSize:10.5}} variant="ghost">
       <span style={fetching?{display:"inline-block",animation:"spin 1s linear infinite"}:{}}>{fetching?"⟳":"⚡"}</span>
       <span className="hide-xs">{t.fetch}</span>
