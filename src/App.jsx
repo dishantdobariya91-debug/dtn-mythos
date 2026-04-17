@@ -1,7 +1,7 @@
 import{useState,useEffect,useCallback,useRef,useMemo}from"react";
 import{AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,RadarChart,Radar,PolarGrid,PolarAngleAxis,BarChart,Bar,Cell}from"recharts";
 const GROQ=import.meta.env.VITE_GROQ_KEY||"";
-
+ 
 // ── MULTI-LANGUAGE ────────────────────────────────────────────
 const LANG={
 en:{name:"English",flag:"🇬🇧",appName:"DTN Mythos",appSub:"Constitutional Intelligence Platform for India",tagline:"Real-time constitutional journalism · Scores · Departments · 10 Languages",signIn:"Sign In",signInSub:"Understand what the news means for India's constitutional rights — in real time",yourName:"Your Name",yourEmail:"Email (optional)",continueBtn:"Enter Platform →",guestMode:"Continue as Guest",disclaimerTitle:"How We Score Constitutional Health",disclaimerSub:"Carefully read before entering — this is what you are tracking",disclaimerAccept:"I understand — Enter Platform",dashboard:"Dashboard",newsroom:"Live Newsroom",tracker:"Constitution Tracker",demoScore:"Democracy Score",departments:"Departments",states:"States",rights:"My Rights",journalist:"Journalist Console",citizenMode:"Citizen Mode",expertMode:"Expert Mode",submit:"Submit Report",review:"Review Queue",method:"Methodology",about:"About",fetch:"Fetch",auto:"AUTO",national:"National",state:"State",district:"District",critical:"CRITICAL",positive:"SUPPORT",high:"CONCERN",impact:"📊 Impact",facts:"⚖ Constitutional",mythos:"✦ Insight",evidence:"Evidence",govResponse:"Govt Response",courtStatus:"Court Status",violation:"Violation",support:"Support",functioning:"Functioning Democracy",erosion:"Democratic Erosion",backsliding:"Democratic Backsliding",authoritarian:"Authoritarian Risk",noStories:"No live stories yet",tapFetch:"Tap Fetch to load real-time news",fetchLive:"⚡ Fetch Live News",impactRadius:"Democracy Impact Radius",constitutionViolations:"Constitutional Violations",constitutionSupports:"Constitutional Supports",deptScore:"Department Score",liveScore:"Live Score",storiesTracked:"Stories Tracked",evidenceLevels:{allegation:"Allegation",single_source:"Single Source",corroborated:"Corroborated",official_doc:"Official Document",court_finding:"Court Finding",final_adjudication:"Final Adjudication"},confidence:{high:"High Confidence",moderate:"Moderate Confidence",low:"Low Confidence",developing:"Developing Story"},storyTypes:{policy:"Policy",law:"Law",court:"Court",policing:"Policing",election:"Election",rights:"Rights",corruption:"Corruption",welfare:"Welfare",speech:"Speech",media:"Media",federalism:"Federalism",minority:"Minority Rights"},citizenWhat:"What happened",citizenWhy:"Why it matters",citizenScore:"Constitutional impact",citizenStatus:"Current status",citizenNext:"What to watch"},
@@ -14,7 +14,7 @@ mr:{name:"मराठी",flag:"🇮🇳",appName:"DTN मिथोस",appSub:
 kn:{name:"ಕನ್ನಡ",flag:"🇮🇳",appName:"DTN ಮಿಥೋಸ್",appSub:"ಭಾರತಕ್ಕಾಗಿ ಸಾಂವಿಧಾನಿಕ ಗುಪ್ತಚರ ವೇದಿಕೆ",tagline:"ನೈಜ-ಸಮಯ ಸಾಂವಿಧಾನಿಕ ಪತ್ರಿಕೋದ್ಯಮ · ಸ್ಕೋರ್ · ಇಲಾಖೆಗಳು · 10 ಭಾಷೆಗಳು",signIn:"ಸೈನ್ ಇನ್",signInSub:"ಸುದ್ದಿ ಭಾರತದ ಸಾಂವಿಧಾನಿಕ ಹಕ್ಕುಗಳಿಗೆ ಏನು ಅರ್ಥ ಎಂದು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ",yourName:"ನಿಮ್ಮ ಹೆಸರು",yourEmail:"ಇಮೇಲ್ (ಐಚ್ಛಿಕ)",continueBtn:"ಪ್ಲಾಟ್ಫಾರ್ಮ್ ಪ್ರವೇಶಿಸಿ →",guestMode:"ಅತಿಥಿಯಾಗಿ ಮುಂದುವರಿಯಿರಿ",disclaimerTitle:"ನಾವು ಸಾಂವಿಧಾನಿಕ ಆರೋಗ್ಯವನ್ನು ಹೇಗೆ ಸ್ಕೋರ್ ಮಾಡುತ್ತೇವೆ",disclaimerSub:"ಪ್ರವೇಶಿಸುವ ಮೊದಲು ಎಚ್ಚರಿಕೆಯಿಂದ ಓದಿ",disclaimerAccept:"ನನಗೆ ಅರ್ಥವಾಗಿದೆ — ಪ್ರವೇಶಿಸಿ",dashboard:"ಡ್ಯಾಶ್ಬೋರ್ಡ್",newsroom:"ಲೈವ್ ನ್ಯೂಸ್ರೂಮ್",tracker:"ಸಂವಿಧಾನ ಟ್ರ್ಯಾಕರ್",demoScore:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಸ್ಕೋರ್",departments:"ಇಲಾಖೆಗಳು",states:"ರಾಜ್ಯಗಳು",rights:"ನನ್ನ ಹಕ್ಕುಗಳು",journalist:"ಪತ್ರಕರ್ತ ಕನ್ಸೋಲ್",citizenMode:"ನಾಗರಿಕ ಮೋಡ್",expertMode:"ತಜ್ಞ ಮೋಡ್",submit:"ವರದಿ ಸಲ್ಲಿಸಿ",review:"ಪರಿಶೀಲನೆ",method:"ವಿಧಾನ",about:"ಬಗ್ಗೆ",fetch:"ತರಿ",auto:"ಸ್ವಯಂ",national:"ರಾಷ್ಟ್ರೀಯ",state:"ರಾಜ್ಯ",district:"ಜಿಲ್ಲೆ",critical:"ನಿರ್ಣಾಯಕ",positive:"ಬೆಂಬಲ",high:"ಕಾಳಜಿ",impact:"📊 ಪ್ರಭಾವ",facts:"⚖ ಸಾಂವಿಧಾನಿಕ",mythos:"✦ ಒಳನೋಟ",evidence:"ಸಾಕ್ಷ್ಯ",govResponse:"ಸರ್ಕಾರಿ ಪ್ರತಿಕ್ರಿಯೆ",courtStatus:"ನ್ಯಾಯಾಲಯ ಸ್ಥಿತಿ",violation:"ಉಲ್ಲಂಘನೆ",support:"ಬೆಂಬಲ",functioning:"ಕಾರ್ಯನಿರ್ವಹಿಸುವ ಪ್ರಜಾಪ್ರಭುತ್ವ",erosion:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಸವೆತ",backsliding:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಹಿನ್ನಡೆ",authoritarian:"ನಿರಂಕುಶ ಅಪಾಯ",noStories:"ಇನ್ನು ಕಥೆಗಳಿಲ್ಲ",tapFetch:"ಲೈವ್ ಸುದ್ದಿ ಲೋಡ್ ಮಾಡಿ",fetchLive:"⚡ ಲೈವ್ ಸುದ್ದಿ ತರಿ",impactRadius:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಪ್ರಭಾವ",constitutionViolations:"ಸಾಂವಿಧಾನಿಕ ಉಲ್ಲಂಘನೆಗಳು",constitutionSupports:"ಸಾಂವಿಧಾನಿಕ ಬೆಂಬಲಗಳು",deptScore:"ಇಲಾಖೆ ಸ್ಕೋರ್",liveScore:"ಲೈವ್ ಸ್ಕೋರ್",storiesTracked:"ಟ್ರ್ಯಾಕ್ ಮಾಡಲಾದ ಕಥೆಗಳು",evidenceLevels:{allegation:"ಆರೋಪ",single_source:"ಏಕ ಮೂಲ",corroborated:"ದೃಢಪಡಿಸಲಾಗಿದೆ",official_doc:"ಅಧಿಕೃತ ದಾಖಲೆ",court_finding:"ನ್ಯಾಯಾಲಯ ನಿರ್ಧಾರ",final_adjudication:"ಅಂತಿಮ ತೀರ್ಪು"},confidence:{high:"ಹೆಚ್ಚಿನ ವಿಶ್ವಾಸ",moderate:"ಮಧ್ಯಮ ವಿಶ್ವಾಸ",low:"ಕಡಿಮೆ ವಿಶ್ವಾಸ",developing:"ಅಭಿವೃದ್ಧಿ ಕಥೆ"},storyTypes:{policy:"ನೀತಿ",law:"ಕಾನೂನು",court:"ನ್ಯಾಯಾಲಯ",policing:"ಪೊಲೀಸ್",election:"ಚುನಾವಣೆ",rights:"ಹಕ್ಕುಗಳು",corruption:"ಭ್ರಷ್ಟಾಚಾರ",welfare:"ಕಲ್ಯಾಣ",speech:"ವಾಕ್",media:"ಮಾಧ್ಯಮ",federalism:"ಸಂಘೀಯವಾದ",minority:"ಅಲ್ಪಸಂಖ್ಯಾತ ಹಕ್ಕುಗಳು"},citizenWhat:"ಏನಾಯಿತು",citizenWhy:"ಏಕೆ ಮುಖ್ಯ",citizenScore:"ಸಾಂವಿಧಾನಿಕ ಪ್ರಭಾವ",citizenStatus:"ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ",citizenNext:"ಮುಂದೆ ಏನು ನೋಡಬೇಕು"},
 ml:{name:"മലയാളം",flag:"🇮🇳",appName:"DTN മിത്തോസ്",appSub:"ഇന്ത്യക്കുള്ള ഭരണഘടനാ ഇന്റലിജന്‍സ് പ്ലാറ്റ്ഫോം",tagline:"തത്സമയ ഭരണഘടനാ പത്രപ്രവര്‍ത്തനം · സ്കോറുകള്‍ · വകുപ്പുകള്‍ · 10 ഭാഷകള്‍",signIn:"സൈന്‍ ഇന്‍",signInSub:"വാര്‍ത്ത ഇന്ത്യയുടെ ഭരണഘടനാ അവകാശങ്ങള്‍ക്ക് എന്താണ് അര്‍ഥം എന്ന് മനസ്സിലാക്കൂ",yourName:"നിങ്ങളുടെ പേര്",yourEmail:"ഇമെയില്‍ (ഐച്ഛികം)",continueBtn:"പ്ലാറ്റ്ഫോം നല്‍കുക →",guestMode:"അതിഥിയായി തുടരുക",disclaimerTitle:"ഞങ്ങള്‍ ഭരണഘടനാ ആരോഗ്യം എങ്ങനെ സ്കോര്‍ ചെയ്യുന്നു",disclaimerSub:"പ്രവേശിക്കുന്നതിന് മുമ്പ് ശ്രദ്ധയോടെ വായിക്കുക",disclaimerAccept:"എനിക്ക് മനസ്സിലായി — പ്ലാറ്റ്ഫോം നല്‍കുക",dashboard:"ഡാഷ്ബോര്‍ഡ്",newsroom:"തത്സമയ ന്യൂസ്‌റൂം",tracker:"ഭരണഘടനാ ട്രാക്കര്‍",demoScore:"ജനാധിപത്യ സ്കോര്‍",departments:"വകുപ്പുകള്‍",states:"സംസ്ഥാനങ്ങള്‍",rights:"എന്‍റെ അവകാശങ്ങള്‍",journalist:"പത്രകണ്‍സോള്‍",citizenMode:"പൗര മോഡ്",expertMode:"വിദഗ്ദ്ധ മോഡ്",submit:"റിപ്പോര്‍ട്ട് സമര്‍പ്പിക്കുക",review:"അവലോകനം",method:"രീതിശാസ്ത്രം",about:"കുറിച്ച്",fetch:"ഫെച്ച്",auto:"ഓട്ടോ",national:"ദേശീയ",state:"സംസ്ഥാനം",district:"ജില്ല",critical:"നിര്‍ണ്ണായക",positive:"പിന്തുണ",high:"ആശങ്ക",impact:"📊 ആഘാതം",facts:"⚖ ഭരണഘടനാ",mythos:"✦ ഉള്‍ക്കാഴ്ച",evidence:"തെളിവ്",govResponse:"സര്‍ക്കാര്‍ പ്രതികരണം",courtStatus:"കോടതി നില",violation:"ലംഘനം",support:"പിന്തുണ",functioning:"പ്രവര്‍ത്തിക്കുന്ന ജനാധിപത്യം",erosion:"ജനാധിപത്യ ശോഷണം",backsliding:"ജനാധിപത്യ പിന്നോക്കം",authoritarian:"സ്വേച്ഛാധിപത്യ അപകടം",noStories:"ഇതുവരെ കഥകള്‍ ഇല്ല",tapFetch:"തത്സമയ വാര്‍ത്ത ലോഡ് ചെയ്യുക",fetchLive:"⚡ തത്സമയ വാര്‍ത്ത ഫെച്ച് ചെയ്യുക",impactRadius:"ജനാധിപത്യ ആഘാതം",constitutionViolations:"ഭരണഘടനാ ലംഘനങ്ങള്‍",constitutionSupports:"ഭരണഘടനാ പിന്തുണകള്‍",deptScore:"വകുപ്പ് സ്കോര്‍",liveScore:"തത്സമയ സ്കോര്‍",storiesTracked:"ട്രാക്ക് ചെയ്ത കഥകള്‍",evidenceLevels:{allegation:"ആരോപണം",single_source:"ഒറ്റ ഉറവിടം",corroborated:"സ്ഥിരീകരിക്കപ്പെട്ടത്",official_doc:"ഔദ്യോഗിക രേഖ",court_finding:"കോടതി കണ്ടെത്തല്‍",final_adjudication:"അന്തിമ വിധി"},confidence:{high:"ഉയര്‍ന്ന ആത്മവിശ്വാസം",moderate:"മിതമായ ആത്മവിശ്വാസം",low:"കുറഞ്ഞ ആത്മവിശ്വാസം",developing:"വളരുന്ന കഥ"},storyTypes:{policy:"നയം",law:"നിയമം",court:"കോടതി",policing:"പോലീസ്",election:"തിരഞ്ഞെടുപ്പ്",rights:"അവകാശങ്ങള്‍",corruption:"അഴിമതി",welfare:"ക്ഷേമം",speech:"വാക്ക്",media:"മാധ്യമം",federalism:"ഫെഡറലിസം",minority:"ന്യൂനപക്ഷ അവകാശങ്ങള്‍"},citizenWhat:"എന്ത് സംഭവിച്ചു",citizenWhy:"എന്തുകൊണ്ട് പ്രധാനം",citizenScore:"ഭരണഘടനാ ആഘാതം",citizenStatus:"നിലവിലെ നില",citizenNext:"അടുത്തതായി എന്ത് നോക്കണം"},
 };
-
+ 
 // ── 16 GOVERNMENT DEPARTMENTS ─────────────────────────────────
 const DEPT={
 pmo:{id:"pmo",name:"Prime Minister's Office",icon:"🏛",color:"#4A8FFF",desc:"Executive leadership, Cabinet coordination, Union policy direction",articles:["Art.52","Art.53","Art.74","Art.77"],base:52},
@@ -34,13 +34,13 @@ ec:{id:"ec",name:"Election Commission",icon:"🗳",color:"#9B7DFF",desc:"Elector
 media:{id:"media",name:"Media & Information",icon:"📰",color:"#F5A623",desc:"Press freedom, media regulation, journalist safety, IT rules",articles:["Art.19(1)(a)","Art.19(2)"],base:26},
 judiciary:{id:"judiciary",name:"Judiciary",icon:"🏛",color:"#0FD47C",desc:"Supreme Court, High Courts — constitutional guardian (institutional developments tracked carefully)",articles:["Art.124","Art.141","Art.226","Art.32","Art.136"],base:63},
 };
-
+ 
 const CA={"Art.14":{t:"Equality Before Law",c:"#6366f1"},"Art.15":{t:"No Discrimination",c:"#8b5cf6"},"Art.17":{t:"Abolition of Untouchability",c:"#c084fc"},"Art.19(1)(a)":{t:"Freedom of Speech & Press",c:"#f97316"},"Art.19(1)(b)":{t:"Right to Assembly",c:"#fb923c"},"Art.19(1)(c)":{t:"Right to Form Associations",c:"#f97316"},"Art.21":{t:"Right to Life & Liberty",c:"#ef4444"},"Art.21A":{t:"Right to Education",c:"#fca5a5"},"Art.22":{t:"Protection from Arrest",c:"#f87171"},"Art.23":{t:"No Forced Labour",c:"#fbbf24"},"Art.25":{t:"Freedom of Religion",c:"#ec4899"},"Art.26":{t:"Religious Autonomy",c:"#f472b6"},"Art.29":{t:"Minority Cultural Rights",c:"#c084fc"},"Art.30":{t:"Minority Education Rights",c:"#e879f9"},"Art.32":{t:"Constitutional Remedies",c:"#0FD47C"},"Art.39":{t:"Right to Livelihood",c:"#86efac"},"Art.40":{t:"Village Panchayats",c:"#6ee7b7"},"Art.46":{t:"Weaker Sections Protection",c:"#a5f3fc"},"Art.47":{t:"Right to Health",c:"#67e8f9"},"Art.48A":{t:"Environmental Protection",c:"#34d399"},"Art.50":{t:"Separation of Powers",c:"#60a5fa"},"Art.82":{t:"Delimitation After Census",c:"#60a5fa"},"Art.300A":{t:"Right to Property",c:"#fbbf24"},"Art.324":{t:"Election Commission Independence",c:"#f59e0b"},"Art.326":{t:"Universal Adult Suffrage",c:"#d97706"},"Art.350A":{t:"Mother Tongue Instruction",c:"#a78bfa"},"Art.355":{t:"Union Duty to Protect States",c:"#92400e"},"5th Sch":{t:"Tribal Areas & Scheduled Areas",c:"#047857"},"10th Sch":{t:"Anti-Defection Law",c:"#991b1b"},"AFSPA":{t:"Armed Forces Special Powers",c:"#dc2626"}};
-
+ 
 const PILLARS={press_freedom:{label:"Press Freedom",color:"#f97316",base:22,weight:1.2,dept:"media"},liberty:{label:"Liberty",color:"#ef4444",base:35,weight:1.2,dept:"police"},equality:{label:"Equality",color:"#8b5cf6",base:32,weight:1.1,dept:"home"},electoral:{label:"Electoral",color:"#4A8FFF",base:48,weight:1.0,dept:"ec"},separation:{label:"Separation of Powers",color:"#0FD47C",base:43,weight:0.9,dept:"law"},religion:{label:"Religious Freedom",color:"#ec4899",base:28,weight:1.0,dept:"minority"},justice:{label:"Access to Justice",color:"#0FD47C",base:45,weight:0.9,dept:"judiciary"},welfare:{label:"Public Welfare",color:"#F5A623",base:42,weight:0.8,dept:"rural"},environment:{label:"Environment Rights",color:"#34d399",base:38,weight:0.8,dept:"environment"}};
-
+ 
 const STATE_BASELINES={"Andhra Pradesh":45,"Arunachal Pradesh":52,"Assam":29,"Bihar":38,"Chhattisgarh":34,"Goa":40,"Gujarat":35,"Haryana":37,"Himachal Pradesh":53,"Jharkhand":43,"Karnataka":55,"Kerala":64,"Madhya Pradesh":38,"Maharashtra":40,"Manipur":17,"Meghalaya":51,"Mizoram":54,"Nagaland":48,"Odisha":47,"Punjab":50,"Rajasthan":44,"Sikkim":57,"Tamil Nadu":59,"Telangana":49,"Tripura":46,"Uttar Pradesh":26,"Uttarakhand":50,"West Bengal":39,"Delhi":41,"J&K":30};
-
+ 
 // Evidence levels — CORE differentiator
 const EVIDENCE_LEVELS={
   allegation:     {label:"Allegation",        color:"#94a3b8",weight:0.2,cls:"ev-allegation",desc:"Unverified claim — insufficient evidence to score"},
@@ -53,12 +53,12 @@ const EVIDENCE_LEVELS={
 const STORY_TYPES=["policy","law","court","policing","election","rights","corruption","welfare","speech","media","federalism","minority"];
 const CONFIDENCE_LEVELS={high:{label:"High",color:"#0FD47C"},moderate:{label:"Moderate",color:"#F5A623"},low:{label:"Low",color:"#F04A5A"},developing:{label:"Developing",color:"#94a3b8"}};
 const COURT_STATUSES={pending:{label:"Court Pending",color:"#F5A623"},stayed:{label:"Order Stayed",color:"#9B7DFF"},upheld:{label:"Upheld",color:"#0FD47C"},struck_down:{label:"Struck Down",color:"#F04A5A"},none:{label:"No Court Action",color:"#6B7FA0"}};
-
+ 
 const BASE=41,SK="dtn_v9";
 const IMPACT={national:{national:1.0,state:0.4,local:0.2},state:{national:0.3,state:1.0,local:0.5},local:{national:0.1,state:0.2,local:1.0},district:{national:0.05,state:0.15,local:1.0}};
 const PAT={isolated:{label:"Isolated",color:"#64748b",dot:"○",bg:"rgba(100,116,139,0.08)",mult:1.0},emerging:{label:"Emerging",color:"#F5A623",dot:"◔",bg:"rgba(245,166,35,0.06)",mult:1.15},repeated:{label:"Repeated",color:"#f97316",dot:"◑",bg:"rgba(249,115,22,0.06)",mult:1.3},systemic:{label:"Systemic",color:"#F04A5A",dot:"●",bg:"rgba(240,74,90,0.06)",mult:1.5}};
-
-
+ 
+ 
 // ── ADVANCED SCORING ENGINE ───────────────────────────────────
 // World-class formula: credibility × evidence × relevance × impact × directional × confidence × recency × pattern × radius
 function calcStoryEffect(s,scope,state){
@@ -76,7 +76,7 @@ function calcStoryEffect(s,scope,state){
 }
 function calcScope(stories,scope,state){const a=stories.filter(s=>s.approved);const base=scope==="state"?(STATE_BASELINES[state]||BASE):BASE;return a.length?Math.max(0,Math.min(100,Math.round(base+a.reduce((t,s)=>t+calcStoryEffect(s,scope,state),0)))):base;}
 function calcDept(stories,id){const d=DEPT[id];if(!d)return 50;const rel=stories.filter(s=>s.approved&&s.institution===id);if(!rel.length)return d.base;const delta=rel.reduce((a,s)=>{const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"]?.weight||0.5;const days=Math.max(0,(Date.now()-s.ts)/86400000);const conf={high:1.0,moderate:0.75,low:0.5,developing:0.35}[s.confidence||"moderate"]||0.7;return a+(s.aiScore||s.delta||0)*ev*conf*Math.max(0.2,1-days*0.005);},0);return Math.max(0,Math.min(100,Math.round(d.base+delta)));}
-
+ 
 // Score explanation generator — makes users FEEL what is right/wrong
 function generateExplanation(s){
   const dir=s.aiScore||s.delta||0;const isPos=dir>0;const dept=DEPT[s.institution];const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"];const pts=Math.abs(dir).toFixed(1);
@@ -88,11 +88,11 @@ function generateExplanation(s){
   const courtStr=s.courtStatus&&s.courtStatus!=="none"?` Court status: ${COURT_STATUSES[s.courtStatus]?.label||"pending"}.`:"";
   return`This event ${action} ${pts} points because ${deptStr} action implicates ${s.violations?.length||s.supports?.length||1} constitutional provision(s). ${evStr} ${confStr}${courtStr}`;
 }
-
+ 
 function sColor(n){return n>=65?"#0FD47C":n>=50?"#F5A623":n>=35?"#f97316":"#F04A5A";}
 function sLabelK(n){return n>=65?"functioning":n>=50?"erosion":n>=35?"backsliding":"authoritarian";}
 function scoreBand(n){if(n>=80)return{label:"Strong Constitutional Support",color:"#0FD47C"};if(n>=65)return{label:"Mostly Stable",color:"#0FD47C"};if(n>=50)return{label:"Mixed Democratic Health",color:"#F5A623"};if(n>=35)return{label:"Significant Concerns",color:"#f97316"};return{label:"Severe Democratic Stress",color:"#F04A5A"};}
-
+ 
 // ── ENHANCED CLASSIFIER ────────────────────────────────────────
 function classify(h,b){
   const txt=((h||"")+" "+(b||"")).toLowerCase();
@@ -150,15 +150,61 @@ function classify(h,b){
   const severity=Math.abs(delta)>=5?"critical":Math.abs(delta)>=3?"high":"medium";
   return{pillar,direction:dir,delta,violations,supports,institution:inst,pattern:pat,scope,state:detState,source:"single_source",aiScore:delta,aiDone:false,mythos:null,aiAnalysis:null,severity,evidenceLevel,storyType,confidence,courtStatus,govResponse,citizenExplanation};
 }
-
+ 
 let _rlu=0;const isRL=()=>Date.now()<_rlu;const setRL=ms=>{_rlu=Date.now()+ms;};
-
+ 
+// Try multiple CORS proxies because free ones go down often.
+// Each entry returns the raw XML text given a target URL.
+const CORS_PROXIES=[
+  {name:"corsproxy.io",url:u=>"https://corsproxy.io/?url="+encodeURIComponent(u),parse:async r=>await r.text()},
+  {name:"allorigins-raw",url:u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),parse:async r=>await r.text()},
+  {name:"allorigins-get",url:u=>"https://api.allorigins.win/get?url="+encodeURIComponent(u),parse:async r=>{const d=await r.json();return d.contents||"";}},
+  {name:"codetabs",url:u=>"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u),parse:async r=>await r.text()},
+];
+ 
+async function fetchThroughProxies(url){
+  for(const p of CORS_PROXIES){
+    try{
+      const res=await fetch(p.url(url),{signal:AbortSignal.timeout(12000)});
+      if(!res.ok){console.warn("[fetchRSS] proxy "+p.name+" returned "+res.status);continue;}
+      const xml=await p.parse(res);
+      if(xml&&xml.length>200){console.log("[fetchRSS] ✓ via "+p.name+" ("+xml.length+" bytes)");return xml;}
+      console.warn("[fetchRSS] proxy "+p.name+" returned empty/tiny response");
+    }catch(e){console.warn("[fetchRSS] proxy "+p.name+" failed:",e.message||e);}
+  }
+  return null;
+}
+ 
 async function fetchRSS(scope,state,district){
-  try{const B="https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=";const R="rights+court+police+arrest+protest+constitution+demolition+election+-cricket+-IPL";let url,sh=null;if(scope==="national")url=B+encodeURIComponent("India+democracy+constitution+rights+court+"+R);else if(scope==="state"&&state){url=B+encodeURIComponent(state+"+India+"+R);sh=state;}else if(scope==="district"&&district)url=B+encodeURIComponent(district+"+India+"+R);else url=B+encodeURIComponent("India+civic+rights+"+R);
-  const proxy="https://api.allorigins.win/get?url="+encodeURIComponent(url);const res=await fetch(proxy,{signal:AbortSignal.timeout(14000)});if(!res.ok)return[];const data=await res.json();const xml=new DOMParser().parseFromString(data.contents,"text/xml");const items=[...xml.querySelectorAll("item")];const kw=/rights|court|police|arrest|detain|demolish|protest|riot|murder|dalit|minority|muslim|tribal|election|verdict|bail|uapa|afspa|judge|constitution|freedom|violence|killed|ed |cbi|rti|corruption|atrocity|evict|journalist|press|encounter|custod/i;
-  const parsed=items.slice(0,12).map(item=>{const rT=item.querySelector("title")?.textContent||"";const headline=rT.replace(/ - [^-]*$/,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim();const rD=item.querySelector("description")?.textContent||"";const body=rD.replace(/<[^>]*>/g,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim().slice(0,500);return{headline,body,state:sh};}).filter(i=>i.headline.length>10);
-  const filtered=parsed.filter(i=>kw.test(i.headline+" "+i.body));return(filtered.length>0?filtered:parsed).slice(0,7);}catch{return[];}}
-
+  const B="https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=";
+  const R="rights+court+police+arrest+protest+constitution+demolition+election+-cricket+-IPL";
+  let url,sh=null;
+  if(scope==="national")url=B+encodeURIComponent("India+democracy+constitution+rights+court+"+R);
+  else if(scope==="state"&&state){url=B+encodeURIComponent(state+"+India+"+R);sh=state;}
+  else if(scope==="district"&&district)url=B+encodeURIComponent(district+"+India+"+R);
+  else url=B+encodeURIComponent("India+civic+rights+"+R);
+ 
+  try{
+    const xmlText=await fetchThroughProxies(url);
+    if(!xmlText){console.error("[fetchRSS] all CORS proxies failed");return[];}
+    const xml=new DOMParser().parseFromString(xmlText,"text/xml");
+    const items=[...xml.querySelectorAll("item")];
+    if(!items.length){console.warn("[fetchRSS] parsed XML had 0 items");return[];}
+    const kw=/rights|court|police|arrest|detain|demolish|protest|riot|murder|dalit|minority|muslim|tribal|election|verdict|bail|uapa|afspa|judge|constitution|freedom|violence|killed|ed |cbi|rti|corruption|atrocity|evict|journalist|press|encounter|custod/i;
+    const parsed=items.slice(0,12).map(item=>{
+      const rT=item.querySelector("title")?.textContent||"";
+      const headline=rT.replace(/ - [^-]*$/,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim();
+      const rD=item.querySelector("description")?.textContent||"";
+      const body=rD.replace(/<[^>]*>/g,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim().slice(0,500);
+      return{headline,body,state:sh};
+    }).filter(i=>i.headline.length>10);
+    const filtered=parsed.filter(i=>kw.test(i.headline+" "+i.body));
+    const out=(filtered.length>0?filtered:parsed).slice(0,7);
+    console.log("[fetchRSS] parsed "+items.length+" items → "+out.length+" returned");
+    return out;
+  }catch(e){console.error("[fetchRSS] unexpected error:",e);return[];}
+}
+ 
 async function aiUpgrade(s){
   if(!GROQ||isRL())return s;
   try{const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ},body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:600,temperature:0.15,messages:[{role:"system",content:`You are India's top constitutional law and journalism expert. Return ONLY valid JSON:
@@ -167,13 +213,13 @@ async function aiUpgrade(s){
   const d=await r.json();const txt=d.choices?.[0]?.message?.content||"";const clean=txt.replace(/```json|```/g,"").trim();const si=clean.indexOf("{"),ei=clean.lastIndexOf("}");if(si<0||ei<0)return s;
   const j=JSON.parse(clean.slice(si,ei+1));
   return{...s,aiScore:Number(j.score)||s.delta,institution:j.department||s.institution,evidenceLevel:j.evidenceLevel||s.evidenceLevel,storyType:j.storyType||s.storyType,confidence:j.confidence||s.confidence,courtStatus:j.courtStatus||s.courtStatus,nationalImpact:Number(j.national_impact)||null,stateImpact:Number(j.state_impact)||null,localImpact:Number(j.local_impact)||null,violations:j.violations?.length?j.violations:s.violations,supports:j.supports?.length?j.supports:s.supports,govResponse:j.govResponse||s.govResponse,aiAnalysis:j.analysis||null,mythos:j.mythos||null,citizenExplanation:j.citizenExplanation||s.citizenExplanation,aiDone:true};}catch{return s;}}
-
+ 
 function useToasts(){const[toasts,setToasts]=useState([]);const add=useCallback((msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4500);},[]);return{toasts,add};}
-
-
+ 
+ 
 // ── DESIGN SYSTEM ──────────────────────────────────────────────
 function Toasts({items}){return(<div style={{position:"fixed",top:60,right:14,zIndex:9999,display:"flex",flexDirection:"column",gap:7,maxWidth:"90vw"}}>{items.map(t=>(<div key={t.id} style={{padding:"11px 16px",borderRadius:11,background:t.type==="error"?"rgba(240,74,90,0.14)":t.type==="success"?"rgba(15,212,124,0.11)":"rgba(74,143,255,0.11)",border:"1px solid "+(t.type==="error"?"rgba(240,74,90,0.28)":t.type==="success"?"rgba(15,212,124,0.28)":"rgba(74,143,255,0.28)"),color:"var(--t1)",fontSize:12.5,backdropFilter:"blur(14px)",boxShadow:"0 8px 28px rgba(0,0,0,0.45)",animation:"fadeUp 0.22s ease"}}>{t.msg}</div>))}</div>);}
-
+ 
 function ScoreRing({score,size=96,label}){
   const r=(size-12)/2,circ=2*Math.PI*r,col=sColor(score),offset=circ-(score/100)*circ;
   return(<div style={{position:"relative",width:size,height:size,flexShrink:0}}>
@@ -188,14 +234,14 @@ function ScoreRing({score,size=96,label}){
       {label&&<span style={{fontSize:Math.max(7,size*0.088),color:"var(--t2)",textAlign:"center",lineHeight:1.2}}>{label}</span>}
     </div>
   </div>);}
-
+ 
 function Tag({children,color="#4A8FFF",sm}){return<span style={{display:"inline-flex",alignItems:"center",fontSize:sm?8.5:9.5,fontWeight:700,fontFamily:"var(--font-m)",color:color,background:color+"18",border:"1px solid "+color+"30",borderRadius:5,padding:sm?"1px 5px":"2px 7px",whiteSpace:"nowrap"}}>{children}</span>;}
 function Pill({children,color="var(--t2)"}){return<span style={{display:"inline-flex",alignItems:"center",fontSize:9.5,color:color,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:99,padding:"1px 8px",fontWeight:500}}>{children}</span>;}
 function Card({children,style={},glow,onClick}){return(<div onClick={onClick} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:13,padding:"15px 17px",position:"relative",overflow:"hidden",cursor:onClick?"pointer":"default",boxShadow:glow?`0 0 0 1px ${glow}28, 0 6px 24px ${glow}14`:"none",transition:"border-color 0.2s",...style}}><div style={{position:"absolute",inset:0,background:"linear-gradient(140deg,rgba(255,255,255,0.011) 0%,transparent 50%)",pointerEvents:"none",borderRadius:"inherit"}}/>{children}</div>);}
 function Metric({label,value,color,sub,icon}){return(<Card style={{padding:"13px 15px"}}><div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.13em",marginBottom:5,display:"flex",alignItems:"center",gap:4}}>{icon&&<span>{icon}</span>}{label}</div><div style={{fontFamily:"var(--font-m)",fontSize:21,fontWeight:700,color:color||"var(--t1)",lineHeight:1,letterSpacing:"-0.03em"}}>{value}</div>{sub&&<div style={{fontSize:9.5,color:"var(--t2)",marginTop:4}}>{sub}</div>}</Card>);}
 function Btn({children,onClick,variant="ghost",disabled,style={}}){const vs={ghost:{bg:"transparent",border:"var(--border2)",color:"var(--t2)"},primary:{bg:"var(--blue)",border:"transparent",color:"#fff"},success:{bg:"var(--green-s)",border:"var(--green-b)",color:"var(--green)"},danger:{bg:"var(--red-s)",border:"var(--red-b)",color:"var(--red)"},amber:{bg:"var(--amber-s)",border:"var(--amber-b)",color:"var(--amber)"},purple:{bg:"var(--purple-s)",border:"var(--purple-b)",color:"var(--purple)"},cyan:{bg:"var(--cyan-s)",border:"var(--cyan-b)",color:"var(--cyan)"}};const v=vs[variant]||vs.ghost;return(<button onClick={onClick} disabled={disabled} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"6px 13px",borderRadius:8,background:v.bg,border:"1px solid "+v.border,color:v.color,fontSize:11,fontWeight:600,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all 0.15s",fontFamily:"var(--font-b)",...style}}>{children}</button>);}
 function STitle({children,action}){return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><div style={{fontSize:8.5,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.14em",color:"var(--t3)"}}>{children}</div>{action}</div>);}
-
+ 
 // ── EVIDENCE BADGE ─────────────────────────────────────────────
 function EvidenceBadge({level,t}){
   const ev=EVIDENCE_LEVELS[level||"single_source"];
@@ -204,7 +250,7 @@ function EvidenceBadge({level,t}){
     <span style={{width:4,height:4,borderRadius:"50%",background:ev?.color||"#94a3b8",display:"inline-block",flexShrink:0}}/>
     {t?.evidenceLevels?.[level]||labels[level]||"Unknown"}
   </span>);}
-
+ 
 // ── CONFIDENCE BADGE ───────────────────────────────────────────
 function ConfidenceBadge({confidence,t}){
   const cv=CONFIDENCE_LEVELS[confidence||"moderate"];
@@ -212,20 +258,20 @@ function ConfidenceBadge({confidence,t}){
   return(<span style={{fontSize:8.5,fontWeight:700,color:cv?.color||"var(--amber)",background:(cv?.color||"var(--amber)")+"12",border:"1px solid "+(cv?.color||"var(--amber)")+"25",borderRadius:4,padding:"1px 6px",fontFamily:"var(--font-m)"}}>
     {t?.confidence?.[confidence]||labels[confidence]||"Moderate"}
   </span>);}
-
+ 
 // ── COURT STATUS BADGE ─────────────────────────────────────────
 function CourtBadge({status}){
   if(!status||status==="none")return null;
   const cs=COURT_STATUSES[status];if(!cs)return null;
   return(<span style={{fontSize:8.5,fontWeight:700,color:cs.color,background:cs.color+"12",border:"1px solid "+cs.color+"25",borderRadius:4,padding:"1px 6px"}}>⚖ {cs.label}</span>);}
-
+ 
 // ── STORY TYPE BADGE ───────────────────────────────────────────
 function StoryTypeBadge({type,t}){
   const colors={policy:"var(--blue)",law:"var(--purple)",court:"var(--green)",policing:"var(--red)",election:"var(--purple)",rights:"var(--red)",corruption:"var(--amber)",welfare:"var(--green)",speech:"var(--orange,#f97316)",media:"var(--amber)",federalism:"var(--blue)",minority:"var(--cyan)"};
   const col=colors[type]||"var(--t2)";
   const label=t?.storyTypes?.[type]||type;
   return(<span style={{fontSize:8.5,fontWeight:700,color:col,background:col+"12",border:"1px solid "+col+"25",borderRadius:4,padding:"1px 6px",textTransform:"capitalize"}}>{label}</span>);}
-
+ 
 // ── SCORE EXPLANATION ──────────────────────────────────────────
 function ScoreExplanation({story}){
   const exp=story.scoreExplanation||generateExplanation(story);
@@ -235,7 +281,7 @@ function ScoreExplanation({story}){
     <div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>Score Explanation</div>
     <p style={{fontSize:11,color:"var(--t2)",lineHeight:1.7,margin:0}}>{exp}</p>
   </div>);}
-
+ 
 // ── IMPACT BAR ─────────────────────────────────────────────────
 function ImpactBar({story,t}){
   const scope=story.scope||"national";const r=IMPACT[scope]||IMPACT.national;
@@ -260,7 +306,7 @@ function ImpactBar({story,t}){
     ))}
     <div style={{fontSize:9,color:"var(--t3)",marginTop:6,fontStyle:"italic"}}>Adjusted for evidence weight ({Math.round(ev*100)}%) × confidence ({Math.round(conf*100)}%)</div>
   </div>);}
-
+ 
 // ── CONSTITUTION PANEL ─────────────────────────────────────────
 function ConstitutionPanel({violations=[],supports=[],t}){
   if(!violations.length&&!supports.length)return(<div style={{padding:"18px",textAlign:"center",color:"var(--t3)",fontSize:11}}>AI constitutional analysis pending...</div>);
@@ -294,8 +340,8 @@ function ConstitutionPanel({violations=[],supports=[],t}){
       </div>
     </div>)}
   </div>);}
-
-
+ 
+ 
 // ── STORY CARD — World-class with Citizen/Expert modes ─────────
 function StoryCard({s,t,mode,onReview,compact,onSelect}){
   const[tab,setTab]=useState("impact");
@@ -385,8 +431,8 @@ function StoryCard({s,t,mode,onReview,compact,onSelect}){
       </div>)}
     </div>
   );}
-
-
+ 
+ 
 // ── SIGN IN ────────────────────────────────────────────────────
 function SignInPage({onSignIn,lang,setLang,t}){
   const[name,setName]=useState("");const[email,setEmail]=useState("");
@@ -421,7 +467,7 @@ function SignInPage({onSignIn,lang,setLang,t}){
       </div>
     </div>
   </div>);}
-
+ 
 // ── DISCLAIMER ─────────────────────────────────────────────────
 function DisclaimerPage({onAccept,t,userName}){
   const[read,setRead]=useState(false);const ref=useRef(null);
@@ -456,11 +502,11 @@ function DisclaimerPage({onAccept,t,userName}){
       </button>
     </div>
   </div>);}
-
-
+ 
+ 
 // ── SIDEBAR + TOPBAR + TICKER ──────────────────────────────────
 const NAV=[{g:"Intelligence",items:[{id:"dashboard",tk:"dashboard",icon:"◉"},{id:"newsroom",tk:"newsroom",icon:"⚡"},{id:"tracker",tk:"tracker",icon:"📜"}]},{g:"Scores",items:[{id:"demoscore",tk:"demoScore",icon:"◎"},{id:"departments",tk:"departments",icon:"🏛"},{id:"states",tk:"states",icon:"◱"}]},{g:"Rights",items:[{id:"rights",tk:"rights",icon:"🛡"},{id:"journalist",tk:"journalist",icon:"🔍"}]},{g:"Community",items:[{id:"submit",tk:"submit",icon:"+"},{id:"review",tk:"review",icon:"◻"}]},{g:"Platform",items:[{id:"method",tk:"method",icon:"◈"},{id:"about",tk:"about",icon:"ℹ"}]}];
-
+ 
 function Sidebar({page,setPage,pending,t,user,lang,setLang,mode,setMode}){return(<aside className="sidebar">
   <div className="sidebar-logo"><div style={{display:"flex",alignItems:"center",gap:9}}><div className="logo-mark">D</div><div><div style={{fontFamily:"var(--font-h)",fontSize:11.5,fontWeight:800,color:"var(--t1)",letterSpacing:"0.02em"}}>{t.appName}</div><div style={{fontSize:8.5,color:"var(--t3)",letterSpacing:"0.07em"}}>dtn.today · Intelligence</div></div></div></div>
   {user&&<div style={{padding:"9px 13px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8}}>
@@ -490,7 +536,7 @@ function Sidebar({page,setPage,pending,t,user,lang,setLang,mode,setMode}){return
     </div>
   </div>
 </aside>);}
-
+ 
 function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl,fScope,setFScope,fState,setFState,fDist,setFDist,t,countdown,mode}){
   const states=Object.keys(STATE_BASELINES).sort();
   const modeColor=mode==="citizen"?"var(--green)":mode==="expert"?"var(--purple)":"var(--blue)";
@@ -521,7 +567,7 @@ function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl
       {t.auto}{autoOn?` ↻${countdown}s`:""}
     </Btn>
   </div>);}
-
+ 
 function LiveTicker({stories,natScore,stScore,distScore,countdown,autoOn}){
   const approved=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);
   const[idx,setIdx]=useState(0);
@@ -543,8 +589,8 @@ function LiveTicker({stories,natScore,stScore,distScore,countdown,autoOn}){
       <span style={{fontSize:8.5,fontFamily:"var(--font-m)",fontWeight:600,color:sColor(distScore)}}>📍{distScore}</span>
     </div>
   </div>);}
-
-
+ 
+ 
 // ── DASHBOARD ──────────────────────────────────────────────────
 function Dashboard({natScore,stScore,distScore,stories,natHistory,fState,fDist,t,mode,setPage,setFScope}){
   const approved=stories.filter(s=>s.approved);
@@ -623,7 +669,7 @@ function Dashboard({natScore,stScore,distScore,stories,natHistory,fState,fDist,t
     </Card>)}
     {approved.length===0&&<Card style={{textAlign:"center",padding:"36px"}}><div style={{fontSize:36,marginBottom:10}}>⚡</div><div style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.tapFetch}</div><div style={{fontSize:11,color:"var(--t2)",marginBottom:14}}>Constitutional intelligence from 1000s of Indian news sources</div><Btn onClick={()=>setPage("newsroom")} variant="primary" style={{padding:"8px 20px",fontSize:13}}>{t.fetchLive}</Btn></Card>}
   </div>);}
-
+ 
 // ── NEWSROOM (Main Intelligence Feed) ──────────────────────────
 function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fState}){
   const[filter,setFilter]=useState("all");const[selStory,setSelStory]=useState(null);
@@ -682,8 +728,8 @@ function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fSt
       </div>
     </div>)}
   </div>);}
-
-
+ 
+ 
 // ── CONSTITUTION TRACKER ───────────────────────────────────────
 function ConstitutionTrackerPage({stories,t,mode}){
   const[selArt,setSelArt]=useState(null);
@@ -727,7 +773,7 @@ function ConstitutionTrackerPage({stories,t,mode}){
       );})}
     </div>
   </div>);}
-
+ 
 // ── DEMOCRACY SCORE DASHBOARD ──────────────────────────────────
 function DemoScorePage({natScore,stScore,distScore,stories,natHistory,fState,fDist,t}){
   const approved=stories.filter(s=>s.approved);
@@ -769,7 +815,7 @@ function DemoScorePage({natScore,stScore,distScore,stories,natHistory,fState,fDi
       </div>
     </Card>))}
   </div>);}
-
+ 
 // ── DEPARTMENTS PAGE (16 depts) ────────────────────────────────
 function DepartmentsPage({stories,t,mode}){
   const[sel,setSel]=useState(null);
@@ -830,8 +876,8 @@ function DepartmentsPage({stories,t,mode}){
       {selStories.length>0?(<><STitle>Recent Stories ({selStories.length})</STitle>{selStories.slice(0,4).map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} compact/>)}</>):(<div style={{textAlign:"center",padding:"22px",color:"var(--t3)",fontSize:11}}>No stories yet — fetch news to populate this department</div>)}
     </Card>)}
   </div>);}
-
-
+ 
+ 
 // ── JOURNALIST CONSOLE ─────────────────────────────────────────
 function JournalistConsolePage({stories,t,onAI,fetching,onFetch}){
   const approved=stories.filter(s=>s.approved);
@@ -899,7 +945,7 @@ function JournalistConsolePage({stories,t,onAI,fetching,onFetch}){
       </div>
     </Card>
   </div>);}
-
+ 
 // ── REMAINING PAGES ────────────────────────────────────────────
 function StatesPage({stories,t}){
   const approved=stories.filter(s=>s.approved);
@@ -918,20 +964,20 @@ function StatesPage({stories,t}){
         </div>);})}
     </div>
   </div>);}
-
+ 
 const OCC={Journalist:{rights:["Art.19(1)(a)","Art.21","Art.22"],threats:["UAPA/BNS-152 arrest","Criminal defamation","Physical attacks — 3 killed 2024-25","IT Rules censorship"],actions:["Document arrest immediately — date, time, officer name","Contact press freedom bodies within 24 hours","Preserve all evidence including digital","File writ petition if detained unlawfully"],helplines:["Press Club India: 011-23379161","NHRC: 14433","CPJ India: cpj.org"]},"Farmer":{rights:["Art.39","Art.41","Art.21"],threats:["Debt crisis — 12,000+ suicides/year","MSP non-statutory","Land acquisition without consent","Bulldozer action on farm land"],actions:["Preserve all land title documents","Use RTI to access acquisition records","File objection within 30 days of notice"],helplines:["Kisan Call: 1800-180-1551","NALSA: 15100"]},"Tribal/Adivasi":{rights:["Art.21","5th Sch","Art.29","Forest Rights Act"],threats:["Mining displacement","PESA violations","Forest rights denial","Fake encounter allegations"],actions:["Gram Sabha resolution is legally required before eviction","Collect FRA title records","Document all displacement with witnesses"],helplines:["NALSA: 15100","NHRC: 14433"]},"Dalit (SC)":{rights:["Art.17","Art.14","Art.15","Art.46"],threats:["50,000+ atrocities per year","Manual scavenging","Caste discrimination in institutions"],actions:["File FIR under SC/ST Prevention of Atrocities Act","Document with photos and witness statements"],helplines:["SC/ST Commission: 011-23381202","NHRC: 14433"]},"Muslim Minority":{rights:["Art.14","Art.25","Art.29","Art.30"],threats:["Bulldozer demolitions","UAPA misuse","CAA citizenship exclusion","Anti-conversion laws"],actions:["Document all demolition notices with dates","Preserve all property ownership records","File writ if demolition occurs without notice"],helplines:["Minority Commission: 011-23517473","NHRC: 14433"]},Woman:{rights:["Art.14","Art.15","Art.21"],threats:["Gender-based violence","Workplace discrimination","Trafficking"],actions:["Preserve all medical and police records","Use Women's Commission complaint mechanism"],helplines:["Women Helpline: 181","NCW: 011-26942369"]},"General Citizen":{rights:["Art.14","Art.21","Art.32"],threats:["Administrative overreach","Arbitrary detention","Property violation"],actions:["Document all notices with timestamps","Request district legal aid"],helplines:["NHRC: 14433","NALSA: 15100"]}};
-
+ 
 function MyRightsPage({scope,setScope,t}){const states=Object.keys(STATE_BASELINES).sort();const occ=OCC[scope.occupation]||OCC["General Citizen"];return(<div className="fade-up"><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>🛡 {t.rights||"My Rights"}</h2></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}><div><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{t.state}</label><select value={scope.state} onChange={e=>setScope(p=>({...p,state:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}>{states.map(s=><option key={s} value={s}>{s}</option>)}</select></div><div><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>Profile</label><select value={scope.occupation} onChange={e=>setScope(p=>({...p,occupation:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}>{Object.keys(OCC).map(o=><option key={o} value={o}>{o}</option>)}</select></div></div><Card style={{marginBottom:10}}><div style={{fontSize:8.5,color:"var(--green)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:9}}>✓ {t.constitutionSupports}</div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>{occ.rights.map(r=><Tag key={r} color={CA[r]?.c||"var(--blue)"}>{r} — {CA[r]?.t||r}</Tag>)}</div><div style={{fontSize:8.5,color:"var(--red)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:7}}>⚠ {t.constitutionViolations} Risk</div>{occ.threats.map((th,i)=><div key={i} style={{fontSize:11,color:"var(--t2)",padding:"5px 0",borderBottom:"1px solid var(--border)"}}>• {th}</div>)}</Card><Card style={{marginBottom:10}}><div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:9}}>If Rights Are Violated</div>{occ.actions.map((a,i)=>(<div key={i} style={{display:"flex",gap:9,padding:"8px 0",borderBottom:"1px solid var(--border)"}}><span style={{color:"var(--blue)",fontWeight:800,fontSize:10.5,flexShrink:0,fontFamily:"var(--font-m)"}}>{i+1}.</span><span style={{fontSize:11,color:"var(--t2)",lineHeight:1.6}}>{a}</span></div>))}</Card><Card><div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:7}}>Emergency Helplines</div>{occ.helplines.map((h,i)=><div key={i} style={{fontSize:11.5,color:"var(--green)",fontFamily:"var(--font-m)",padding:"3px 0",fontWeight:600}}>{h}</div>)}</Card></div>);}
-
+ 
 function SubmitPage({onSubmit,toast,t}){const[form,setForm]=useState({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});const handle=()=>{if(!form.headline.trim()){toast("Please enter a headline","error");return;}onSubmit(form);setForm({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});toast("Report submitted · Evidence level: "+form.evidenceLevel,"success");};return(<div className="fade-up" style={{maxWidth:580}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.submit||"Submit Report"}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Include evidence level — helps us weight your report accurately</p></div><Card><div style={{display:"flex",flexDirection:"column",gap:12}}>{[{k:"headline",label:"Headline *",type:"input",ph:"Brief description of the constitutional event"},{k:"body",label:"Details",type:"textarea",ph:"Evidence, source links, location, official notices..."}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{f.label}</label>{f.type==="textarea"?<textarea value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} rows={3} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",resize:"vertical",fontFamily:"var(--font-b)"}}/>:<input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}/>}</div>))}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>{[{k:"evidenceLevel",label:"Evidence Level",opts:Object.entries(EVIDENCE_LEVELS).map(([v,l])=>[v,l.label])},{k:"scope",label:"Scope",opts:[["national","National"],["state","State"],["local","Local"]]},{k:"storyType",label:"Story Type",opts:STORY_TYPES.map(s=>[s,s.charAt(0).toUpperCase()+s.slice(1)])},{k:"state",label:"State",opts:[["","All India"],...Object.keys(STATE_BASELINES).sort().map(s=>[s,s])]},{k:"source",label:"Source",opts:[["citizen_unverified","Citizen"],["single_source","Single"],["corroborated","Confirmed"],["verified","Official"]]},{k:"courtStatus",label:"Court Status",opts:Object.entries(COURT_STATUSES).map(([v,cs])=>[v,cs.label])}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",display:"block",marginBottom:4}}>{f.label}</label><select value={form[f.k]||""} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",fontFamily:"var(--font-b)"}}>{f.opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div><Btn onClick={handle} variant="primary" style={{padding:"10px 22px",fontSize:13,width:"fit-content"}}>{t.submit||"Submit Report"}</Btn></div></Card></div>);}
-
+ 
 function ReviewPage({stories,onReview,t,mode}){const pending=stories.filter(s=>!s.approved&&!s.held);const held=stories.filter(s=>s.held);return(<div className="fade-up"><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.review||"Review Queue"}</h2></div>{pending.length===0&&held.length===0&&<Card style={{textAlign:"center",padding:"40px",color:"var(--t2)"}}>No items pending</Card>}{pending.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:700,color:"var(--amber)",marginBottom:9}}>⏳ Pending ({pending.length})</div>{pending.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}</div>}{held.length>0&&<div><div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:9}}>Held ({held.length})</div>{held.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}</div>}</div>);}
-
+ 
 function MethodPage({t}){return(<div className="fade-up" style={{maxWidth:680}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.method||"Methodology"}</h2></div>{[{icon:"📊",c:"var(--blue)",title:"Advanced Scoring Formula",body:"story_effect = directional_score × evidence_weight × source_credibility × confidence × recency_decay × pillar_weight × pattern_multiplier × impact_radius_factor\n\nEvidence weights: Allegation 0.2× · Single Source 0.4× · Corroborated 0.65× · Official Doc 0.85× · Court Finding 0.92× · Final Adjudication 1.0×"},{icon:"🔍",c:"var(--amber)",title:"Evidence Classification System",body:"Every story is assigned an evidence level that directly controls its score weight. An allegation barely moves the score. A gazette notification or court order has near-full effect. This is the core safeguard that prevents misinformation from distorting scores."},{icon:"🌐",c:"var(--green)",title:"Impact Radius — 3 Scores Simultaneously",body:"National news: 100% national · 40% state · 20% local\nState news: 30% national · 100% state · 50% local\nLocal news: 5% national · 15% state · 100% local\nAll adjusted for evidence quality and confidence level"},{icon:"🏛",c:"var(--purple)",title:"16 Department Scores",body:"PMO · Home · Law · Finance · Education · Health · Women&Child · Minority · Rural · Urban · Environment · Defence · Police · EC · Media · Judiciary — each with base score, evidence-weighted story adjustments, and live violation/support tracking"},{icon:"⚖",c:"var(--cyan)",title:"Constitutional Mapping",body:"Every story maps to specific Indian Constitution Articles. 7 constitutional pillars tracked. Violations (red) and Supports (green) shown per story, per department, per state, per article."},{icon:"🤖",c:"var(--purple)",title:"AI Layer — Groq Llama 3.3 70B",body:"Free API (14,400 req/day). AI classifies evidence level, story type, department, exact constitutional violations with article numbers, government response if in text, citizen explanation in plain language, and poetic mythos."},{icon:"📰",c:"var(--blue)",title:"Data Source — Google News RSS",body:"Real-time RSS from 1000s of Indian newspapers, TV channels, digital media. Filtered by 40+ constitutional relevance keywords. 100% free, no API key required. Updates continuously."}].map((item,i)=>(<Card key={i} style={{marginBottom:8,padding:"14px 17px"}}><div style={{display:"flex",gap:11,alignItems:"flex-start"}}><div style={{width:34,height:34,borderRadius:9,background:item.c+"12",border:"1px solid "+item.c+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{item.icon}</div><div><div style={{fontSize:12.5,fontWeight:700,color:"var(--t1)",marginBottom:4}}>{item.title}</div><div style={{fontSize:10.5,color:"var(--t2)",lineHeight:1.75,whiteSpace:"pre-line"}}>{item.body}</div></div></div></Card>))}</div>);}
-
+ 
 function AboutPage({t}){return(<div className="fade-up" style={{maxWidth:560}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.about||"About"} DTN Mythos</h2></div><Card style={{marginBottom:10}}><div style={{fontFamily:"var(--font-h)",fontSize:14,fontWeight:700,marginBottom:10,background:"var(--grad)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Journalism + Constitutional Analysis + Democracy Score + Multilingual Civic Education</div><p style={{fontSize:12,color:"var(--t2)",lineHeight:1.85,marginBottom:10}}>DTN Mythos is a real-time constitutional intelligence platform. Every news story is scored for democracy impact using a transparent multi-factor formula, mapped to constitutional articles, classified by evidence level and story type, explained in plain language for citizens and technical detail for experts, and displayed in 10 Indian languages.</p><p style={{fontSize:12,color:"var(--t2)",lineHeight:1.85}}>Three layers: Public App (citizens) · Journalist Intelligence Console (editors/reporters) · Constitutional Analysis Engine (scoring, mapping, translation, audit).</p></Card><Card style={{background:"rgba(74,143,255,0.04)",border:"1px solid rgba(74,143,255,0.14)"}}><div style={{fontSize:8.5,color:"var(--blue)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Legal Notice & Safeguards</div><p style={{fontSize:11,color:"var(--t2)",lineHeight:1.75,marginBottom:10}}>Independent civic analytics. Scores are analytical estimates — not legal verdicts or court orders. We always distinguish allegation from established fact. Government response and court status shown when available. Not affiliated with any political party or government body. No advertising. No data sold.</p><div style={{display:"flex",gap:14,flexWrap:"wrap"}}><span style={{fontSize:11,color:"var(--green)",fontFamily:"var(--font-m)",fontWeight:600}}>NALSA: 15100</span><span style={{fontSize:11,color:"var(--green)",fontFamily:"var(--font-m)",fontWeight:600}}>NHRC: 14433</span><span style={{fontSize:11,color:"var(--green)",fontFamily:"var(--font-m)",fontWeight:600}}>Women: 181</span></div></Card></div>);}
-
-
+ 
+ 
 // ── MAIN APP EXPORT ────────────────────────────────────────────
 const MOB_NAV=[
   {id:"dashboard",icon:"◉",tk:"dashboard"},
@@ -940,7 +986,7 @@ const MOB_NAV=[
   {id:"departments",icon:"🏛",tk:"departments"},
   {id:"tracker",icon:"📜",tk:"tracker"},
 ];
-
+ 
 export default function App(){
   const[lang,setLang]=useState(()=>localStorage.getItem("dtn_lang")||"en");
   const t=LANG[lang]||LANG.en;
@@ -960,20 +1006,20 @@ export default function App(){
   const[mode,setMode]=useState("normal");
   const{toasts,add:toast}=useToasts();
   const countRef=useRef(null);
-
+ 
   useEffect(()=>{localStorage.setItem("dtn_lang",lang);},[lang]);
-
+ 
   const natScore=useMemo(()=>calcScope(stories,"national",fState),[stories,fState]);
   const stScore=useMemo(()=>calcScope(stories,"state",fState),[stories,fState]);
   const distScore=useMemo(()=>calcScope(stories,"district",fState),[stories,fState]);
-
+ 
   useEffect(()=>{
     const label=new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
     setNatHistory(p=>{const last=p[p.length-1];if(last&&last.score===natScore)return p;return[...p,{label,score:natScore}].slice(-50);});
   },[natScore]);
-
+ 
   useEffect(()=>{try{localStorage.setItem(SK,JSON.stringify(stories));}catch{}},[stories]);
-
+ 
   const runUpgrades=useCallback(async(list)=>{
     const todo=list.filter(s=>s.approved&&!s.aiDone&&!isRL()&&GROQ);
     for(let i=0;i<todo.length;i++){
@@ -983,7 +1029,7 @@ export default function App(){
       if(i<todo.length-1)await new Promise(r=>setTimeout(r,5000));
     }
   },[]);
-
+ 
   const doFetch=useCallback(async()=>{
     if(fetching)return;
     setFetching(true);
@@ -1016,7 +1062,7 @@ export default function App(){
       setTimeout(()=>runUpgrades(fresh),2500);
     }finally{setFetching(false);}
   },[fetching,fScope,fState,fDist,runUpgrades,toast]);
-
+ 
   useEffect(()=>{
     if(autoOn){
       setCountdown(120);
@@ -1024,10 +1070,10 @@ export default function App(){
       return()=>clearInterval(countRef.current);
     }else{clearInterval(countRef.current);setCountdown(120);}
   },[autoOn,doFetch]);
-
+ 
   // Auto-fetch on sign-in
   useEffect(()=>{if(user)setTimeout(()=>doFetch(),1200);},[user]);
-
+ 
   const handleSignIn=useCallback(u=>{setUser(u);localStorage.setItem("dtn_user",JSON.stringify(u));},[]);
   const handleDisc=useCallback(()=>{setShowDisc(false);localStorage.setItem("dtn_disc","1");},[]);
   const handleReview=useCallback((id,action)=>{
@@ -1048,13 +1094,13 @@ export default function App(){
       approved:false,held:false,aiDone:false,
     },...p]);
   },[]);
-
+ 
   const pending=stories.filter(s=>!s.approved&&!s.held&&!s.rejected).length;
-
+ 
   // ── AUTH FLOW ────────────────────────────────────────────────
   if(!user)return<SignInPage onSignIn={handleSignIn} lang={lang} setLang={setLang} t={t}/>;
   if(showDisc)return<DisclaimerPage onAccept={handleDisc} t={t} userName={user.name}/>;
-
+ 
   // ── MAIN SHELL ───────────────────────────────────────────────
   return(
     <div className="shell">
@@ -1122,7 +1168,7 @@ export default function App(){
           {page==="about"&&<AboutPage t={t}/>}
         </main>
       </div>
-
+ 
       {/* Mobile bottom nav */}
       <nav className="mobile-nav">
         {MOB_NAV.map(item=>(
@@ -1136,7 +1182,7 @@ export default function App(){
           </button>
         ))}
       </nav>
-
+ 
       <Toasts items={toasts}/>
     </div>
   );
