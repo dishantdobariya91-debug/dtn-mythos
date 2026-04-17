@@ -1,456 +1,945 @@
 import{useState,useEffect,useCallback,useRef,useMemo}from"react";
 import{AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,RadarChart,Radar,PolarGrid,PolarAngleAxis,BarChart,Bar,Cell}from"recharts";
-const GROQ_API_KEY=import.meta.env.VITE_GROQ_KEY||"";
+const GROQ=import.meta.env.VITE_GROQ_KEY||"";
 
-// ── LANGUAGES ──────────────────────────────────────────────────
+// ── MULTI-LANGUAGE ────────────────────────────────────────────
 const LANG={
-en:{name:"English",flag:"🇬🇧",appName:"DTN Mythos",appSub:"India Democracy Transparency Network",signIn:"Sign In",signInSub:"Track India's constitutional health in real time",yourName:"Your Name",yourEmail:"Email Address",continueBtn:"Continue to Platform",disclaimerTitle:"Scoring Methodology & Disclaimer",disclaimerAccept:"I Understand — Enter Platform",dashboard:"Dashboard",liveFeed:"Live Feed",myRights:"My Rights",patterns:"Patterns",timeline:"Timeline",constitution:"Constitution",scoreAnalysis:"Score Analysis",anomalies:"Anomalies",states:"State Rankings",departments:"Departments",submit:"Submit Report",review:"Review Queue",methodology:"Methodology",about:"About",fetch:"Fetch",auto:"AUTO",national:"National",state:"State",district:"District",critical:"CRITICAL",positive:"POSITIVE",high:"HIGH",impact:"📊 Impact",facts:"⚖ Facts",mythos:"✦ Mythos",violation:"Violation",support:"Support",functioning:"Functioning Democracy",erosion:"Democratic Erosion",backsliding:"Democratic Backsliding",authoritarian:"Authoritarian Risk",noStories:"No live stories yet",tapFetch:"Tap Fetch to load real-time India news",fetchLive:"⚡ Fetch Live News",impactRadius:"Democracy Impact Radius",constitutionViolations:"Constitutional Violations",constitutionSupports:"Constitutional Supports",deptScore:"Department Democracy Score",allDepts:"All Departments",liveScore:"Live Score",storiesTracked:"Stories Tracked"},
-hi:{name:"हिंदी",flag:"🇮🇳",appName:"डीटीएन मिथोस",appSub:"भारत लोकतंत्र पारदर्शिता नेटवर्क",signIn:"साइन इन करें",signInSub:"भारत के संवैधानिक स्वास्थ्य को रीयल टाइम में ट्रैक करें",yourName:"आपका नाम",yourEmail:"ईमेल पता",continueBtn:"प्लेटफॉर्म पर जाएं",disclaimerTitle:"स्कोरिंग पद्धति और अस्वीकरण",disclaimerAccept:"मैं समझता हूं — प्लेटफॉर्म में प्रवेश करें",dashboard:"डैशबोर्ड",liveFeed:"लाइव फ़ीड",myRights:"मेरे अधिकार",patterns:"पैटर्न",timeline:"टाइमलाइन",constitution:"संविधान",scoreAnalysis:"स्कोर विश्लेषण",anomalies:"विसंगतियां",states:"राज्य रैंकिंग",departments:"विभाग",submit:"रिपोर्ट जमा करें",review:"समीक्षा कतार",methodology:"पद्धति",about:"के बारे में",fetch:"फ़ेच",auto:"ऑटो",national:"राष्ट्रीय",state:"राज्य",district:"जिला",critical:"गंभीर",positive:"सकारात्मक",high:"उच्च",impact:"📊 प्रभाव",facts:"⚖ तथ्य",mythos:"✦ मिथोस",violation:"उल्लंघन",support:"समर्थन",functioning:"कार्यशील लोकतंत्र",erosion:"लोकतांत्रिक क्षरण",backsliding:"लोकतांत्रिक पतन",authoritarian:"सत्तावादी जोखिम",noStories:"अभी कोई लाइव स्टोरी नहीं",tapFetch:"लाइव समाचार के लिए फ़ेच टैप करें",fetchLive:"⚡ लाइव समाचार लाएं",impactRadius:"लोकतंत्र प्रभाव त्रिज्या",constitutionViolations:"संवैधानिक उल्लंघन",constitutionSupports:"संवैधानिक समर्थन",deptScore:"विभाग लोकतंत्र स्कोर",allDepts:"सभी विभाग",liveScore:"लाइव स्कोर",storiesTracked:"ट्रैक की गई कहानियां"},
-gu:{name:"ગુજરાતી",flag:"🇮🇳",appName:"ડીટીએન મિથોસ",appSub:"ભારત લોકશાહી પારદર્શિતા નેટવર્ક",signIn:"સાઇન ઇન કરો",signInSub:"ભારતના બંધારણીય સ્વાસ્થ્યને રીઅલ ટાઇમમાં ટ્રૅક કરો",yourName:"તમારું નામ",yourEmail:"ઇમેઇલ સરનામું",continueBtn:"પ્લેટફોર્મ પર આગળ વધો",disclaimerTitle:"સ્કોરિંગ પદ્ધતિ અને અસ્વીકરણ",disclaimerAccept:"હું સમજું છું — પ્લેટફોર્મ દાખલ કરો",dashboard:"ડૅશબોર્ડ",liveFeed:"લાઇવ ફીડ",myRights:"મારા અધિકારો",patterns:"પેટર્ન",timeline:"સમયરેખા",constitution:"બંધારણ",scoreAnalysis:"સ્કોર વિશ્લેષણ",anomalies:"વિસંગતતાઓ",states:"રાજ્ય ક્રમાંકન",departments:"વિભાગો",submit:"અહેવાલ સબમિટ કરો",review:"સમીક્ષા કતાર",methodology:"પદ્ધતિ",about:"વિશે",fetch:"ફેચ",auto:"ઓટો",national:"રાષ્ટ્રીય",state:"રાજ્ય",district:"જિલ્લો",critical:"ગંભીર",positive:"સકારાત્મક",high:"ઉચ્ચ",impact:"📊 અસર",facts:"⚖ તથ્યો",mythos:"✦ મિથોસ",violation:"ઉલ્લંઘન",support:"સમર્થન",functioning:"કાર્યરત લોકશાહી",erosion:"લોકશાહી ધોવાણ",backsliding:"લોકશાહી પ્રત્યાઘાત",authoritarian:"સર્વાધિકારી જોખમ",noStories:"હજી કોઈ લાઇવ સ્ટોરી નથી",tapFetch:"લાઇવ સમાચાર માટે ફેચ ટૅપ કરો",fetchLive:"⚡ લાઇવ સમાચાર લાવો",impactRadius:"લોકશાહી અસર ત્રિજ્યા",constitutionViolations:"બંધારણીય ઉલ્લંઘન",constitutionSupports:"બંધારણીય સમર્થન",deptScore:"વિભાગ લોકશાહી સ્કોર",allDepts:"બધા વિભાગો",liveScore:"લાઇવ સ્કોર",storiesTracked:"ટ્રૅક કરેલ સ્ટોરીઝ"},
-ta:{name:"தமிழ்",flag:"🇮🇳",appName:"DTN மித்தோஸ்",appSub:"இந்திய ஜனநாயக வெளிப்படைத்தன்மை நெட்வொர்க்",signIn:"உள்நுழைக",signInSub:"இந்தியாவின் அரசியலமைப்பு ஆரோக்கியத்தை நேரடியாக கண்காணிக்கவும்",yourName:"உங்கள் பெயர்",yourEmail:"மின்னஞ்சல் முகவரி",continueBtn:"தளத்தை தொடரவும்",disclaimerTitle:"மதிப்பெண் முறை மற்றும் மறுப்பு",disclaimerAccept:"நான் புரிந்துகொள்கிறேன் — தளத்தில் நுழைக",dashboard:"டாஷ்போர்டு",liveFeed:"நேரடி ஊட்டம்",myRights:"என் உரிமைகள்",patterns:"வடிவங்கள்",timeline:"காலவரிசை",constitution:"அரசியலமைப்பு",scoreAnalysis:"மதிப்பெண் பகுப்பாய்வு",anomalies:"முரண்பாடுகள்",states:"மாநில தரவரிசை",departments:"துறைகள்",submit:"அறிக்கை சமர்ப்பி",review:"மதிப்பாய்வு வரிசை",methodology:"முறைவியல்",about:"பற்றி",fetch:"பெறு",auto:"தானியங்கி",national:"தேசிய",state:"மாநில",district:"மாவட்டம்",critical:"முக்கியமான",positive:"நேர்மறை",high:"உயர்",impact:"📊 தாக்கம்",facts:"⚖ உண்மைகள்",mythos:"✦ மித்தோஸ்",violation:"மீறல்",support:"ஆதரவு",functioning:"செயல்படும் ஜனநாயகம்",erosion:"ஜனநாயக அரிப்பு",backsliding:"ஜனநாயக பின்னடைவு",authoritarian:"சர்வாதிகார ஆபத்து",noStories:"இன்னும் நேரடி கதைகள் இல்லை",tapFetch:"நேரடி செய்திகளை பெறு என்பதை தட்டவும்",fetchLive:"⚡ நேரடி செய்திகளை பெறுக",impactRadius:"ஜனநாயக தாக்க ஆரம்",constitutionViolations:"அரசியலமைப்பு மீறல்கள்",constitutionSupports:"அரசியலமைப்பு ஆதரவுகள்",deptScore:"துறை ஜனநாயக மதிப்பெண்",allDepts:"அனைத்து துறைகளும்",liveScore:"நேரடி மதிப்பெண்",storiesTracked:"கண்காணிக்கப்பட்ட கதைகள்"},
-te:{name:"తెలుగు",flag:"🇮🇳",appName:"DTN మిథోస్",appSub:"భారత ప్రజాస్వామ్య పారదర్శకత నెట్వర్క్",signIn:"సైన్ ఇన్",signInSub:"భారతదేశ రాజ్యాంగ ఆరోగ్యాన్ని నిజ సమయంలో ట్రాక్ చేయండి",yourName:"మీ పేరు",yourEmail:"ఇమెయిల్",continueBtn:"ప్లాట్ఫారమ్కు వెళ్ళండి",disclaimerTitle:"స్కోరింగ్ పద్ధతి మరియు నిరాకరణ",disclaimerAccept:"నాకు అర్థమైంది — ప్రవేశించండి",dashboard:"డ్యాష్బోర్డ్",liveFeed:"లైవ్ ఫీడ్",myRights:"నా హక్కులు",patterns:"నమూనాలు",timeline:"కాలక్రమం",constitution:"రాజ్యాంగం",scoreAnalysis:"స్కోర్ విశ్లేషణ",anomalies:"అసాధారణతలు",states:"రాష్ట్ర ర్యాంకింగ్",departments:"విభాగాలు",submit:"నివేదిక సమర్పించు",review:"సమీక్ష క్యూ",methodology:"పద్దతి",about:"గురించి",fetch:"తీసుకు",auto:"ఆటో",national:"జాతీయ",state:"రాష్ట్రం",district:"జిల్లా",critical:"విమర్శనాత్మక",positive:"సానుకూల",high:"అధిక",impact:"📊 ప్రభావం",facts:"⚖ వాస్తవాలు",mythos:"✦ మిథోస్",violation:"ఉల్లంఘన",support:"మద్దతు",functioning:"పని చేసే ప్రజాస్వామ్యం",erosion:"ప్రజాస్వామ్య కోత",backsliding:"ప్రజాస్వామ్య వెనకడుగు",authoritarian:"నిరంకుశ ప్రమాదం",noStories:"ఇంకా లైవ్ కథలు లేవు",tapFetch:"లైవ్ వార్తలు లోడ్ చేయడానికి తీసుకు నొక్కండి",fetchLive:"⚡ లైవ్ వార్తలు తీసుకు",impactRadius:"ప్రజాస్వామ్య ప్రభావ వ్యాసార్థం",constitutionViolations:"రాజ్యాంగ ఉల్లంఘనలు",constitutionSupports:"రాజ్యాంగ మద్దతులు",deptScore:"విభాగ ప్రజాస్వామ్య స్కోర్",allDepts:"అన్ని విభాగాలు",liveScore:"లైవ్ స్కోర్",storiesTracked:"ట్రాక్ చేయబడిన కథలు"},
-bn:{name:"বাংলা",flag:"🇮🇳",appName:"DTN মিথোস",appSub:"ভারত গণতন্ত্র স্বচ্ছতা নেটওয়ার্ক",signIn:"সাইন ইন করুন",signInSub:"ভারতের সাংবিধানিক স্বাস্থ্য রিয়েল টাইমে ট্র্যাক করুন",yourName:"আপনার নাম",yourEmail:"ইমেল ঠিকানা",continueBtn:"প্ল্যাটফর্মে যান",disclaimerTitle:"স্কোরিং পদ্ধতি এবং দাবিত্যাগ",disclaimerAccept:"আমি বুঝি — প্ল্যাটফর্মে প্রবেশ করুন",dashboard:"ড্যাশবোর্ড",liveFeed:"লাইভ ফিড",myRights:"আমার অধিকার",patterns:"প্যাটার্ন",timeline:"টাইমলাইন",constitution:"সংবিধান",scoreAnalysis:"স্কোর বিশ্লেষণ",anomalies:"অসঙ্গতি",states:"রাজ্য র‍্যাংকিং",departments:"বিভাগ",submit:"রিপোর্ট জমা দিন",review:"পর্যালোচনা সারি",methodology:"পদ্ধতি",about:"সম্পর্কে",fetch:"আনুন",auto:"অটো",national:"জাতীয়",state:"রাজ্য",district:"জেলা",critical:"সমালোচনামূলক",positive:"ইতিবাচক",high:"উচ্চ",impact:"📊 প্রভাব",facts:"⚖ তথ্য",mythos:"✦ মিথোস",violation:"লঙ্ঘন",support:"সমর্থন",functioning:"কার্যকরী গণতন্ত্র",erosion:"গণতান্ত্রিক ক্ষয়",backsliding:"গণতান্ত্রিক পশ্চাদপসরণ",authoritarian:"কর্তৃত্ববাদী ঝুঁকি",noStories:"এখনো কোনো লাইভ স্টোরি নেই",tapFetch:"লাইভ সংবাদ লোড করতে আনুন ট্যাপ করুন",fetchLive:"⚡ লাইভ সংবাদ আনুন",impactRadius:"গণতান্ত্রিক প্রভাব ব্যাসার্ধ",constitutionViolations:"সাংবিধানিক লঙ্ঘন",constitutionSupports:"সাংবিধানিক সমর্থন",deptScore:"বিভাগ গণতন্ত্র স্কোর",allDepts:"সব বিভাগ",liveScore:"লাইভ স্কোর",storiesTracked:"ট্র্যাক করা গল্প"},
-mr:{name:"मराठी",flag:"🇮🇳",appName:"DTN मिथोस",appSub:"भारत लोकशाही पारदर्शकता नेटवर्क",signIn:"साइन इन करा",signInSub:"भारताच्या घटनात्मक आरोग्याचा रीअल टाइममध्ये मागोवा घ्या",yourName:"तुमचे नाव",yourEmail:"ईमेल पत्ता",continueBtn:"व्यासपीठावर जा",disclaimerTitle:"स्कोरिंग पद्धत आणि अस्वीकरण",disclaimerAccept:"मला समजले — व्यासपीठात प्रवेश करा",dashboard:"डॅशबोर्ड",liveFeed:"थेट फीड",myRights:"माझे अधिकार",patterns:"नमुने",timeline:"टाइमलाइन",constitution:"संविधान",scoreAnalysis:"गुण विश्लेषण",anomalies:"विसंगती",states:"राज्य क्रमवारी",departments:"विभाग",submit:"अहवाल सादर करा",review:"पुनरावलोकन रांग",methodology:"पद्धत",about:"बद्दल",fetch:"आण",auto:"ऑटो",national:"राष्ट्रीय",state:"राज्य",district:"जिल्हा",critical:"गंभीर",positive:"सकारात्मक",high:"उच्च",impact:"📊 परिणाम",facts:"⚖ तथ्ये",mythos:"✦ मिथोस",violation:"उल्लंघन",support:"समर्थन",functioning:"कार्यशील लोकशाही",erosion:"लोकशाही क्षरण",backsliding:"लोकशाही माघार",authoritarian:"हुकूमशाही धोका",noStories:"अद्याप कोणत्याही थेट कथा नाहीत",tapFetch:"थेट बातम्यांसाठी आण टॅप करा",fetchLive:"⚡ थेट बातम्या आणा",impactRadius:"लोकशाही प्रभाव त्रिज्या",constitutionViolations:"घटनात्मक उल्लंघने",constitutionSupports:"घटनात्मक समर्थन",deptScore:"विभाग लोकशाही गुण",allDepts:"सर्व विभाग",liveScore:"थेट गुण",storiesTracked:"मागोवा घेतलेल्या कथा"},
-kn:{name:"ಕನ್ನಡ",flag:"🇮🇳",appName:"DTN ಮಿಥೋಸ್",appSub:"ಭಾರತ ಪ್ರಜಾಪ್ರಭುತ್ವ ಪಾರದರ್ಶಕತೆ ನೆಟ್ವರ್ಕ್",signIn:"ಸೈನ್ ಇನ್",signInSub:"ಭಾರತದ ಸಾಂವಿಧಾನಿಕ ಆರೋಗ್ಯ ಟ್ರ್ಯಾಕ್ ಮಾಡಿ",yourName:"ನಿಮ್ಮ ಹೆಸರು",yourEmail:"ಇಮೇಲ್ ವಿಳಾಸ",continueBtn:"ಪ್ಲಾಟ್ಫಾರ್ಮ್ಗೆ ಮುಂದುವರಿಯಿರಿ",disclaimerTitle:"ಸ್ಕೋರಿಂಗ್ ವಿಧಾನ ಮತ್ತು ಹಕ್ಕುತ್ಯಾಗ",disclaimerAccept:"ನನಗೆ ಅರ್ಥವಾಗಿದೆ — ಪ್ರವೇಶಿಸಿ",dashboard:"ಡ್ಯಾಶ್ಬೋರ್ಡ್",liveFeed:"ಲೈವ್ ಫೀಡ್",myRights:"ನನ್ನ ಹಕ್ಕುಗಳು",patterns:"ಮಾದರಿಗಳು",timeline:"ಕಾಲಮಾಲೆ",constitution:"ಸಂವಿಧಾನ",scoreAnalysis:"ಸ್ಕೋರ್ ವಿಶ್ಲೇಷಣೆ",anomalies:"ವೈಪರೀತ್ಯಗಳು",states:"ರಾಜ್ಯ ಶ್ರೇಯಾಂಕಗಳು",departments:"ಇಲಾಖೆಗಳು",submit:"ವರದಿ ಸಲ್ಲಿಸಿ",review:"ಪರಿಶೀಲನಾ ಸರತಿ",methodology:"ವಿಧಾನ",about:"ಬಗ್ಗೆ",fetch:"ತರಿ",auto:"ಸ್ವಯಂ",national:"ರಾಷ್ಟ್ರೀಯ",state:"ರಾಜ್ಯ",district:"ಜಿಲ್ಲೆ",critical:"ನಿರ್ಣಾಯಕ",positive:"ಸಕಾರಾತ್ಮಕ",high:"ಉನ್ನತ",impact:"📊 ಪ್ರಭಾವ",facts:"⚖ ಸತ್ಯಗಳು",mythos:"✦ ಮಿಥೋಸ್",violation:"ಉಲ್ಲಂಘನೆ",support:"ಬೆಂಬಲ",functioning:"ಕಾರ್ಯನಿರ್ವಹಿಸುವ ಪ್ರಜಾಪ್ರಭುತ್ವ",erosion:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಸವೆತ",backsliding:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಹಿನ್ನಡೆ",authoritarian:"ನಿರಂಕುಶ ಅಪಾಯ",noStories:"ಇನ್ನು ಲೈವ್ ಕಥೆಗಳಿಲ್ಲ",tapFetch:"ಲೈವ್ ಸುದ್ದಿ ಲೋಡ್ ಮಾಡಲು ತರಿ ಟ್ಯಾಪ್ ಮಾಡಿ",fetchLive:"⚡ ಲೈವ್ ಸುದ್ದಿ ತರಿ",impactRadius:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಪ್ರಭಾವ ತ್ರಿಜ್ಯ",constitutionViolations:"ಸಾಂವಿಧಾನಿಕ ಉಲ್ಲಂಘನೆಗಳು",constitutionSupports:"ಸಾಂವಿಧಾನಿಕ ಬೆಂಬಲಗಳು",deptScore:"ಇಲಾಖೆ ಪ್ರಜಾಪ್ರಭುತ್ವ ಸ್ಕೋರ್",allDepts:"ಎಲ್ಲಾ ಇಲಾಖೆಗಳು",liveScore:"ಲೈವ್ ಸ್ಕೋರ್",storiesTracked:"ಟ್ರ್ಯಾಕ್ ಮಾಡಲಾದ ಕಥೆಗಳು"},
-ml:{name:"മലയാളം",flag:"🇮🇳",appName:"DTN മിത്തോസ്",appSub:"ഇന്ത്യ ജനാധിപത്യ സുതാര്യത നെറ്റ്വര്ക്ക്",signIn:"സൈന്‍ ഇന്‍",signInSub:"ഇന്ത്യയുടെ ഭരണഘടനാ ആരോഗ്യം തത്സമയം ട്രാക്ക് ചെയ്യുക",yourName:"നിങ്ങളുടെ പേര്",yourEmail:"ഇമെയില്‍ വിലാസം",continueBtn:"പ്ലാറ്റ്ഫോമിലേക്ക് തുടരുക",disclaimerTitle:"സ്കോറിംഗ് രീതിശാസ്ത്രവും നിരാകരണവും",disclaimerAccept:"എനിക്ക് മനസ്സിലായി — പ്ലാറ്റ്ഫോം നല്‍കുക",dashboard:"ഡാഷ്ബോര്‍ഡ്",liveFeed:"തത്സമയ ഫീഡ്",myRights:"എന്‍റെ അവകാശങ്ങള്‍",patterns:"പാറ്റേണുകള്‍",timeline:"ടൈംലൈന്‍",constitution:"ഭരണഘടന",scoreAnalysis:"സ്കോര്‍ വിശകലനം",anomalies:"അപാകതകള്‍",states:"സംസ്ഥാന റാങ്കിംഗ്",departments:"വകുപ്പുകള്‍",submit:"റിപ്പോര്‍ട്ട് സമര്‍പ്പിക്കുക",review:"അവലോകന ക്യൂ",methodology:"രീതിശാസ്ത്രം",about:"കുറിച്ച്",fetch:"ഫെച്ച്",auto:"ഓട്ടോ",national:"ദേശീയ",state:"സംസ്ഥാനം",district:"ജില്ല",critical:"നിര്‍ണ്ണായക",positive:"ഗുണാത്മക",high:"ഉയര്‍ന്ന",impact:"📊 ആഘാതം",facts:"⚖ വസ്തുതകള്‍",mythos:"✦ മിത്തോസ്",violation:"ലംഘനം",support:"പിന്തുണ",functioning:"പ്രവര്‍ത്തിക്കുന്ന ജനാധിപത്യം",erosion:"ജനാധിപത്യ ശോഷണം",backsliding:"ജനാധിപത്യ പിന്നോക്കം",authoritarian:"സ്വേച്ഛാധിപത്യ അപകടം",noStories:"ഇതുവരെ തത്സമയ കഥകള്‍ ഇല്ല",tapFetch:"തത്സമയ വാര്‍ത്ത ലോഡ് ചെയ്യാന്‍ ഫെച്ച് ടാപ്പ് ചെയ്യുക",fetchLive:"⚡ തത്സമയ വാര്‍ത്ത ഫെച്ച് ചെയ്യുക",impactRadius:"ജനാധിപത്യ ആഘാത ആരം",constitutionViolations:"ഭരണഘടനാ ലംഘനങ്ങള്‍",constitutionSupports:"ഭരണഘടനാ പിന്തുണകള്‍",deptScore:"വകുപ്പ് ജനാധിപത്യ സ്കോര്‍",allDepts:"എല്ലാ വകുപ്പുകളും",liveScore:"തത്സമയ സ്കോര്‍",storiesTracked:"ട്രാക്ക് ചെയ്ത കഥകള്‍"},
+en:{name:"English",flag:"🇬🇧",appName:"DTN Mythos",appSub:"Constitutional Intelligence Platform for India",tagline:"Real-time constitutional journalism · Scores · Departments · 10 Languages",signIn:"Sign In",signInSub:"Understand what the news means for India's constitutional rights — in real time",yourName:"Your Name",yourEmail:"Email (optional)",continueBtn:"Enter Platform →",guestMode:"Continue as Guest",disclaimerTitle:"How We Score Constitutional Health",disclaimerSub:"Carefully read before entering — this is what you are tracking",disclaimerAccept:"I understand — Enter Platform",dashboard:"Dashboard",newsroom:"Live Newsroom",tracker:"Constitution Tracker",demoScore:"Democracy Score",departments:"Departments",states:"States",rights:"My Rights",journalist:"Journalist Console",citizenMode:"Citizen Mode",expertMode:"Expert Mode",submit:"Submit Report",review:"Review Queue",method:"Methodology",about:"About",fetch:"Fetch",auto:"AUTO",national:"National",state:"State",district:"District",critical:"CRITICAL",positive:"SUPPORT",high:"CONCERN",impact:"📊 Impact",facts:"⚖ Constitutional",mythos:"✦ Insight",evidence:"Evidence",govResponse:"Govt Response",courtStatus:"Court Status",violation:"Violation",support:"Support",functioning:"Functioning Democracy",erosion:"Democratic Erosion",backsliding:"Democratic Backsliding",authoritarian:"Authoritarian Risk",noStories:"No live stories yet",tapFetch:"Tap Fetch to load real-time news",fetchLive:"⚡ Fetch Live News",impactRadius:"Democracy Impact Radius",constitutionViolations:"Constitutional Violations",constitutionSupports:"Constitutional Supports",deptScore:"Department Score",liveScore:"Live Score",storiesTracked:"Stories Tracked",evidenceLevels:{allegation:"Allegation",single_source:"Single Source",corroborated:"Corroborated",official_doc:"Official Document",court_finding:"Court Finding",final_adjudication:"Final Adjudication"},confidence:{high:"High Confidence",moderate:"Moderate Confidence",low:"Low Confidence",developing:"Developing Story"},storyTypes:{policy:"Policy",law:"Law",court:"Court",policing:"Policing",election:"Election",rights:"Rights",corruption:"Corruption",welfare:"Welfare",speech:"Speech",media:"Media",federalism:"Federalism",minority:"Minority Rights"},citizenWhat:"What happened",citizenWhy:"Why it matters",citizenScore:"Constitutional impact",citizenStatus:"Current status",citizenNext:"What to watch"},
+hi:{name:"हिंदी",flag:"🇮🇳",appName:"डीटीएन मिथोस",appSub:"भारत के लिए संवैधानिक खुफिया मंच",tagline:"रीयल-टाइम संवैधानिक पत्रकारिता · स्कोर · विभाग · 10 भाषाएं",signIn:"साइन इन",signInSub:"समझें कि समाचार का भारत के संवैधानिक अधिकारों के लिए क्या मतलब है",yourName:"आपका नाम",yourEmail:"ईमेल (वैकल्पिक)",continueBtn:"प्लेटफ़ॉर्म में प्रवेश करें →",guestMode:"अतिथि के रूप में जारी रखें",disclaimerTitle:"हम संवैधानिक स्वास्थ्य को कैसे स्कोर करते हैं",disclaimerSub:"प्रवेश करने से पहले ध्यान से पढ़ें",disclaimerAccept:"मैं समझता हूं — प्लेटफ़ॉर्म में प्रवेश करें",dashboard:"डैशबोर्ड",newsroom:"लाइव न्यूज़रूम",tracker:"संविधान ट्रैकर",demoScore:"लोकतंत्र स्कोर",departments:"विभाग",states:"राज्य",rights:"मेरे अधिकार",journalist:"पत्रकार कंसोल",citizenMode:"नागरिक मोड",expertMode:"विशेषज्ञ मोड",submit:"रिपोर्ट जमा करें",review:"समीक्षा",method:"पद्धति",about:"के बारे में",fetch:"फ़ेच",auto:"ऑटो",national:"राष्ट्रीय",state:"राज्य",district:"जिला",critical:"गंभीर",positive:"समर्थन",high:"चिंता",impact:"📊 प्रभाव",facts:"⚖ संवैधानिक",mythos:"✦ अंतर्दृष्टि",evidence:"साक्ष्य",govResponse:"सरकारी प्रतिक्रिया",courtStatus:"न्यायालय स्थिति",violation:"उल्लंघन",support:"समर्थन",functioning:"कार्यशील लोकतंत्र",erosion:"लोकतांत्रिक क्षरण",backsliding:"लोकतांत्रिक पतन",authoritarian:"सत्तावादी जोखिम",noStories:"अभी कोई स्टोरी नहीं",tapFetch:"लाइव समाचार लोड करने के लिए फ़ेच करें",fetchLive:"⚡ लाइव समाचार लाएं",impactRadius:"लोकतंत्र प्रभाव",constitutionViolations:"संवैधानिक उल्लंघन",constitutionSupports:"संवैधानिक समर्थन",deptScore:"विभाग स्कोर",liveScore:"लाइव स्कोर",storiesTracked:"ट्रैक की गई कहानियां",evidenceLevels:{allegation:"आरोप",single_source:"एकल स्रोत",corroborated:"पुष्टि",official_doc:"आधिकारिक दस्तावेज़",court_finding:"न्यायालय निर्णय",final_adjudication:"अंतिम निर्णय"},confidence:{high:"उच्च विश्वास",moderate:"मध्यम विश्वास",low:"कम विश्वास",developing:"विकासशील कहानी"},storyTypes:{policy:"नीति",law:"कानून",court:"न्यायालय",policing:"पुलिसिंग",election:"चुनाव",rights:"अधिकार",corruption:"भ्रष्टाचार",welfare:"कल्याण",speech:"वाणी",media:"मीडिया",federalism:"संघवाद",minority:"अल्पसंख्यक अधिकार"},citizenWhat:"क्या हुआ",citizenWhy:"यह क्यों मायने रखता है",citizenScore:"संवैधानिक प्रभाव",citizenStatus:"वर्तमान स्थिति",citizenNext:"आगे क्या देखें"},
+gu:{name:"ગુજરાતી",flag:"🇮🇳",appName:"ડીટીએન મિથોસ",appSub:"ભારત માટે બંધારણીય ઇન્ટેલિજન્સ પ્લેટફોર્મ",tagline:"રીઅલ-ટાઇમ બંધારણીય પત્રકારત્વ · સ્કોર · વિભાગો · 10 ભાષાઓ",signIn:"સાઇન ઇન",signInSub:"સમાચારનો ભારતના બંધારણીય અધિકારો માટે શો અર્થ છે તે સમજો",yourName:"તમારું નામ",yourEmail:"ઇમેઇલ (વૈકલ્પિક)",continueBtn:"પ્લેટફોર્મ દાખલ કરો →",guestMode:"અતિથિ તરીકે ચાલુ રાખો",disclaimerTitle:"અમે બંધારણીય સ્વાસ્થ્ય કેવી રીતે સ્કોર કરીએ છીએ",disclaimerSub:"પ્રવેશ પહેલાં કાળજીપૂર્વક વાંચો",disclaimerAccept:"હું સમજું છું — પ્લેટફોર્મ દાખલ કરો",dashboard:"ડૅશબોર્ડ",newsroom:"લાઇવ ન્યૂઝરૂમ",tracker:"બંધારણ ટ્રૅકર",demoScore:"લોકશાહી સ્કોર",departments:"વિભાગો",states:"રાજ્યો",rights:"મારા અધિકારો",journalist:"પત્રકાર કન્સોલ",citizenMode:"નાગરિક મોડ",expertMode:"નિષ્ણાત મોડ",submit:"અહેવાલ સબમિટ",review:"સમીક્ષા",method:"પદ્ધતિ",about:"વિશે",fetch:"ફેચ",auto:"ઓટો",national:"રાષ્ટ્રીય",state:"રાજ્ય",district:"જિલ્લો",critical:"ગંભીર",positive:"સમર્થન",high:"ચિંતા",impact:"📊 અસર",facts:"⚖ બંધારણીય",mythos:"✦ આંતરદૃષ્ટિ",evidence:"પુરાવા",govResponse:"સરકારી પ્રતિભાવ",courtStatus:"કોર્ટ સ્થિતિ",violation:"ઉલ્લંઘન",support:"સમર્થન",functioning:"કાર્યરત લોકશાહી",erosion:"લોકશાહી ધોવાણ",backsliding:"લોકશાહી પ્રત્યાઘાત",authoritarian:"સર્વાધિકારી જોખમ",noStories:"હજી કોઈ સ્ટોરી નથી",tapFetch:"લાઇવ સમાચાર ફેચ કરો",fetchLive:"⚡ લાઇવ સમાચાર લાવો",impactRadius:"લોકશાહી અસર",constitutionViolations:"બંધારણીય ઉલ્લંઘન",constitutionSupports:"બંધારણીય સમર્થન",deptScore:"વિભાગ સ્કોર",liveScore:"લાઇવ સ્કોર",storiesTracked:"ટ્રૅક કરેલ સ્ટોરીઝ",evidenceLevels:{allegation:"આરોપ",single_source:"એકલ સ્રોત",corroborated:"પુષ્ટિ",official_doc:"સત્તાવાર દસ્તાવેજ",court_finding:"ન્યાયાલય નિર્ણય",final_adjudication:"અંતિમ ચુકાદો"},confidence:{high:"ઉચ્ચ વિશ્વાસ",moderate:"મધ્યમ વિશ્વાસ",low:"ઓછો વિશ્વાસ",developing:"વિકાસશીલ વાર્તા"},storyTypes:{policy:"નીતિ",law:"કાયદો",court:"ન્યાયાલય",policing:"પોલીસ",election:"ચૂંટણી",rights:"અધિકાર",corruption:"ભ્રષ્ટાચાર",welfare:"કલ્યાણ",speech:"વાણી",media:"મીડિયા",federalism:"સંઘવાદ",minority:"લઘુમતી અધિકાર"},citizenWhat:"શું થયું",citizenWhy:"આ શા માટે મહત્વનું છે",citizenScore:"બંધારણીય અસર",citizenStatus:"વર્તમાન સ્થિતિ",citizenNext:"આગળ શું જોવું"},
+ta:{name:"தமிழ்",flag:"🇮🇳",appName:"DTN மித்தோஸ்",appSub:"இந்தியாவுக்கான அரசியலமைப்பு நுண்ணறிவு தளம்",tagline:"நேரடி அரசியலமைப்பு பத்திரிகையியல் · மதிப்பெண்கள் · துறைகள் · 10 மொழிகள்",signIn:"உள்நுழைக",signInSub:"செய்திகள் இந்தியாவின் அரசியலமைப்பு உரிமைகளுக்கு என்னவென்பதை புரிந்துகொள்ளுங்கள்",yourName:"உங்கள் பெயர்",yourEmail:"மின்னஞ்சல் (விருப்பத்தேர்வு)",continueBtn:"தளத்தில் நுழைக →",guestMode:"விருந்தினராக தொடரவும்",disclaimerTitle:"நாங்கள் அரசியலமைப்பு ஆரோக்கியத்தை எவ்வாறு மதிப்பிடுகிறோம்",disclaimerSub:"நுழைவதற்கு முன் கவனமாக படிக்கவும்",disclaimerAccept:"நான் புரிந்துகொள்கிறேன் — தளத்தில் நுழைக",dashboard:"டாஷ்போர்டு",newsroom:"நேரடி நியூஸ்ரூம்",tracker:"அரசியலமைப்பு கண்காணிப்பு",demoScore:"ஜனநாயக மதிப்பெண்",departments:"துறைகள்",states:"மாநிலங்கள்",rights:"என் உரிமைகள்",journalist:"பத்திரிகையாளர் கன்சோல்",citizenMode:"குடிமக்கள் பயன்முறை",expertMode:"நிபுணர் பயன்முறை",submit:"அறிக்கை சமர்ப்பி",review:"மதிப்பாய்வு",method:"முறைவியல்",about:"பற்றி",fetch:"பெறு",auto:"தானியங்கி",national:"தேசிய",state:"மாநில",district:"மாவட்டம்",critical:"முக்கியமான",positive:"ஆதரவு",high:"கவலை",impact:"📊 தாக்கம்",facts:"⚖ அரசியலமைப்பு",mythos:"✦ நுண்ணறிவு",evidence:"சான்று",govResponse:"அரசு பதில்",courtStatus:"நீதிமன்ற நிலை",violation:"மீறல்",support:"ஆதரவு",functioning:"செயல்படும் ஜனநாயகம்",erosion:"ஜனநாயக அரிப்பு",backsliding:"ஜனநாயக பின்னடைவு",authoritarian:"சர்வாதிகார ஆபத்து",noStories:"இன்னும் கதைகள் இல்லை",tapFetch:"நேரடி செய்திகளை பெறு",fetchLive:"⚡ நேரடி செய்திகளை பெறுக",impactRadius:"ஜனநாயக தாக்கம்",constitutionViolations:"அரசியலமைப்பு மீறல்கள்",constitutionSupports:"அரசியலமைப்பு ஆதரவுகள்",deptScore:"துறை மதிப்பெண்",liveScore:"நேரடி மதிப்பெண்",storiesTracked:"கண்காணிக்கப்பட்ட கதைகள்",evidenceLevels:{allegation:"குற்றச்சாட்டு",single_source:"ஒற்றை மூலம்",corroborated:"உறுதிப்படுத்தல்",official_doc:"அதிகாரப்பூர்வ ஆவணம்",court_finding:"நீதிமன்ற கண்டுபிடிப்பு",final_adjudication:"இறுதி தீர்ப்பு"},confidence:{high:"உயர் நம்பகத்தன்மை",moderate:"மிதமான நம்பகத்தன்மை",low:"குறைந்த நம்பகத்தன்மை",developing:"வளரும் கதை"},storyTypes:{policy:"கொள்கை",law:"சட்டம்",court:"நீதிமன்றம்",policing:"காவல்",election:"தேர்தல்",rights:"உரிமைகள்",corruption:"ஊழல்",welfare:"நலன்",speech:"பேச்சு",media:"ஊடகம்",federalism:"கூட்டாட்சி",minority:"சிறுபான்மை உரிமைகள்"},citizenWhat:"என்ன நடந்தது",citizenWhy:"ஏன் முக்கியம்",citizenScore:"அரசியலமைப்பு தாக்கம்",citizenStatus:"தற்போதைய நிலை",citizenNext:"அடுத்து என்ன பார்க்க வேண்டும்"},
+te:{name:"తెలుగు",flag:"🇮🇳",appName:"DTN మిథోస్",appSub:"భారతదేశానికి రాజ్యాంగ నుండి వేగులవారి నిఘా వేదిక",tagline:"నిజ-సమయ రాజ్యాంగ పాత్రికేయత · స్కోర్లు · విభాగాలు · 10 భాషలు",signIn:"సైన్ ఇన్",signInSub:"వార్తలు భారత రాజ్యాంగ హక్కులకు ఏమి అర్థమో తెలుసుకోండి",yourName:"మీ పేరు",yourEmail:"ఇమెయిల్ (ఐచ్ఛికం)",continueBtn:"ప్లాట్ఫారమ్ నమోదు చేయండి →",guestMode:"అతిథిగా కొనసాగించు",disclaimerTitle:"మేము రాజ్యాంగ ఆరోగ్యాన్ని ఎలా స్కోర్ చేస్తాం",disclaimerSub:"ప్రవేశించే ముందు జాగ్రత్తగా చదవండి",disclaimerAccept:"నాకు అర్థమైంది — ప్రవేశించండి",dashboard:"డ్యాష్బోర్డ్",newsroom:"లైవ్ న్యూస్‌రూమ్",tracker:"రాజ్యాంగ ట్రాకర్",demoScore:"ప్రజాస్వామ్య స్కోర్",departments:"విభాగాలు",states:"రాష్ట్రాలు",rights:"నా హక్కులు",journalist:"పాత్రికేయుడి కన్సోల్",citizenMode:"పౌర మోడ్",expertMode:"నిపుణుడి మోడ్",submit:"నివేదిక సమర్పించు",review:"సమీక్ష",method:"పద్దతి",about:"గురించి",fetch:"తీసుకు",auto:"ఆటో",national:"జాతీయ",state:"రాష్ట్రం",district:"జిల్లా",critical:"విమర్శనాత్మక",positive:"మద్దతు",high:"ఆందోళన",impact:"📊 ప్రభావం",facts:"⚖ రాజ్యాంగ",mythos:"✦ అంతర్దృష్టి",evidence:"సాక్ష్యం",govResponse:"ప్రభుత్వ స్పందన",courtStatus:"కోర్టు స్థితి",violation:"ఉల్లంఘన",support:"మద్దతు",functioning:"పని చేసే ప్రజాస్వామ్యం",erosion:"ప్రజాస్వామ్య కోత",backsliding:"ప్రజాస్వామ్య వెనకడుగు",authoritarian:"నిరంకుశ ప్రమాదం",noStories:"ఇంకా కథలు లేవు",tapFetch:"లైవ్ వార్తలు తీసుకురండి",fetchLive:"⚡ లైవ్ వార్తలు తీసుకు",impactRadius:"ప్రజాస్వామ్య ప్రభావం",constitutionViolations:"రాజ్యాంగ ఉల్లంఘనలు",constitutionSupports:"రాజ్యాంగ మద్దతులు",deptScore:"విభాగ స్కోర్",liveScore:"లైవ్ స్కోర్",storiesTracked:"ట్రాక్ చేయబడిన కథలు",evidenceLevels:{allegation:"ఆరోపణ",single_source:"ఒకే వనరు",corroborated:"ధృవీకరించబడింది",official_doc:"అధికారిక పత్రం",court_finding:"కోర్టు నిర్ధారణ",final_adjudication:"తుది తీర్పు"},confidence:{high:"అధిక విశ్వాసం",moderate:"మధ్యస్థ విశ్వాసం",low:"తక్కువ విశ్వాసం",developing:"అభివృద్ధి చెందుతున్న కథ"},storyTypes:{policy:"విధానం",law:"చట్టం",court:"కోర్టు",policing:"పోలీసింగ్",election:"ఎన్నిక",rights:"హక్కులు",corruption:"అవినీతి",welfare:"సంక్షేమం",speech:"వాక్",media:"మీడియా",federalism:"సమాఖ్యవాదం",minority:"మైనారిటీ హక్కులు"},citizenWhat:"ఏమి జరిగింది",citizenWhy:"ఎందుకు ముఖ్యం",citizenScore:"రాజ్యాంగ ప్రభావం",citizenStatus:"ప్రస్తుత స్థితి",citizenNext:"తదుపరి ఏమి చూడాలి"},
+bn:{name:"বাংলা",flag:"🇮🇳",appName:"DTN মিথোস",appSub:"ভারতের জন্য সাংবিধানিক বুদ্ধিমত্তা প্ল্যাটফর্ম",tagline:"রিয়েল-টাইম সাংবিধানিক সাংবাদিকতা · স্কোর · বিভাগ · ১০ ভাষা",signIn:"সাইন ইন করুন",signInSub:"সংবাদ ভারতের সাংবিধানিক অধিকারের জন্য কী বোঝায় তা বুঝুন",yourName:"আপনার নাম",yourEmail:"ইমেল (ঐচ্ছিক)",continueBtn:"প্ল্যাটফর্মে প্রবেশ করুন →",guestMode:"অতিথি হিসেবে চালিয়ে যান",disclaimerTitle:"আমরা কীভাবে সাংবিধানিক স্বাস্থ্য স্কোর করি",disclaimerSub:"প্রবেশের আগে সাবধানে পড়ুন",disclaimerAccept:"আমি বুঝি — প্ল্যাটফর্মে প্রবেশ করুন",dashboard:"ড্যাশবোর্ড",newsroom:"লাইভ নিউজরুম",tracker:"সংবিধান ট্র্যাকার",demoScore:"গণতন্ত্র স্কোর",departments:"বিভাগ",states:"রাজ্য",rights:"আমার অধিকার",journalist:"সাংবাদিক কনসোল",citizenMode:"নাগরিক মোড",expertMode:"বিশেষজ্ঞ মোড",submit:"রিপোর্ট জমা",review:"পর্যালোচনা",method:"পদ্ধতি",about:"সম্পর্কে",fetch:"আনুন",auto:"অটো",national:"জাতীয়",state:"রাজ্য",district:"জেলা",critical:"সমালোচনামূলক",positive:"সমর্থন",high:"উদ্বেগ",impact:"📊 প্রভাব",facts:"⚖ সাংবিধানিক",mythos:"✦ অন্তর্দৃষ্টি",evidence:"প্রমাণ",govResponse:"সরকারি প্রতিক্রিয়া",courtStatus:"আদালত অবস্থা",violation:"লঙ্ঘন",support:"সমর্থন",functioning:"কার্যকরী গণতন্ত্র",erosion:"গণতান্ত্রিক ক্ষয়",backsliding:"গণতান্ত্রিক পশ্চাদপসরণ",authoritarian:"কর্তৃত্ববাদী ঝুঁকি",noStories:"এখনো কোনো স্টোরি নেই",tapFetch:"লাইভ সংবাদ আনুন",fetchLive:"⚡ লাইভ সংবাদ আনুন",impactRadius:"গণতান্ত্রিক প্রভাব",constitutionViolations:"সাংবিধানিক লঙ্ঘন",constitutionSupports:"সাংবিধানিক সমর্থন",deptScore:"বিভাগ স্কোর",liveScore:"লাইভ স্কোর",storiesTracked:"ট্র্যাক করা গল্প",evidenceLevels:{allegation:"অভিযোগ",single_source:"একক উৎস",corroborated:"নিশ্চিত",official_doc:"সরকারি দলিল",court_finding:"আদালতের রায়",final_adjudication:"চূড়ান্ত সিদ্ধান্ত"},confidence:{high:"উচ্চ আস্থা",moderate:"মাঝারি আস্থা",low:"কম আস্থা",developing:"চলমান গল্প"},storyTypes:{policy:"নীতি",law:"আইন",court:"আদালত",policing:"পুলিশিং",election:"নির্বাচন",rights:"অধিকার",corruption:"দুর্নীতি",welfare:"কল্যাণ",speech:"বাক",media:"মিডিয়া",federalism:"যুক্তরাষ্ট্রীয়তা",minority:"সংখ্যালঘু অধিকার"},citizenWhat:"কী ঘটেছিল",citizenWhy:"কেন গুরুত্বপূর্ণ",citizenScore:"সাংবিধানিক প্রভাব",citizenStatus:"বর্তমান অবস্থা",citizenNext:"পরবর্তী কী দেখবেন"},
+mr:{name:"मराठी",flag:"🇮🇳",appName:"DTN मिथोस",appSub:"भारतासाठी घटनात्मक बुद्धिमत्ता व्यासपीठ",tagline:"रीअल-टाइम घटनात्मक पत्रकारिता · स्कोर · विभाग · 10 भाषा",signIn:"साइन इन करा",signInSub:"बातम्या भारताच्या घटनात्मक अधिकारांसाठी काय सांगतात ते समजा",yourName:"तुमचे नाव",yourEmail:"ईमेल (वैकल्पिक)",continueBtn:"व्यासपीठात प्रवेश करा →",guestMode:"अतिथी म्हणून सुरू ठेवा",disclaimerTitle:"आम्ही घटनात्मक आरोग्य कसे स्कोर करतो",disclaimerSub:"प्रवेश करण्यापूर्वी काळजीपूर्वक वाचा",disclaimerAccept:"मला समजले — व्यासपीठात प्रवेश करा",dashboard:"डॅशबोर्ड",newsroom:"लाइव्ह न्यूजरूम",tracker:"संविधान ट्रॅकर",demoScore:"लोकशाही स्कोर",departments:"विभाग",states:"राज्ये",rights:"माझे अधिकार",journalist:"पत्रकार कन्सोल",citizenMode:"नागरिक मोड",expertMode:"तज्ज्ञ मोड",submit:"अहवाल सादर",review:"पुनरावलोकन",method:"पद्धत",about:"बद्दल",fetch:"आण",auto:"ऑटो",national:"राष्ट्रीय",state:"राज्य",district:"जिल्हा",critical:"गंभीर",positive:"समर्थन",high:"चिंता",impact:"📊 परिणाम",facts:"⚖ घटनात्मक",mythos:"✦ अंतर्दृष्टी",evidence:"पुरावा",govResponse:"सरकारी प्रतिसाद",courtStatus:"न्यायालय स्थिती",violation:"उल्लंघन",support:"समर्थन",functioning:"कार्यशील लोकशाही",erosion:"लोकशाही क्षरण",backsliding:"लोकशाही माघार",authoritarian:"हुकूमशाही धोका",noStories:"अद्याप कोणत्याही कथा नाहीत",tapFetch:"लाइव्ह बातम्या आणा",fetchLive:"⚡ लाइव्ह बातम्या आणा",impactRadius:"लोकशाही प्रभाव",constitutionViolations:"घटनात्मक उल्लंघने",constitutionSupports:"घटनात्मक समर्थन",deptScore:"विभाग स्कोर",liveScore:"लाइव्ह स्कोर",storiesTracked:"मागोवा घेतलेल्या कथा",evidenceLevels:{allegation:"आरोप",single_source:"एकल स्रोत",corroborated:"पुष्टी",official_doc:"अधिकृत दस्तऐवज",court_finding:"न्यायालय निर्णय",final_adjudication:"अंतिम निर्णय"},confidence:{high:"उच्च विश्वास",moderate:"मध्यम विश्वास",low:"कमी विश्वास",developing:"विकसित होणारी कथा"},storyTypes:{policy:"धोरण",law:"कायदा",court:"न्यायालय",policing:"पोलीस",election:"निवडणूक",rights:"अधिकार",corruption:"भ्रष्टाचार",welfare:"कल्याण",speech:"वाणी",media:"माध्यमे",federalism:"संघराज्यवाद",minority:"अल्पसंख्यांक अधिकार"},citizenWhat:"काय झाले",citizenWhy:"हे का महत्त्वाचे आहे",citizenScore:"घटनात्मक प्रभाव",citizenStatus:"सध्याची स्थिती",citizenNext:"पुढे काय पाहावे"},
+kn:{name:"ಕನ್ನಡ",flag:"🇮🇳",appName:"DTN ಮಿಥೋಸ್",appSub:"ಭಾರತಕ್ಕಾಗಿ ಸಾಂವಿಧಾನಿಕ ಗುಪ್ತಚರ ವೇದಿಕೆ",tagline:"ನೈಜ-ಸಮಯ ಸಾಂವಿಧಾನಿಕ ಪತ್ರಿಕೋದ್ಯಮ · ಸ್ಕೋರ್ · ಇಲಾಖೆಗಳು · 10 ಭಾಷೆಗಳು",signIn:"ಸೈನ್ ಇನ್",signInSub:"ಸುದ್ದಿ ಭಾರತದ ಸಾಂವಿಧಾನಿಕ ಹಕ್ಕುಗಳಿಗೆ ಏನು ಅರ್ಥ ಎಂದು ಅರ್ಥಮಾಡಿಕೊಳ್ಳಿ",yourName:"ನಿಮ್ಮ ಹೆಸರು",yourEmail:"ಇಮೇಲ್ (ಐಚ್ಛಿಕ)",continueBtn:"ಪ್ಲಾಟ್ಫಾರ್ಮ್ ಪ್ರವೇಶಿಸಿ →",guestMode:"ಅತಿಥಿಯಾಗಿ ಮುಂದುವರಿಯಿರಿ",disclaimerTitle:"ನಾವು ಸಾಂವಿಧಾನಿಕ ಆರೋಗ್ಯವನ್ನು ಹೇಗೆ ಸ್ಕೋರ್ ಮಾಡುತ್ತೇವೆ",disclaimerSub:"ಪ್ರವೇಶಿಸುವ ಮೊದಲು ಎಚ್ಚರಿಕೆಯಿಂದ ಓದಿ",disclaimerAccept:"ನನಗೆ ಅರ್ಥವಾಗಿದೆ — ಪ್ರವೇಶಿಸಿ",dashboard:"ಡ್ಯಾಶ್ಬೋರ್ಡ್",newsroom:"ಲೈವ್ ನ್ಯೂಸ್ರೂಮ್",tracker:"ಸಂವಿಧಾನ ಟ್ರ್ಯಾಕರ್",demoScore:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಸ್ಕೋರ್",departments:"ಇಲಾಖೆಗಳು",states:"ರಾಜ್ಯಗಳು",rights:"ನನ್ನ ಹಕ್ಕುಗಳು",journalist:"ಪತ್ರಕರ್ತ ಕನ್ಸೋಲ್",citizenMode:"ನಾಗರಿಕ ಮೋಡ್",expertMode:"ತಜ್ಞ ಮೋಡ್",submit:"ವರದಿ ಸಲ್ಲಿಸಿ",review:"ಪರಿಶೀಲನೆ",method:"ವಿಧಾನ",about:"ಬಗ್ಗೆ",fetch:"ತರಿ",auto:"ಸ್ವಯಂ",national:"ರಾಷ್ಟ್ರೀಯ",state:"ರಾಜ್ಯ",district:"ಜಿಲ್ಲೆ",critical:"ನಿರ್ಣಾಯಕ",positive:"ಬೆಂಬಲ",high:"ಕಾಳಜಿ",impact:"📊 ಪ್ರಭಾವ",facts:"⚖ ಸಾಂವಿಧಾನಿಕ",mythos:"✦ ಒಳನೋಟ",evidence:"ಸಾಕ್ಷ್ಯ",govResponse:"ಸರ್ಕಾರಿ ಪ್ರತಿಕ್ರಿಯೆ",courtStatus:"ನ್ಯಾಯಾಲಯ ಸ್ಥಿತಿ",violation:"ಉಲ್ಲಂಘನೆ",support:"ಬೆಂಬಲ",functioning:"ಕಾರ್ಯನಿರ್ವಹಿಸುವ ಪ್ರಜಾಪ್ರಭುತ್ವ",erosion:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಸವೆತ",backsliding:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಹಿನ್ನಡೆ",authoritarian:"ನಿರಂಕುಶ ಅಪಾಯ",noStories:"ಇನ್ನು ಕಥೆಗಳಿಲ್ಲ",tapFetch:"ಲೈವ್ ಸುದ್ದಿ ಲೋಡ್ ಮಾಡಿ",fetchLive:"⚡ ಲೈವ್ ಸುದ್ದಿ ತರಿ",impactRadius:"ಪ್ರಜಾಪ್ರಭುತ್ವ ಪ್ರಭಾವ",constitutionViolations:"ಸಾಂವಿಧಾನಿಕ ಉಲ್ಲಂಘನೆಗಳು",constitutionSupports:"ಸಾಂವಿಧಾನಿಕ ಬೆಂಬಲಗಳು",deptScore:"ಇಲಾಖೆ ಸ್ಕೋರ್",liveScore:"ಲೈವ್ ಸ್ಕೋರ್",storiesTracked:"ಟ್ರ್ಯಾಕ್ ಮಾಡಲಾದ ಕಥೆಗಳು",evidenceLevels:{allegation:"ಆರೋಪ",single_source:"ಏಕ ಮೂಲ",corroborated:"ದೃಢಪಡಿಸಲಾಗಿದೆ",official_doc:"ಅಧಿಕೃತ ದಾಖಲೆ",court_finding:"ನ್ಯಾಯಾಲಯ ನಿರ್ಧಾರ",final_adjudication:"ಅಂತಿಮ ತೀರ್ಪು"},confidence:{high:"ಹೆಚ್ಚಿನ ವಿಶ್ವಾಸ",moderate:"ಮಧ್ಯಮ ವಿಶ್ವಾಸ",low:"ಕಡಿಮೆ ವಿಶ್ವಾಸ",developing:"ಅಭಿವೃದ್ಧಿ ಕಥೆ"},storyTypes:{policy:"ನೀತಿ",law:"ಕಾನೂನು",court:"ನ್ಯಾಯಾಲಯ",policing:"ಪೊಲೀಸ್",election:"ಚುನಾವಣೆ",rights:"ಹಕ್ಕುಗಳು",corruption:"ಭ್ರಷ್ಟಾಚಾರ",welfare:"ಕಲ್ಯಾಣ",speech:"ವಾಕ್",media:"ಮಾಧ್ಯಮ",federalism:"ಸಂಘೀಯವಾದ",minority:"ಅಲ್ಪಸಂಖ್ಯಾತ ಹಕ್ಕುಗಳು"},citizenWhat:"ಏನಾಯಿತು",citizenWhy:"ಏಕೆ ಮುಖ್ಯ",citizenScore:"ಸಾಂವಿಧಾನಿಕ ಪ್ರಭಾವ",citizenStatus:"ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ",citizenNext:"ಮುಂದೆ ಏನು ನೋಡಬೇಕು"},
+ml:{name:"മലയാളം",flag:"🇮🇳",appName:"DTN മിത്തോസ്",appSub:"ഇന്ത്യക്കുള്ള ഭരണഘടനാ ഇന്റലിജന്‍സ് പ്ലാറ്റ്ഫോം",tagline:"തത്സമയ ഭരണഘടനാ പത്രപ്രവര്‍ത്തനം · സ്കോറുകള്‍ · വകുപ്പുകള്‍ · 10 ഭാഷകള്‍",signIn:"സൈന്‍ ഇന്‍",signInSub:"വാര്‍ത്ത ഇന്ത്യയുടെ ഭരണഘടനാ അവകാശങ്ങള്‍ക്ക് എന്താണ് അര്‍ഥം എന്ന് മനസ്സിലാക്കൂ",yourName:"നിങ്ങളുടെ പേര്",yourEmail:"ഇമെയില്‍ (ഐച്ഛികം)",continueBtn:"പ്ലാറ്റ്ഫോം നല്‍കുക →",guestMode:"അതിഥിയായി തുടരുക",disclaimerTitle:"ഞങ്ങള്‍ ഭരണഘടനാ ആരോഗ്യം എങ്ങനെ സ്കോര്‍ ചെയ്യുന്നു",disclaimerSub:"പ്രവേശിക്കുന്നതിന് മുമ്പ് ശ്രദ്ധയോടെ വായിക്കുക",disclaimerAccept:"എനിക്ക് മനസ്സിലായി — പ്ലാറ്റ്ഫോം നല്‍കുക",dashboard:"ഡാഷ്ബോര്‍ഡ്",newsroom:"തത്സമയ ന്യൂസ്‌റൂം",tracker:"ഭരണഘടനാ ട്രാക്കര്‍",demoScore:"ജനാധിപത്യ സ്കോര്‍",departments:"വകുപ്പുകള്‍",states:"സംസ്ഥാനങ്ങള്‍",rights:"എന്‍റെ അവകാശങ്ങള്‍",journalist:"പത്രകണ്‍സോള്‍",citizenMode:"പൗര മോഡ്",expertMode:"വിദഗ്ദ്ധ മോഡ്",submit:"റിപ്പോര്‍ട്ട് സമര്‍പ്പിക്കുക",review:"അവലോകനം",method:"രീതിശാസ്ത്രം",about:"കുറിച്ച്",fetch:"ഫെച്ച്",auto:"ഓട്ടോ",national:"ദേശീയ",state:"സംസ്ഥാനം",district:"ജില്ല",critical:"നിര്‍ണ്ണായക",positive:"പിന്തുണ",high:"ആശങ്ക",impact:"📊 ആഘാതം",facts:"⚖ ഭരണഘടനാ",mythos:"✦ ഉള്‍ക്കാഴ്ച",evidence:"തെളിവ്",govResponse:"സര്‍ക്കാര്‍ പ്രതികരണം",courtStatus:"കോടതി നില",violation:"ലംഘനം",support:"പിന്തുണ",functioning:"പ്രവര്‍ത്തിക്കുന്ന ജനാധിപത്യം",erosion:"ജനാധിപത്യ ശോഷണം",backsliding:"ജനാധിപത്യ പിന്നോക്കം",authoritarian:"സ്വേച്ഛാധിപത്യ അപകടം",noStories:"ഇതുവരെ കഥകള്‍ ഇല്ല",tapFetch:"തത്സമയ വാര്‍ത്ത ലോഡ് ചെയ്യുക",fetchLive:"⚡ തത്സമയ വാര്‍ത്ത ഫെച്ച് ചെയ്യുക",impactRadius:"ജനാധിപത്യ ആഘാതം",constitutionViolations:"ഭരണഘടനാ ലംഘനങ്ങള്‍",constitutionSupports:"ഭരണഘടനാ പിന്തുണകള്‍",deptScore:"വകുപ്പ് സ്കോര്‍",liveScore:"തത്സമയ സ്കോര്‍",storiesTracked:"ട്രാക്ക് ചെയ്ത കഥകള്‍",evidenceLevels:{allegation:"ആരോപണം",single_source:"ഒറ്റ ഉറവിടം",corroborated:"സ്ഥിരീകരിക്കപ്പെട്ടത്",official_doc:"ഔദ്യോഗിക രേഖ",court_finding:"കോടതി കണ്ടെത്തല്‍",final_adjudication:"അന്തിമ വിധി"},confidence:{high:"ഉയര്‍ന്ന ആത്മവിശ്വാസം",moderate:"മിതമായ ആത്മവിശ്വാസം",low:"കുറഞ്ഞ ആത്മവിശ്വാസം",developing:"വളരുന്ന കഥ"},storyTypes:{policy:"നയം",law:"നിയമം",court:"കോടതി",policing:"പോലീസ്",election:"തിരഞ്ഞെടുപ്പ്",rights:"അവകാശങ്ങള്‍",corruption:"അഴിമതി",welfare:"ക്ഷേമം",speech:"വാക്ക്",media:"മാധ്യമം",federalism:"ഫെഡറലിസം",minority:"ന്യൂനപക്ഷ അവകാശങ്ങള്‍"},citizenWhat:"എന്ത് സംഭവിച്ചു",citizenWhy:"എന്തുകൊണ്ട് പ്രധാനം",citizenScore:"ഭരണഘടനാ ആഘാതം",citizenStatus:"നിലവിലെ നില",citizenNext:"അടുത്തതായി എന്ത് നോക്കണം"},
 };
 
-// ── DEPARTMENTS ─────────────────────────────────────────────────
-const DEPARTMENTS={
-parliament:{id:"parliament",name:"Parliament",icon:"🏛",color:"#3b82f6",articles:["Art.79","Art.80","Art.81","10th Sch","Art.368"],description:"Lok Sabha & Rajya Sabha — law-making body of India",keyRights:["Art.326","Art.82","10th Sch"],base:55},
-executive:{id:"executive",name:"Executive",icon:"🏢",color:"#f97316",articles:["Art.52","Art.53","Art.74","Art.77","Art.355"],description:"President, Cabinet, Ministries — executive power of Union",keyRights:["Art.14","Art.21","Art.300A"],base:45},
-judiciary:{id:"judiciary",name:"Judiciary",icon:"⚖",color:"#22c55e",articles:["Art.124","Art.141","Art.226","Art.32","Art.136"],description:"Supreme Court & High Courts — guardian of Constitution",keyRights:["Art.32","Art.226","Art.141"],base:62},
-police:{id:"police",name:"Police",icon:"🚔",color:"#ef4444",articles:["Art.21","Art.22","Art.50"],description:"State police forces — law enforcement under state govts",keyRights:["Art.21","Art.22","Art.19(1)(b)"],base:30},
-ec:{id:"ec",name:"Election Commission",icon:"🗳",color:"#a78bfa",articles:["Art.324","Art.325","Art.326","Art.329"],description:"Constitutional body supervising all elections in India",keyRights:["Art.324","Art.326","Art.325"],base:58},
-media:{id:"media",name:"Media & Press",icon:"📰",color:"#f59e0b",articles:["Art.19(1)(a)","Art.19(2)"],description:"Fourth estate — free press as democracy's watchdog",keyRights:["Art.19(1)(a)","Art.21"],base:28},
-military:{id:"military",name:"Armed Forces",icon:"⭐",color:"#14b8a6",articles:["Art.53","Art.355","Art.352","Art.33"],description:"Indian Army, Navy, Air Force under civilian control",keyRights:["Art.21","Art.355"],base:65},
-localGov:{id:"localGov",name:"Local Government",icon:"🏘",color:"#ec4899",articles:["Art.243","Art.243A","Art.243D","Art.243G"],description:"Panchayats & Municipalities — grassroots democracy",keyRights:["Art.243D","Art.243G"],base:42},
+// ── 16 GOVERNMENT DEPARTMENTS ─────────────────────────────────
+const DEPT={
+pmo:{id:"pmo",name:"Prime Minister's Office",icon:"🏛",color:"#4A8FFF",desc:"Executive leadership, Cabinet coordination, Union policy direction",articles:["Art.52","Art.53","Art.74","Art.77"],base:52},
+home:{id:"home",name:"Home Affairs",icon:"🏠",color:"#F04A5A",desc:"Internal security, state relations, citizenship, police coordination",articles:["Art.246","Art.355","Art.21","Art.22"],base:38},
+law:{id:"law",name:"Law & Justice",icon:"⚖",color:"#0FD47C",desc:"Legal affairs, judicial appointments, constitutional amendments",articles:["Art.124","Art.217","Art.368"],base:50},
+finance:{id:"finance",name:"Finance",icon:"💰",color:"#F5A623",desc:"Fiscal policy, taxation, economic regulations, ED operations",articles:["Art.265","Art.300A","Art.39"],base:48},
+education:{id:"education",name:"Education",icon:"📚",color:"#9B7DFF",desc:"Schools, universities, curriculum, language policy, institutions",articles:["Art.21A","Art.30","Art.350A"],base:55},
+health:{id:"health",name:"Health",icon:"🏥",color:"#0FD47C",desc:"Public health, hospitals, drug regulation, healthcare access",articles:["Art.21","Art.47"],base:50},
+wcd:{id:"wcd",name:"Women & Child",icon:"👶",color:"#ec4899",desc:"Gender rights, child welfare, anti-trafficking, maternity policy",articles:["Art.15","Art.21","Art.39(f)"],base:44},
+minority:{id:"minority",name:"Minority Affairs",icon:"🤝",color:"#F5A623",desc:"Rights of religious, linguistic minorities, scholarship schemes",articles:["Art.29","Art.30","Art.25","Art.14"],base:36},
+rural:{id:"rural",name:"Rural Development",icon:"🌾",color:"#0FD47C",desc:"MGNREGA, Panchayati Raj, rural infrastructure, land rights",articles:["Art.40","Art.243","Art.39"],base:46},
+urban:{id:"urban",name:"Urban Development",icon:"🏙",color:"#4A8FFF",desc:"Smart cities, municipal governance, housing, slum rehabilitation",articles:["Art.243W","Art.300A","Art.21"],base:44},
+environment:{id:"environment",name:"Environment",icon:"🌿",color:"#0FD47C",desc:"Forest rights, environmental clearances, tribal displacement",articles:["Art.21","Art.48A","5th Sch"],base:42},
+defence:{id:"defence",name:"Defence",icon:"⭐",color:"#6B7FA0",desc:"Armed forces, AFSPA zones, civilian accountability",articles:["Art.53","Art.355","Art.33","AFSPA"],base:62},
+police:{id:"police",name:"Police & Safety",icon:"🚔",color:"#F04A5A",desc:"State police, custodial deaths, arbitrary arrests, encounters",articles:["Art.21","Art.22","Art.50"],base:28},
+ec:{id:"ec",name:"Election Commission",icon:"🗳",color:"#9B7DFF",desc:"Electoral integrity, voter rolls, model code, EVM credibility",articles:["Art.324","Art.325","Art.326","Art.329"],base:58},
+media:{id:"media",name:"Media & Information",icon:"📰",color:"#F5A623",desc:"Press freedom, media regulation, journalist safety, IT rules",articles:["Art.19(1)(a)","Art.19(2)"],base:26},
+judiciary:{id:"judiciary",name:"Judiciary",icon:"🏛",color:"#0FD47C",desc:"Supreme Court, High Courts — constitutional guardian (institutional developments tracked carefully)",articles:["Art.124","Art.141","Art.226","Art.32","Art.136"],base:63},
 };
 
-const CA={"Art.14":{t:"Equality Before Law",c:"#6366f1"},"Art.15":{t:"No Discrimination",c:"#8b5cf6"},"Art.17":{t:"Abolition of Untouchability",c:"#c084fc"},"Art.19(1)(a)":{t:"Freedom of Speech & Press",c:"#f97316"},"Art.19(1)(b)":{t:"Right to Assembly",c:"#fb923c"},"Art.21":{t:"Right to Life & Liberty",c:"#ef4444"},"Art.21A":{t:"Right to Education",c:"#fca5a5"},"Art.22":{t:"Protection from Arrest",c:"#f87171"},"Art.23":{t:"No Forced Labour",c:"#fbbf24"},"Art.25":{t:"Freedom of Religion",c:"#ec4899"},"Art.26":{t:"Religious Autonomy",c:"#f472b6"},"Art.29":{t:"Minority Cultural Rights",c:"#c084fc"},"Art.30":{t:"Minority Education Rights",c:"#e879f9"},"Art.32":{t:"Constitutional Remedies",c:"#22c55e"},"Art.39":{t:"Right to Livelihood",c:"#86efac"},"Art.46":{t:"Weaker Sections Protection",c:"#a5f3fc"},"Art.82":{t:"Delimitation After Census",c:"#60a5fa"},"Art.300A":{t:"Right to Property",c:"#fbbf24"},"Art.324":{t:"Election Commission",c:"#f59e0b"},"Art.326":{t:"Universal Adult Suffrage",c:"#d97706"},"Art.355":{t:"Union Duty to States",c:"#92400e"},"5th Sch":{t:"Tribal Areas",c:"#047857"},"10th Sch":{t:"Anti-Defection Law",c:"#991b1b"}};
+const CA={"Art.14":{t:"Equality Before Law",c:"#6366f1"},"Art.15":{t:"No Discrimination",c:"#8b5cf6"},"Art.17":{t:"Abolition of Untouchability",c:"#c084fc"},"Art.19(1)(a)":{t:"Freedom of Speech & Press",c:"#f97316"},"Art.19(1)(b)":{t:"Right to Assembly",c:"#fb923c"},"Art.19(1)(c)":{t:"Right to Form Associations",c:"#f97316"},"Art.21":{t:"Right to Life & Liberty",c:"#ef4444"},"Art.21A":{t:"Right to Education",c:"#fca5a5"},"Art.22":{t:"Protection from Arrest",c:"#f87171"},"Art.23":{t:"No Forced Labour",c:"#fbbf24"},"Art.25":{t:"Freedom of Religion",c:"#ec4899"},"Art.26":{t:"Religious Autonomy",c:"#f472b6"},"Art.29":{t:"Minority Cultural Rights",c:"#c084fc"},"Art.30":{t:"Minority Education Rights",c:"#e879f9"},"Art.32":{t:"Constitutional Remedies",c:"#0FD47C"},"Art.39":{t:"Right to Livelihood",c:"#86efac"},"Art.40":{t:"Village Panchayats",c:"#6ee7b7"},"Art.46":{t:"Weaker Sections Protection",c:"#a5f3fc"},"Art.47":{t:"Right to Health",c:"#67e8f9"},"Art.48A":{t:"Environmental Protection",c:"#34d399"},"Art.50":{t:"Separation of Powers",c:"#60a5fa"},"Art.82":{t:"Delimitation After Census",c:"#60a5fa"},"Art.300A":{t:"Right to Property",c:"#fbbf24"},"Art.324":{t:"Election Commission Independence",c:"#f59e0b"},"Art.326":{t:"Universal Adult Suffrage",c:"#d97706"},"Art.350A":{t:"Mother Tongue Instruction",c:"#a78bfa"},"Art.355":{t:"Union Duty to Protect States",c:"#92400e"},"5th Sch":{t:"Tribal Areas & Scheduled Areas",c:"#047857"},"10th Sch":{t:"Anti-Defection Law",c:"#991b1b"},"AFSPA":{t:"Armed Forces Special Powers",c:"#dc2626"}};
 
-const PILLARS={press_freedom:{label:"Press Freedom",color:"#f97316",base:22,weight:1.2,dept:"media"},liberty:{label:"Liberty",color:"#ef4444",base:35,weight:1.2,dept:"police"},equality:{label:"Equality",color:"#8b5cf6",base:32,weight:1.1,dept:"executive"},electoral:{label:"Electoral",color:"#3b82f6",base:48,weight:1.0,dept:"ec"},separation:{label:"Separation",color:"#14b8a6",base:43,weight:0.9,dept:"parliament"},religion:{label:"Religion",color:"#ec4899",base:28,weight:1.0,dept:"executive"},justice:{label:"Justice",color:"#22c55e",base:45,weight:0.9,dept:"judiciary"}};
+const PILLARS={press_freedom:{label:"Press Freedom",color:"#f97316",base:22,weight:1.2,dept:"media"},liberty:{label:"Liberty",color:"#ef4444",base:35,weight:1.2,dept:"police"},equality:{label:"Equality",color:"#8b5cf6",base:32,weight:1.1,dept:"home"},electoral:{label:"Electoral",color:"#4A8FFF",base:48,weight:1.0,dept:"ec"},separation:{label:"Separation of Powers",color:"#0FD47C",base:43,weight:0.9,dept:"law"},religion:{label:"Religious Freedom",color:"#ec4899",base:28,weight:1.0,dept:"minority"},justice:{label:"Access to Justice",color:"#0FD47C",base:45,weight:0.9,dept:"judiciary"},welfare:{label:"Public Welfare",color:"#F5A623",base:42,weight:0.8,dept:"rural"},environment:{label:"Environment Rights",color:"#34d399",base:38,weight:0.8,dept:"environment"}};
 
 const STATE_BASELINES={"Andhra Pradesh":45,"Arunachal Pradesh":52,"Assam":29,"Bihar":38,"Chhattisgarh":34,"Goa":40,"Gujarat":35,"Haryana":37,"Himachal Pradesh":53,"Jharkhand":43,"Karnataka":55,"Kerala":64,"Madhya Pradesh":38,"Maharashtra":40,"Manipur":17,"Meghalaya":51,"Mizoram":54,"Nagaland":48,"Odisha":47,"Punjab":50,"Rajasthan":44,"Sikkim":57,"Tamil Nadu":59,"Telangana":49,"Tripura":46,"Uttar Pradesh":26,"Uttarakhand":50,"West Bengal":39,"Delhi":41,"J&K":30};
 
-const BASE_SCORE=41;
-const SK="dtn_v7";
-const CONF_W={verified:1.0,corroborated:0.8,single_source:0.5,citizen_unverified:0.3};
-const IMPACT_RADIUS={national:{national:1.0,state:0.4,local:0.2},state:{national:0.3,state:1.0,local:0.5},local:{national:0.1,state:0.2,local:1.0},district:{national:0.05,state:0.15,local:1.0}};
-const PATTERN_CLASSES={isolated:{label:"Isolated",color:"#64748b",dot:"○",bg:"rgba(100,116,139,0.1)",mult:1.0},emerging:{label:"Emerging",color:"#f59e0b",dot:"◔",bg:"rgba(245,158,11,0.1)",mult:1.15},repeated:{label:"Repeated",color:"#f97316",dot:"◑",bg:"rgba(249,115,22,0.1)",mult:1.3},systemic:{label:"Systemic",color:"#ef4444",dot:"●",bg:"rgba(239,68,68,0.1)",mult:1.5}};
+// Evidence levels — CORE differentiator
+const EVIDENCE_LEVELS={
+  allegation:     {label:"Allegation",        color:"#94a3b8",weight:0.2,cls:"ev-allegation",desc:"Unverified claim — insufficient evidence to score"},
+  single_source:  {label:"Single Source",     color:"#F5A623",weight:0.4,cls:"ev-corroborated",desc:"One source only — moderate weight until corroborated"},
+  corroborated:   {label:"Corroborated",      color:"#F5A623",weight:0.65,cls:"ev-corroborated",desc:"Multiple independent sources confirm the event"},
+  official_doc:   {label:"Official Document", color:"#4A8FFF",weight:0.85,cls:"ev-official",desc:"Primary source — gazette, order, official notification"},
+  court_finding:  {label:"Court Finding",     color:"#0FD47C",weight:0.92,cls:"ev-court",desc:"Judicial determination — court order or judgment"},
+  final_adjudication:{label:"Final Adjudication",color:"#9B7DFF",weight:1.0,cls:"ev-adjudicated",desc:"Final legal outcome — matter fully adjudicated"},
+};
+const STORY_TYPES=["policy","law","court","policing","election","rights","corruption","welfare","speech","media","federalism","minority"];
+const CONFIDENCE_LEVELS={high:{label:"High",color:"#0FD47C"},moderate:{label:"Moderate",color:"#F5A623"},low:{label:"Low",color:"#F04A5A"},developing:{label:"Developing",color:"#94a3b8"}};
+const COURT_STATUSES={pending:{label:"Court Pending",color:"#F5A623"},stayed:{label:"Order Stayed",color:"#9B7DFF"},upheld:{label:"Upheld",color:"#0FD47C"},struck_down:{label:"Struck Down",color:"#F04A5A"},none:{label:"No Court Action",color:"#6B7FA0"}};
 
-// ── SCORING ENGINE ─────────────────────────────────────────────
-function calcDemocracyWeight(story,scope,state){const src=CONF_W[story.source]||0.3;const days=Math.max(0,(Date.now()-story.ts)/86400000);const rec=Math.max(0.2,1-days*0.006);const pw=PILLARS[story.pillar]?.weight||1.0;const pm=PATTERN_CLASSES[story.pattern]?.mult||1.0;const r=(IMPACT_RADIUS[story.scope||"national"]||IMPACT_RADIUS.national)[scope]||0.1;const sf=(story.state&&story.state===state)?1.0:(story.state&&scope==="state")?0.2:1.0;return(story.aiScore||story.delta||0)*src*rec*pw*pm*r*sf;}
-function calcScopeScore(stories,scope,state){const a=stories.filter(s=>s.approved);const base=scope==="state"?(STATE_BASELINES[state]||BASE_SCORE):BASE_SCORE;if(!a.length)return base;return Math.max(0,Math.min(100,Math.round(base+a.reduce((t,s)=>t+calcDemocracyWeight(s,scope,state),0))));}
-function calcDeptScore(stories,deptId){const dept=DEPARTMENTS[deptId];if(!dept)return 50;const rel=stories.filter(s=>s.approved&&s.institution===deptId);if(!rel.length)return dept.base;const delta=rel.reduce((a,s)=>{const src=CONF_W[s.source]||0.3;const days=Math.max(0,(Date.now()-s.ts)/86400000);const rec=Math.max(0.2,1-days*0.006);return a+(s.aiScore||s.delta||0)*src*rec;},0);return Math.max(0,Math.min(100,Math.round(dept.base+delta)));}
-function scoreColor(n){return n>=60?"#22c55e":n>=40?"#f59e0b":n>=25?"#f97316":"#ef4444";}
-function scoreLabelKey(n){return n>=60?"functioning":n>=40?"erosion":n>=25?"backsliding":"authoritarian";}
+const BASE=41,SK="dtn_v9";
+const IMPACT={national:{national:1.0,state:0.4,local:0.2},state:{national:0.3,state:1.0,local:0.5},local:{national:0.1,state:0.2,local:1.0},district:{national:0.05,state:0.15,local:1.0}};
+const PAT={isolated:{label:"Isolated",color:"#64748b",dot:"○",bg:"rgba(100,116,139,0.08)",mult:1.0},emerging:{label:"Emerging",color:"#F5A623",dot:"◔",bg:"rgba(245,166,35,0.06)",mult:1.15},repeated:{label:"Repeated",color:"#f97316",dot:"◑",bg:"rgba(249,115,22,0.06)",mult:1.3},systemic:{label:"Systemic",color:"#F04A5A",dot:"●",bg:"rgba(240,74,90,0.06)",mult:1.5}};
 
-// ── CLASSIFIER ─────────────────────────────────────────────────
-function classify(headline,body){
-  const txt=((headline||"")+" "+(body||"")).toLowerCase();
-  let pillar="justice",direction="negative",delta=-2,violations=[],supports=[],pattern="isolated",scope="national",institution=null;
-  if(/supreme court|high court|sc |hc |judiciary|bench|verdict|judgment/.test(txt))institution="judiciary";
-  else if(/parliament|lok sabha|rajya sabha|bill |amendment/.test(txt))institution="parliament";
-  else if(/police|arrested|detained|custody|encounter/.test(txt))institution="police";
-  else if(/election commission|eci|ballot|voter/.test(txt))institution="ec";
-  else if(/government|ministry|cm |chief minister|governor/.test(txt))institution="executive";
-  else if(/journalist|reporter|media|press|editor/.test(txt))institution="media";
-  else if(/army|military|afspa|armed force/.test(txt))institution="military";
-  else if(/panchayat|municipality|gram sabha/.test(txt))institution="localGov";
-  if(txt.includes("village")||txt.includes("district")||txt.includes("taluk"))scope="local";
-  else if(Object.keys(STATE_BASELINES).some(s=>txt.includes(s.toLowerCase())))scope="state";
-  if(/journalist|press|media|reporter/.test(txt)){pillar="press_freedom";if(/kill|murder|dead/.test(txt)){delta=-5;violations=[{a:"Art.21",h:"Journalist killed — right to life violated"},{a:"Art.19(1)(a)",h:"Press freedom suppressed through killing"}];}else if(/arrest|detain|raid/.test(txt)){delta=-3;violations=[{a:"Art.19(1)(a)",h:"Journalist arrested — press freedom restricted"},{a:"Art.22",h:"Arbitrary detention without proper grounds"}];}else if(/free|release|acquit/.test(txt)){direction="positive";delta=2;supports=[{a:"Art.19(1)(a)",h:"Press freedom upheld by authority"}];}else{delta=-2;violations=[{a:"Art.19(1)(a)",h:"Press freedom facing restrictions"}];}}
-  else if(/uapa|psa|afspa|custody death|encounter|arbitrary arrest/.test(txt)){pillar="liberty";if(/kill|dead|death/.test(txt)){delta=-5;violations=[{a:"Art.21",h:"Right to life violated — killing without due process"},{a:"Art.22",h:"Extra-judicial death — no accountability"}];}else{delta=-3;violations=[{a:"Art.21",h:"Liberty arbitrarily denied by state"},{a:"Art.22",h:"Detained without proper grounds or procedure"}];}}
-  else if(/election|voter|ballot|eci|delimitation|electoral bond/.test(txt)){pillar="electoral";if(/sc.*struck|court.*quash|upheld/.test(txt)){direction="positive";delta=3;supports=[{a:"Art.324",h:"Election Commission independence upheld"},{a:"Art.326",h:"Universal suffrage protected"}];}else if(/rig|fraud|manipulat/.test(txt)){delta=-5;violations=[{a:"Art.326",h:"Election fraud — universal suffrage undermined"},{a:"Art.324",h:"Election Commission integrity compromised"}];}else{delta=-2;violations=[{a:"Art.82",h:"Electoral process affected — representation at risk"}];}}
-  else if(/nrc|caa |citizenship|stateless/.test(txt)){pillar="equality";delta=-4;violations=[{a:"Art.14",h:"Unequal citizenship — equality before law denied"},{a:"Art.15",h:"Religious discrimination in citizenship law"}];}
-  else if(/bulldoz|demolish|evict/.test(txt)){pillar="equality";delta=-3;violations=[{a:"Art.300A",h:"Property demolished without legal authority"},{a:"Art.21",h:"Home demolition violates human dignity"}];}
-  else if(/sc.*upheld|court.*protected|acquitted|bail.*granted|sc.*struck down/.test(txt)){pillar="justice";direction="positive";delta=3;supports=[{a:"Art.32",h:"Constitutional remedy granted — rights upheld"},{a:"Art.141",h:"Supreme Court law protects citizens"}];}
-  else if(/dalit|caste|sc.st|untouchab/.test(txt)){pillar="equality";delta=-3;violations=[{a:"Art.17",h:"Caste discrimination — untouchability practiced"},{a:"Art.46",h:"State failed to protect weaker sections"}];}
-  else if(/tribal|adivasi|forest right|displacement/.test(txt)){pillar="equality";delta=-3;scope="state";violations=[{a:"5th Sch",h:"Tribal rights violated — schedule not enforced"},{a:"Art.21",h:"Forced displacement violates right to life"}];}
-  else if(/riot|communal|violence|killed|murder/.test(txt)){pillar="liberty";delta=-4;violations=[{a:"Art.21",h:"Right to life threatened by communal violence"},{a:"Art.355",h:"Union failed duty to protect state"}];}
-  else if(/anti.conversion|religious|church|mosque|temple/.test(txt)){pillar="religion";delta=-2;violations=[{a:"Art.25",h:"Freedom of religion and conscience restricted"}];}
-  else{direction="negative";delta=-1;violations=[{a:"Art.21",h:"Potential constitutional rights concern identified"}];}
-  if(delta<=-5)pattern="systemic";else if(delta<=-4)pattern="repeated";else if(delta<=-3)pattern="emerging";else pattern="isolated";
-  let detectedState=null;
-  for(const st of Object.keys(STATE_BASELINES)){if(txt.includes(st.toLowerCase())){detectedState=st;break;}}
-  const severity=Math.abs(delta)>=5?"critical":Math.abs(delta)>=3?"high":"medium";
-  return{pillar,direction,delta,violations,supports,institution,pattern,scope,state:detectedState,source:"single_source",confidence:0.55,aiScore:delta,aiDone:false,mythos:null,aiAnalysis:null,severity};
+
+// ── ADVANCED SCORING ENGINE ───────────────────────────────────
+// World-class formula: credibility × evidence × relevance × impact × directional × confidence × recency × pattern × radius
+function calcStoryEffect(s,scope,state){
+  const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"]?.weight||0.5;
+  const cred={verified:1.0,corroborated:0.8,single_source:0.5,citizen_unverified:0.3}[s.source]||0.4;
+  const days=Math.max(0,(Date.now()-s.ts)/86400000);
+  const rec=Math.max(0.2,1-days*0.005);
+  const conf={high:1.0,moderate:0.75,low:0.5,developing:0.35}[s.confidence||"moderate"]||0.7;
+  const pm=PAT[s.pattern]?.mult||1.0;
+  const pw=PILLARS[s.pillar]?.weight||1.0;
+  const rf=(IMPACT[s.scope||"national"]||IMPACT.national)[scope]||0.1;
+  const sf=(s.state&&s.state===state)?1.0:(s.state&&scope==="state")?0.2:1.0;
+  const dir=s.aiScore||s.delta||0;
+  return dir*ev*cred*rec*conf*pm*pw*rf*sf;
+}
+function calcScope(stories,scope,state){const a=stories.filter(s=>s.approved);const base=scope==="state"?(STATE_BASELINES[state]||BASE):BASE;return a.length?Math.max(0,Math.min(100,Math.round(base+a.reduce((t,s)=>t+calcStoryEffect(s,scope,state),0)))):base;}
+function calcDept(stories,id){const d=DEPT[id];if(!d)return 50;const rel=stories.filter(s=>s.approved&&s.institution===id);if(!rel.length)return d.base;const delta=rel.reduce((a,s)=>{const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"]?.weight||0.5;const days=Math.max(0,(Date.now()-s.ts)/86400000);const conf={high:1.0,moderate:0.75,low:0.5,developing:0.35}[s.confidence||"moderate"]||0.7;return a+(s.aiScore||s.delta||0)*ev*conf*Math.max(0.2,1-days*0.005);},0);return Math.max(0,Math.min(100,Math.round(d.base+delta)));}
+
+// Score explanation generator — makes users FEEL what is right/wrong
+function generateExplanation(s){
+  const dir=s.aiScore||s.delta||0;const isPos=dir>0;const dept=DEPT[s.institution];const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"];const pts=Math.abs(dir).toFixed(1);
+  if(Math.abs(dir)<0.5)return null;
+  const action=isPos?"strengthened constitutional functioning by":"raised constitutional concern, reducing score by";
+  const deptStr=dept?`the ${dept.name}`:"government";
+  const evStr=ev?`Evidence level: ${ev.label} (weight ${Math.round(ev.weight*100)}%).`:"";
+  const confStr=s.confidence?`Confidence: ${CONFIDENCE_LEVELS[s.confidence]?.label||"moderate"}.`:"";
+  const courtStr=s.courtStatus&&s.courtStatus!=="none"?` Court status: ${COURT_STATUSES[s.courtStatus]?.label||"pending"}.`:"";
+  return`This event ${action} ${pts} points because ${deptStr} action implicates ${s.violations?.length||s.supports?.length||1} constitutional provision(s). ${evStr} ${confStr}${courtStr}`;
 }
 
-let _rlu=0;
-const isRL=()=>Date.now()<_rlu;
-const setRL=ms=>{_rlu=Date.now()+ms;};
+function sColor(n){return n>=65?"#0FD47C":n>=50?"#F5A623":n>=35?"#f97316":"#F04A5A";}
+function sLabelK(n){return n>=65?"functioning":n>=50?"erosion":n>=35?"backsliding":"authoritarian";}
+function scoreBand(n){if(n>=80)return{label:"Strong Constitutional Support",color:"#0FD47C"};if(n>=65)return{label:"Mostly Stable",color:"#0FD47C"};if(n>=50)return{label:"Mixed Democratic Health",color:"#F5A623"};if(n>=35)return{label:"Significant Concerns",color:"#f97316"};return{label:"Severe Democratic Stress",color:"#F04A5A"};}
 
-async function parseRSS(rssUrl,stateHint){try{const proxy="https://api.allorigins.win/get?url="+encodeURIComponent(rssUrl);const res=await fetch(proxy,{signal:AbortSignal.timeout(12000)});if(!res.ok)return[];const data=await res.json();const parser=new DOMParser();const xml=parser.parseFromString(data.contents,"text/xml");const items=[...xml.querySelectorAll("item")];return items.slice(0,10).map(item=>{const rawTitle=item.querySelector("title")?.textContent||"";const headline=rawTitle.replace(/ - [^-]*$/,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim();const rawDesc=item.querySelector("description")?.textContent||"";const body=rawDesc.replace(/<[^>]*>/g,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim().slice(0,400);return{headline,body,state:stateHint||null};}).filter(i=>i.headline.length>10);}catch{return[];}}
+// ── ENHANCED CLASSIFIER ────────────────────────────────────────
+function classify(h,b){
+  const txt=((h||"")+" "+(b||"")).toLowerCase();
+  let pillar="justice",dir="negative",delta=-2,violations=[],supports=[],pat="isolated",scope="national",inst=null;
+  let evidenceLevel="single_source",storyType="policy",confidence="moderate",courtStatus="none",govResponse=null,citizenExplanation=null;
+  // Institution
+  if(/supreme court|high court|sc |hc |judiciary|bench|verdict|judgment|bail|acquit/.test(txt))inst="judiciary";
+  else if(/prime minister|pmo|cabinet/.test(txt))inst="pmo";
+  else if(/home minister|home ministry|amit shah|central police/.test(txt))inst="home";
+  else if(/parliament|lok sabha|rajya sabha|bill |amendment|speaker/.test(txt))inst="law";
+  else if(/election commission|eci|ballot|voter|electoral/.test(txt))inst="ec";
+  else if(/police|arrested|detained|custody|encounter|cops|constable/.test(txt))inst="police";
+  else if(/journalist|reporter|media|press|editor|news channel/.test(txt))inst="media";
+  else if(/army|military|afspa|armed force/.test(txt))inst="defence";
+  else if(/panchayat|municipality|gram sabha|local body/.test(txt))inst="rural";
+  else if(/education|school|university|teacher/.test(txt))inst="education";
+  else if(/hospital|health|doctor|medicine|drug/.test(txt))inst="health";
+  else if(/forest|environment|tribal|adivasi|displacement/.test(txt))inst="environment";
+  else if(/minority|muslim|christian|church|mosque|religious/.test(txt))inst="minority";
+  else if(/finance|income tax|ed |cbi|money laundering|bank/.test(txt))inst="finance";
+  else if(/government|ministry|cm |chief minister|governor/.test(txt))inst="home";
+  // Scope
+  if(/village|district|taluk|block/.test(txt))scope="local";
+  else if(Object.keys(STATE_BASELINES).some(s=>txt.includes(s.toLowerCase())))scope="state";
+  // Evidence level heuristics
+  if(/sc |supreme court.*order|high court.*order|gazette|official notification/.test(txt))evidenceLevel="official_doc";
+  else if(/court.*stayed|court.*upheld|judgment|verdict/.test(txt))evidenceLevel="court_finding";
+  else if(/multiple sources|confirmed|verified|official/.test(txt))evidenceLevel="corroborated";
+  else if(/alleged|reportedly|sources say|unconfirmed/.test(txt))evidenceLevel="allegation";
+  // Story type
+  if(/court|judgment|verdict|bail|acquit/.test(txt))storyType="court";
+  else if(/election|ballot|voter/.test(txt))storyType="election";
+  else if(/police|arrested|detained|encounter/.test(txt))storyType="policing";
+  else if(/journalist|press|media/.test(txt))storyType="media";
+  else if(/corruption|scam|ed |cbi|money laundering/.test(txt))storyType="corruption";
+  else if(/dalit|caste|minority|muslim|christian|tribal/.test(txt))storyType="minority";
+  else if(/welfare|hospital|school|ration|scheme/.test(txt))storyType="welfare";
+  // Constitutional classification
+  if(/journalist|press|media|reporter/.test(txt)){pillar="press_freedom";if(/kill|murder|dead/.test(txt)){delta=-5;evidenceLevel=evidenceLevel==="allegation"?"single_source":evidenceLevel;violations=[{a:"Art.21",h:"Journalist killed — right to life violated — press freedom suppressed through violence"},{a:"Art.19(1)(a)",h:"Press freedom attacked — killing journalist silences wider newsroom"}];citizenExplanation="A journalist was killed. This is one of the most serious constitutional violations — it removes the right to life and silences press freedom.";}else if(/arrest|detain|raid/.test(txt)){delta=-3;violations=[{a:"Art.19(1)(a)",h:"Journalist arrested — press freedom restricted"},{a:"Art.22",h:"Arbitrary detention — proper arrest safeguards bypassed"}];citizenExplanation="A journalist was arrested or their news office raided. This reduces press freedom and can silence reporting.";}else if(/free|release|acquit/.test(txt)){dir="positive";delta=2;supports=[{a:"Art.19(1)(a)",h:"Press freedom upheld — journalist released/case dropped"}];citizenExplanation="A journalist was freed or a press freedom case resolved positively.";}else{delta=-2;violations=[{a:"Art.19(1)(a)",h:"Press freedom restricted — journalist or outlet affected"}];citizenExplanation="A journalist or media outlet is facing restrictions that affect free press.";}}
+  else if(/uapa|psa|afspa|custody death|encounter|arbitrary arrest/.test(txt)){pillar="liberty";storyType="policing";if(/kill|dead|death/.test(txt)){delta=-5;evidenceLevel=evidenceLevel==="allegation"?"corroborated":evidenceLevel;violations=[{a:"Art.21",h:"Right to life violated — extra-judicial killing or custody death"},{a:"Art.22",h:"Death in custody — due process completely absent"}];citizenExplanation="Someone died in police custody or in an encounter. This is the severest violation — the state took a life without due process.";}else{delta=-3;violations=[{a:"Art.21",h:"Liberty arbitrarily denied by state"},{a:"Art.22",h:"Detained without proper legal grounds or procedure"}];citizenExplanation="Someone was detained under special laws without the normal legal process. Their right to liberty appears violated.";}}
+  else if(/election|voter|ballot|eci|delimitation|electoral bond/.test(txt)){pillar="electoral";if(/sc.*struck|court.*quash|upheld/.test(txt)){dir="positive";delta=3;evidenceLevel="court_finding";courtStatus="upheld";supports=[{a:"Art.324",h:"Election Commission independence upheld by court"},{a:"Art.326",h:"Universal adult suffrage protected"}];citizenExplanation="A court upheld election fairness. This is positive — it strengthens democratic rights.";}else if(/rig|fraud|manipulat/.test(txt)){delta=-5;violations=[{a:"Art.326",h:"Election fraud — universal suffrage undermined"},{a:"Art.324",h:"Election Commission independence compromised"}];citizenExplanation="Allegations of election rigging or fraud. If true, this would undermine every citizen's vote.";}else{delta=-2;violations=[{a:"Art.82",h:"Electoral process affected — representation at risk"}];citizenExplanation="An electoral process development may affect how fairly votes are counted or represented.";}}
+  else if(/nrc|caa |citizenship|stateless/.test(txt)){pillar="equality";delta=-4;storyType="minority";violations=[{a:"Art.14",h:"Unequal citizenship — equality before law denied to citizens"},{a:"Art.15",h:"Discrimination based on religion — constitutional bar crossed"}];citizenExplanation="A citizenship policy is being applied unequally based on religion. This may violate the constitutional guarantee of equal treatment.";}
+  else if(/bulldoz|demolish|evict/.test(txt)){pillar="equality";delta=-3;violations=[{a:"Art.300A",h:"Property demolished without legal authority or due process"},{a:"Art.21",h:"Home demolition destroys dignity and right to shelter"}];citizenExplanation="Homes were demolished — possibly without legal process. This violates both property rights and human dignity.";}
+  else if(/sc.*upheld|court.*protected|acquitted|bail.*granted|sc.*struck down law/.test(txt)){pillar="justice";dir="positive";delta=3;evidenceLevel="court_finding";courtStatus="upheld";supports=[{a:"Art.32",h:"Constitutional remedy granted — rights upheld by Supreme Court"},{a:"Art.141",h:"SC law of the land affirmed — protects all citizens"}];citizenExplanation="A court protected constitutional rights. This is a positive outcome — it sets precedent to protect others too.";}
+  else if(/dalit|caste|sc.st|untouchab|atrocity/.test(txt)){pillar="equality";delta=-3;storyType="minority";violations=[{a:"Art.17",h:"Caste-based discrimination — untouchability practiced despite constitutional ban"},{a:"Art.46",h:"State failed to protect constitutionally vulnerable sections"}];citizenExplanation="A caste-based discrimination or atrocity is reported. The Constitution bans this — the state is expected to prevent and punish such incidents.";}
+  else if(/tribal|adivasi|forest right|displacement/.test(txt)){pillar="environment";delta=-3;scope="state";inst=inst||"environment";violations=[{a:"5th Sch",h:"Tribal rights violated — constitutional schedule not enforced"},{a:"Art.21",h:"Forced displacement violates right to dignified life"}];citizenExplanation="Tribal or forest-dwelling communities are being displaced. The Constitution specifically protects their rights through the Fifth Schedule.";}
+  else if(/riot|communal|violence|mob attack/.test(txt)){pillar="liberty";delta=-4;violations=[{a:"Art.21",h:"Right to life threatened by communal violence"},{a:"Art.355",h:"State failed constitutional duty to protect citizens from internal disturbance"}];citizenExplanation="Communal violence or mob attacks occurred. The state has a constitutional duty to prevent such violence and protect all citizens.";}
+  else if(/anti.conversion|religious conversion|cow vigilant|lynching/.test(txt)){pillar="religion";delta=-3;inst=inst||"minority";violations=[{a:"Art.25",h:"Freedom of religion and conscience restricted by state or mob action"}];citizenExplanation="Religious freedom is being restricted — through conversion laws or mob violence. The Constitution guarantees freedom of religion.";}
+  else if(/welfare|ration|scheme.*cancel|hospital.*shut/.test(txt)){pillar="welfare";delta=-2;inst=inst||"health";violations=[{a:"Art.21",h:"Right to life includes right to basic welfare — access denied"},{a:"Art.47",h:"State duty to improve public health — not being met"}];citizenExplanation="A welfare scheme or hospital is being cut or closed. Citizens have a constitutional right to basic welfare.";}
+  else{dir="negative";delta=-1;violations=[{a:"Art.21",h:"Potential constitutional concern identified — further evidence needed"}];citizenExplanation="A story with potential constitutional implications — watch for further developments.";}
+  if(delta<=-5)pat="systemic";else if(delta<=-4)pat="repeated";else if(delta<=-3)pat="emerging";else pat="isolated";
+  // Confidence based on evidence
+  confidence=evidenceLevel==="final_adjudication"?"high":evidenceLevel==="court_finding"?"high":evidenceLevel==="official_doc"?"high":evidenceLevel==="corroborated"?"moderate":evidenceLevel==="allegation"?"low":"moderate";
+  let detState=null;for(const st of Object.keys(STATE_BASELINES)){if(txt.includes(st.toLowerCase())){detState=st;break;}}
+  const severity=Math.abs(delta)>=5?"critical":Math.abs(delta)>=3?"high":"medium";
+  return{pillar,direction:dir,delta,violations,supports,institution:inst,pattern:pat,scope,state:detState,source:"single_source",aiScore:delta,aiDone:false,mythos:null,aiAnalysis:null,severity,evidenceLevel,storyType,confidence,courtStatus,govResponse,citizenExplanation};
+}
 
-async function fetchNewsRSS(scope,stateName,district){try{const BASE="https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=";const RIGHTS="rights+court+police+arrest+protest+constitution+demolition+election+-cricket+-IPL";let url,stateHint=null;if(scope==="national")url=BASE+encodeURIComponent("India+democracy+"+RIGHTS);else if(scope==="state"&&stateName){url=BASE+encodeURIComponent(stateName+"+India+"+RIGHTS);stateHint=stateName;}else if(scope==="district"&&district)url=BASE+encodeURIComponent(district+"+India+"+RIGHTS);else url=BASE+encodeURIComponent("India+civic+rights+"+RIGHTS);const items=await parseRSS(url,stateHint);const kw=/rights|court|police|arrest|detain|demolish|protest|riot|murder|dalit|minority|muslim|tribal|election|verdict|bail|uapa|afspa|judge|constitution|freedom|violence|killed|ed |cbi|rti|corruption|atrocity|evict/i;const filtered=items.filter(i=>kw.test(i.headline+" "+i.body));return(filtered.length>0?filtered:items).slice(0,6);}catch{return[];}}
+let _rlu=0;const isRL=()=>Date.now()<_rlu;const setRL=ms=>{_rlu=Date.now()+ms;};
 
-async function aiUpgrade(story){if(!GROQ_API_KEY||isRL())return story;try{const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ_API_KEY},body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:500,temperature:0.2,messages:[{role:"system",content:`You are India's top constitutional law expert. Return ONLY valid JSON:
-{"score":-5to5,"pillar":"press_freedom|liberty|equality|electoral|separation|religion|justice","department":"parliament|executive|judiciary|police|ec|media|military|localGov","scope":"national|state|local","national_impact":0-100,"state_impact":0-100,"local_impact":0-100,"violations":[{"a":"Art.XX","h":"why violated 10 words"}],"supports":[{"a":"Art.XX","h":"why upheld 10 words"}],"analysis":"constitutional analysis 120 chars","mythos":"poetic insight 140 chars"}`},{role:"user",content:"Scope:"+story.scope+" State:"+story.state+" News:"+story.headline}]})});if(r.status===429){setRL(30000);return story;}if(!r.ok)return story;const d=await r.json();const txt=d.choices?.[0]?.message?.content||"";const clean=txt.replace(/```json|```/g,"").trim();const start=clean.indexOf("{"),end=clean.lastIndexOf("}");if(start<0||end<0)return story;const j=JSON.parse(clean.slice(start,end+1));return{...story,aiScore:Number(j.score)||story.delta,aiPillar:j.pillar||story.pillar,institution:j.department||story.institution,nationalImpact:Number(j.national_impact)||null,stateImpact:Number(j.state_impact)||null,localImpact:Number(j.local_impact)||null,violations:j.violations?.length?j.violations:story.violations,supports:j.supports?.length?j.supports:story.supports,aiAnalysis:j.analysis||null,mythos:j.mythos||null,aiDone:true};}catch{return story;}}
+async function fetchRSS(scope,state,district){
+  try{const B="https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=";const R="rights+court+police+arrest+protest+constitution+demolition+election+-cricket+-IPL";let url,sh=null;if(scope==="national")url=B+encodeURIComponent("India+democracy+constitution+rights+court+"+R);else if(scope==="state"&&state){url=B+encodeURIComponent(state+"+India+"+R);sh=state;}else if(scope==="district"&&district)url=B+encodeURIComponent(district+"+India+"+R);else url=B+encodeURIComponent("India+civic+rights+"+R);
+  const proxy="https://api.allorigins.win/get?url="+encodeURIComponent(url);const res=await fetch(proxy,{signal:AbortSignal.timeout(14000)});if(!res.ok)return[];const data=await res.json();const xml=new DOMParser().parseFromString(data.contents,"text/xml");const items=[...xml.querySelectorAll("item")];const kw=/rights|court|police|arrest|detain|demolish|protest|riot|murder|dalit|minority|muslim|tribal|election|verdict|bail|uapa|afspa|judge|constitution|freedom|violence|killed|ed |cbi|rti|corruption|atrocity|evict|journalist|press|encounter|custod/i;
+  const parsed=items.slice(0,12).map(item=>{const rT=item.querySelector("title")?.textContent||"";const headline=rT.replace(/ - [^-]*$/,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim();const rD=item.querySelector("description")?.textContent||"";const body=rD.replace(/<[^>]*>/g,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim().slice(0,500);return{headline,body,state:sh};}).filter(i=>i.headline.length>10);
+  const filtered=parsed.filter(i=>kw.test(i.headline+" "+i.body));return(filtered.length>0?filtered:parsed).slice(0,7);}catch{return[];}}
 
-// ── TOAST ──────────────────────────────────────────────────────
-function useToasts(){const[toasts,setToasts]=useState([]);const add=useCallback((msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4000);},[]);return{toasts,add};}
-function Toasts({items}){return(<div style={{position:"fixed",top:68,right:14,zIndex:9999,display:"flex",flexDirection:"column",gap:8,maxWidth:"88vw"}}>{items.map(t=>(<div key={t.id} style={{padding:"10px 16px",borderRadius:10,background:t.type==="error"?"var(--red-s)":t.type==="success"?"var(--green-s)":"var(--surface2)",border:"1px solid "+(t.type==="error"?"var(--red)":t.type==="success"?"var(--green)":"var(--border2)"),color:"var(--t1)",fontSize:13,animation:"fadeUp 0.2s ease",boxShadow:"0 8px 24px rgba(0,0,0,0.4)"}}>{t.msg}</div>))}</div>);}
+async function aiUpgrade(s){
+  if(!GROQ||isRL())return s;
+  try{const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ},body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:600,temperature:0.15,messages:[{role:"system",content:`You are India's top constitutional law and journalism expert. Return ONLY valid JSON:
+{"score":-5to5,"pillar":"press_freedom|liberty|equality|electoral|separation|religion|justice|welfare|environment","department":"pmo|home|law|finance|education|health|wcd|minority|rural|urban|environment|defence|police|ec|media|judiciary","scope":"national|state|local","evidenceLevel":"allegation|single_source|corroborated|official_doc|court_finding|final_adjudication","storyType":"policy|law|court|policing|election|rights|corruption|welfare|speech|media|federalism|minority","confidence":"high|moderate|low|developing","courtStatus":"none|pending|stayed|upheld|struck_down","national_impact":0-100,"state_impact":0-100,"local_impact":0-100,"violations":[{"a":"Art.XX","h":"precise constitutional impact in 15 words"}],"supports":[{"a":"Art.XX","h":"precise constitutional support in 15 words"}],"govResponse":"brief govt response if in text or null","analysis":"constitutional analysis 140 chars max","mythos":"poetic civic insight 150 chars max","citizenExplanation":"plain language — what this means for ordinary Indians in 2 sentences"}`},{role:"user",content:"Scope:"+s.scope+" State:"+s.state+" EvidenceLevel:"+s.evidenceLevel+" News:"+s.headline+" Context:"+s.body?.slice(0,200)}]})});
+  if(r.status===429){setRL(30000);return s;}if(!r.ok)return s;
+  const d=await r.json();const txt=d.choices?.[0]?.message?.content||"";const clean=txt.replace(/```json|```/g,"").trim();const si=clean.indexOf("{"),ei=clean.lastIndexOf("}");if(si<0||ei<0)return s;
+  const j=JSON.parse(clean.slice(si,ei+1));
+  return{...s,aiScore:Number(j.score)||s.delta,institution:j.department||s.institution,evidenceLevel:j.evidenceLevel||s.evidenceLevel,storyType:j.storyType||s.storyType,confidence:j.confidence||s.confidence,courtStatus:j.courtStatus||s.courtStatus,nationalImpact:Number(j.national_impact)||null,stateImpact:Number(j.state_impact)||null,localImpact:Number(j.local_impact)||null,violations:j.violations?.length?j.violations:s.violations,supports:j.supports?.length?j.supports:s.supports,govResponse:j.govResponse||s.govResponse,aiAnalysis:j.analysis||null,mythos:j.mythos||null,citizenExplanation:j.citizenExplanation||s.citizenExplanation,aiDone:true};}catch{return s;}}
 
-// ── PRIMITIVES ─────────────────────────────────────────────────
-function ScoreRing({score,size=100}){const r=(size-14)/2,circ=2*Math.PI*r,col=scoreColor(score),dash=(score/100)*circ;return(<div style={{position:"relative",width:size,height:size,flexShrink:0}}><svg width={size} height={size} style={{transform:"rotate(-90deg)"}}><circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={9}/><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={9} strokeDasharray={circ} strokeDashoffset={circ-dash} strokeLinecap="round" style={{transition:"stroke-dashoffset 1.2s ease"}}/></svg><div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}><span style={{fontFamily:"var(--font-m)",fontSize:size*0.21,fontWeight:700,color:col,lineHeight:1}}>{score}</span><span style={{fontSize:size*0.09,color:"var(--t3)"}}>/ 100</span></div></div>);}
-function Tag({children,color="#4F8EF7"}){return<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,fontFamily:"var(--font-m)",color:color,background:color+"22",borderRadius:5,padding:"1px 7px"}}>{children}</span>;}
-function Pill({children,color="var(--t2)"}){return<span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:500,color:color,background:"rgba(255,255,255,0.06)",borderRadius:99,padding:"2px 9px"}}>{children}</span>;}
-function Metric({label,value,color}){return(<div style={{padding:"12px 14px",background:"var(--surface2)",borderRadius:10,border:"1px solid var(--border)"}}><div style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:4}}>{label}</div><div style={{fontFamily:"var(--font-m)",fontSize:18,fontWeight:700,color:color||"var(--t1)"}}>{value}</div></div>);}
+function useToasts(){const[toasts,setToasts]=useState([]);const add=useCallback((msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4500);},[]);return{toasts,add};}
+
+
+// ── DESIGN SYSTEM ──────────────────────────────────────────────
+function Toasts({items}){return(<div style={{position:"fixed",top:60,right:14,zIndex:9999,display:"flex",flexDirection:"column",gap:7,maxWidth:"90vw"}}>{items.map(t=>(<div key={t.id} style={{padding:"11px 16px",borderRadius:11,background:t.type==="error"?"rgba(240,74,90,0.14)":t.type==="success"?"rgba(15,212,124,0.11)":"rgba(74,143,255,0.11)",border:"1px solid "+(t.type==="error"?"rgba(240,74,90,0.28)":t.type==="success"?"rgba(15,212,124,0.28)":"rgba(74,143,255,0.28)"),color:"var(--t1)",fontSize:12.5,backdropFilter:"blur(14px)",boxShadow:"0 8px 28px rgba(0,0,0,0.45)",animation:"fadeUp 0.22s ease"}}>{t.msg}</div>))}</div>);}
+
+function ScoreRing({score,size=96,label}){
+  const r=(size-12)/2,circ=2*Math.PI*r,col=sColor(score),offset=circ-(score/100)*circ;
+  return(<div style={{position:"relative",width:size,height:size,flexShrink:0}}>
+    <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={7}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={7}
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+        style={{transition:"stroke-dashoffset 1.5s cubic-bezier(0.34,1.56,0.64,1)",filter:`drop-shadow(0 0 8px ${col}90)`}}/>
+    </svg>
+    <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}>
+      <span style={{fontFamily:"var(--font-m)",fontSize:size*0.22,fontWeight:700,color:col,lineHeight:1,letterSpacing:"-0.03em"}}>{score}</span>
+      {label&&<span style={{fontSize:Math.max(7,size*0.088),color:"var(--t2)",textAlign:"center",lineHeight:1.2}}>{label}</span>}
+    </div>
+  </div>);}
+
+function Tag({children,color="#4A8FFF",sm}){return<span style={{display:"inline-flex",alignItems:"center",fontSize:sm?8.5:9.5,fontWeight:700,fontFamily:"var(--font-m)",color:color,background:color+"18",border:"1px solid "+color+"30",borderRadius:5,padding:sm?"1px 5px":"2px 7px",whiteSpace:"nowrap"}}>{children}</span>;}
+function Pill({children,color="var(--t2)"}){return<span style={{display:"inline-flex",alignItems:"center",fontSize:9.5,color:color,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:99,padding:"1px 8px",fontWeight:500}}>{children}</span>;}
+function Card({children,style={},glow,onClick}){return(<div onClick={onClick} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:13,padding:"15px 17px",position:"relative",overflow:"hidden",cursor:onClick?"pointer":"default",boxShadow:glow?`0 0 0 1px ${glow}28, 0 6px 24px ${glow}14`:"none",transition:"border-color 0.2s",...style}}><div style={{position:"absolute",inset:0,background:"linear-gradient(140deg,rgba(255,255,255,0.011) 0%,transparent 50%)",pointerEvents:"none",borderRadius:"inherit"}}/>{children}</div>);}
+function Metric({label,value,color,sub,icon}){return(<Card style={{padding:"13px 15px"}}><div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.13em",marginBottom:5,display:"flex",alignItems:"center",gap:4}}>{icon&&<span>{icon}</span>}{label}</div><div style={{fontFamily:"var(--font-m)",fontSize:21,fontWeight:700,color:color||"var(--t1)",lineHeight:1,letterSpacing:"-0.03em"}}>{value}</div>{sub&&<div style={{fontSize:9.5,color:"var(--t2)",marginTop:4}}>{sub}</div>}</Card>);}
+function Btn({children,onClick,variant="ghost",disabled,style={}}){const vs={ghost:{bg:"transparent",border:"var(--border2)",color:"var(--t2)"},primary:{bg:"var(--blue)",border:"transparent",color:"#fff"},success:{bg:"var(--green-s)",border:"var(--green-b)",color:"var(--green)"},danger:{bg:"var(--red-s)",border:"var(--red-b)",color:"var(--red)"},amber:{bg:"var(--amber-s)",border:"var(--amber-b)",color:"var(--amber)"},purple:{bg:"var(--purple-s)",border:"var(--purple-b)",color:"var(--purple)"},cyan:{bg:"var(--cyan-s)",border:"var(--cyan-b)",color:"var(--cyan)"}};const v=vs[variant]||vs.ghost;return(<button onClick={onClick} disabled={disabled} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"6px 13px",borderRadius:8,background:v.bg,border:"1px solid "+v.border,color:v.color,fontSize:11,fontWeight:600,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all 0.15s",fontFamily:"var(--font-b)",...style}}>{children}</button>);}
+function STitle({children,action}){return(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}><div style={{fontSize:8.5,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.14em",color:"var(--t3)"}}>{children}</div>{action}</div>);}
+
+// ── EVIDENCE BADGE ─────────────────────────────────────────────
+function EvidenceBadge({level,t}){
+  const ev=EVIDENCE_LEVELS[level||"single_source"];
+  const labels={allegation:"Allegation",single_source:"Single Source",corroborated:"Corroborated",official_doc:"Official Doc",court_finding:"Court Finding",final_adjudication:"Adjudicated"};
+  return(<span title={ev?.desc||""} style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:8.5,fontWeight:800,color:ev?.color||"#94a3b8",background:(ev?.color||"#94a3b8")+"15",border:"1px solid "+(ev?.color||"#94a3b8")+"30",borderRadius:4,padding:"1px 6px",fontFamily:"var(--font-m)",whiteSpace:"nowrap"}}>
+    <span style={{width:4,height:4,borderRadius:"50%",background:ev?.color||"#94a3b8",display:"inline-block",flexShrink:0}}/>
+    {t?.evidenceLevels?.[level]||labels[level]||"Unknown"}
+  </span>);}
+
+// ── CONFIDENCE BADGE ───────────────────────────────────────────
+function ConfidenceBadge({confidence,t}){
+  const cv=CONFIDENCE_LEVELS[confidence||"moderate"];
+  const labels={high:"High Confidence",moderate:"Moderate",low:"Low Confidence",developing:"Developing"};
+  return(<span style={{fontSize:8.5,fontWeight:700,color:cv?.color||"var(--amber)",background:(cv?.color||"var(--amber)")+"12",border:"1px solid "+(cv?.color||"var(--amber)")+"25",borderRadius:4,padding:"1px 6px",fontFamily:"var(--font-m)"}}>
+    {t?.confidence?.[confidence]||labels[confidence]||"Moderate"}
+  </span>);}
+
+// ── COURT STATUS BADGE ─────────────────────────────────────────
+function CourtBadge({status}){
+  if(!status||status==="none")return null;
+  const cs=COURT_STATUSES[status];if(!cs)return null;
+  return(<span style={{fontSize:8.5,fontWeight:700,color:cs.color,background:cs.color+"12",border:"1px solid "+cs.color+"25",borderRadius:4,padding:"1px 6px"}}>⚖ {cs.label}</span>);}
+
+// ── STORY TYPE BADGE ───────────────────────────────────────────
+function StoryTypeBadge({type,t}){
+  const colors={policy:"var(--blue)",law:"var(--purple)",court:"var(--green)",policing:"var(--red)",election:"var(--purple)",rights:"var(--red)",corruption:"var(--amber)",welfare:"var(--green)",speech:"var(--orange,#f97316)",media:"var(--amber)",federalism:"var(--blue)",minority:"var(--cyan)"};
+  const col=colors[type]||"var(--t2)";
+  const label=t?.storyTypes?.[type]||type;
+  return(<span style={{fontSize:8.5,fontWeight:700,color:col,background:col+"12",border:"1px solid "+col+"25",borderRadius:4,padding:"1px 6px",textTransform:"capitalize"}}>{label}</span>);}
+
+// ── SCORE EXPLANATION ──────────────────────────────────────────
+function ScoreExplanation({story}){
+  const exp=story.scoreExplanation||generateExplanation(story);
+  if(!exp)return null;
+  const col=story.direction==="positive"?"var(--green)":"var(--red)";
+  return(<div style={{padding:"10px 12px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,borderLeft:"2px solid "+col,marginTop:8}}>
+    <div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>Score Explanation</div>
+    <p style={{fontSize:11,color:"var(--t2)",lineHeight:1.7,margin:0}}>{exp}</p>
+  </div>);}
 
 // ── IMPACT BAR ─────────────────────────────────────────────────
-function ImpactBar({story,t}){const scope=story.scope||"national";const r=IMPACT_RADIUS[scope]||IMPACT_RADIUS.national;const abs=Math.abs(story.aiScore||story.delta||0);const ni=story.nationalImpact!=null?story.nationalImpact:Math.round(r.national*100*abs/5);const si=story.stateImpact!=null?story.stateImpact:Math.round(r.state*100*abs/5);const li=story.localImpact!=null?story.localImpact:Math.round(r.local*100*abs/5);const col=story.direction==="positive"?"var(--green)":"var(--red)";return(<div style={{padding:"10px 12px",background:"rgba(255,255,255,0.03)",borderRadius:9,marginTop:8}}><div style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>{t.impactRadius}</div>{[["🌐 "+t.national,ni],["🏛 "+t.state,si],["📍 "+t.district,li]].map(([lbl,val])=>(<div key={lbl} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}><span style={{fontSize:10,color:"var(--t2)",width:80,flexShrink:0}}>{lbl}</span><div style={{flex:1,height:5,background:"rgba(255,255,255,0.06)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",borderRadius:99,background:col,width:Math.min(100,val)+"%",transition:"width 1s ease"}}/></div><span style={{fontSize:10,fontFamily:"var(--font-m)",fontWeight:700,color:col,width:30,textAlign:"right"}}>{Math.round(val)}%</span></div>))}</div>);}
+function ImpactBar({story,t}){
+  const scope=story.scope||"national";const r=IMPACT[scope]||IMPACT.national;
+  const abs=Math.min(5,Math.abs(story.aiScore||story.delta||0))/5;
+  const ev=EVIDENCE_LEVELS[story.evidenceLevel||"single_source"]?.weight||0.5;
+  const conf={high:1.0,moderate:0.75,low:0.5,developing:0.35}[story.confidence||"moderate"]||0.7;
+  const mult=ev*conf;
+  const ni=story.nationalImpact!=null?story.nationalImpact:Math.round(r.national*100*abs*mult);
+  const si=story.stateImpact!=null?story.stateImpact:Math.round(r.state*100*abs*mult);
+  const li=story.localImpact!=null?story.localImpact:Math.round(r.local*100*abs*mult);
+  const col=story.direction==="positive"?"var(--green)":"var(--red)";
+  return(<div style={{padding:"11px 13px",background:"rgba(255,255,255,0.02)",borderRadius:9,marginTop:9,border:"1px solid var(--border)"}}>
+    <div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.13em",marginBottom:9}}>{t.impactRadius}</div>
+    {[[`🌐 ${t.national}`,ni],[`🏛 ${t.state}`,si],[`📍 ${t.district}`,li]].map(([lbl,val])=>(
+      <div key={lbl} style={{display:"flex",alignItems:"center",gap:9,marginBottom:6}}>
+        <span style={{fontSize:9.5,color:"var(--t2)",width:75,flexShrink:0,fontWeight:500}}>{lbl}</span>
+        <div style={{flex:1,height:4,background:"rgba(255,255,255,0.04)",borderRadius:99,overflow:"hidden"}}>
+          <div style={{height:"100%",borderRadius:99,background:col,width:Math.min(100,val)+"%",transition:"width 1.3s cubic-bezier(0.34,1.56,0.64,1)",boxShadow:`0 0 8px ${col}55`}}/>
+        </div>
+        <span style={{fontSize:9.5,fontFamily:"var(--font-m)",fontWeight:700,color:col,width:28,textAlign:"right"}}>{Math.round(val)}%</span>
+      </div>
+    ))}
+    <div style={{fontSize:9,color:"var(--t3)",marginTop:6,fontStyle:"italic"}}>Adjusted for evidence weight ({Math.round(ev*100)}%) × confidence ({Math.round(conf*100)}%)</div>
+  </div>);}
 
 // ── CONSTITUTION PANEL ─────────────────────────────────────────
-function ConstitutionPanel({violations=[],supports=[],t}){if(!violations.length&&!supports.length)return null;return(<div style={{marginTop:8}}>{violations.length>0&&(<div style={{marginBottom:8}}><div style={{fontSize:9,color:"var(--red)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>⚠ {t.constitutionViolations}</div>{violations.map((v,i)=>(<div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"5px 0",borderBottom:"1px solid var(--border)"}}><Tag color={CA[v.a]?.c||"#ef4444"}>{v.a}</Tag><div style={{flex:1}}><div style={{fontSize:11,fontWeight:600,color:"var(--t1)"}}>{CA[v.a]?.t||v.a}</div><div style={{fontSize:10,color:"var(--t2)"}}>{v.h||v.reason}</div></div></div>))}</div>)}{supports.length>0&&(<div><div style={{fontSize:9,color:"var(--green)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>✓ {t.constitutionSupports}</div>{supports.map((v,i)=>(<div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"5px 0",borderBottom:"1px solid var(--border)"}}><Tag color="var(--green)">{v.a}</Tag><div style={{flex:1}}><div style={{fontSize:11,fontWeight:600,color:"var(--t1)"}}>{CA[v.a]?.t||v.a}</div><div style={{fontSize:10,color:"var(--t2)"}}>{v.h||v.reason}</div></div></div>))}</div>)}</div>);}
+function ConstitutionPanel({violations=[],supports=[],t}){
+  if(!violations.length&&!supports.length)return(<div style={{padding:"18px",textAlign:"center",color:"var(--t3)",fontSize:11}}>AI constitutional analysis pending...</div>);
+  return(<div style={{marginTop:4}}>
+    {violations.length>0&&(<div style={{marginBottom:10}}>
+      <div style={{fontSize:8.5,color:"var(--red)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.14em",marginBottom:7,display:"flex",alignItems:"center",gap:5}}>
+        <span style={{width:5,height:5,borderRadius:"50%",background:"var(--red)",display:"inline-block"}}/>⚠ {t.constitutionViolations}
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+        {violations.map((v,i)=>(<div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 11px",background:"rgba(240,74,90,0.04)",border:"1px solid rgba(240,74,90,0.11)",borderRadius:8}}>
+          <Tag color={CA[v.a]?.c||"#F04A5A"} sm>{v.a}</Tag>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:10.5,fontWeight:600,color:"var(--t1)",marginBottom:2}}>{CA[v.a]?.t||v.a}</div>
+            <div style={{fontSize:9.5,color:"var(--t2)",lineHeight:1.55}}>{v.h||v.reason}</div>
+          </div>
+        </div>))}
+      </div>
+    </div>)}
+    {supports.length>0&&(<div>
+      <div style={{fontSize:8.5,color:"var(--green)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.14em",marginBottom:7,display:"flex",alignItems:"center",gap:5}}>
+        <span style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",display:"inline-block"}}/>✓ {t.constitutionSupports}
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+        {supports.map((v,i)=>(<div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 11px",background:"rgba(15,212,124,0.04)",border:"1px solid rgba(15,212,124,0.11)",borderRadius:8}}>
+          <Tag color="var(--green)" sm>{v.a}</Tag>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:10.5,fontWeight:600,color:"var(--t1)",marginBottom:2}}>{CA[v.a]?.t||v.a}</div>
+            <div style={{fontSize:9.5,color:"var(--t2)",lineHeight:1.55}}>{v.h||v.reason}</div>
+          </div>
+        </div>))}
+      </div>
+    </div>)}
+  </div>);}
 
 
-// ── STORY CARD ─────────────────────────────────────────────────
-function StoryCard({s,t,onReview,compact}){
+// ── STORY CARD — World-class with Citizen/Expert modes ─────────
+function StoryCard({s,t,mode,onReview,compact,onSelect}){
   const[tab,setTab]=useState("impact");
   const isCrit=s.severity==="critical"&&s.direction==="negative";
   const isPos=s.direction==="positive";
-  const dc=isCrit?"var(--red)":isPos?"var(--green)":"var(--amber)";
-  const bg=isCrit?"rgba(240,74,90,0.04)":isPos?"rgba(34,197,94,0.04)":"rgba(245,158,11,0.03)";
-  const pc=PATTERN_CLASSES[s.pattern]||PATTERN_CLASSES.isolated;
-  const deptInfo=s.institution?DEPARTMENTS[s.institution]:null;
+  const col=isCrit?"var(--red)":isPos?"var(--green)":"var(--amber)";
+  const bg=isCrit?"rgba(240,74,90,0.035)":isPos?"rgba(15,212,124,0.035)":"rgba(245,166,35,0.025)";
+  const border=isCrit?"rgba(240,74,90,0.12)":isPos?"rgba(15,212,124,0.12)":"rgba(245,166,35,0.09)";
+  const pc=PAT[s.pattern]||PAT.isolated;const d=s.institution?DEPT[s.institution]:null;
+  const wt=Math.abs(s.aiScore||s.delta||0);
+  const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"];
+  // CITIZEN MODE — simplified view
+  if(mode==="citizen"&&!compact){return(
+    <div style={{background:bg,border:"1px solid "+border,borderRadius:14,padding:"16px 18px",marginBottom:10}}>
+      <div style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:10}}>
+        <div style={{width:32,height:32,borderRadius:9,background:col+"18",border:"1px solid "+col+"25",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{isPos?"✅":isCrit?"🚨":"⚠️"}</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:9,color:col,fontWeight:700,marginBottom:3,textTransform:"uppercase",letterSpacing:"0.06em"}}>{isPos?"Supports Constitution":"Potential Constitutional Concern"}</div>
+          <h3 style={{fontSize:13,fontWeight:600,color:"var(--t1)",lineHeight:1.55}}>{s.headline}</h3>
+        </div>
+      </div>
+      {s.citizenExplanation&&(<div style={{padding:"10px 12px",background:"rgba(255,255,255,0.03)",borderRadius:8,marginBottom:10}}>
+        <div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>{t.citizenWhy}</div>
+        <p style={{fontSize:12,color:"var(--t1)",lineHeight:1.7,margin:0}}>{s.citizenExplanation}</p>
+      </div>)}
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+        {d&&<Pill color={d.color}>{d.icon} {d.name}</Pill>}
+        <EvidenceBadge level={s.evidenceLevel} t={t}/>
+        {s.courtStatus&&s.courtStatus!=="none"&&<CourtBadge status={s.courtStatus}/>}
+        <span style={{fontSize:9,color:"var(--t3)",marginLeft:"auto"}}>{new Date(s.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
+      </div>
+    </div>
+  );}
   return(
-    <div style={{background:bg,border:"1px solid "+(isCrit?"rgba(240,74,90,0.15)":isPos?"rgba(34,197,94,0.15)":"rgba(245,158,11,0.10)"),borderRadius:14,padding:compact?"12px":"16px 18px",marginBottom:10}}>
-      <div style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:8,flexWrap:"wrap"}}>
+    <div onClick={onSelect?()=>onSelect(s):undefined} style={{background:bg,border:"1px solid "+border,borderRadius:14,padding:compact?"11px 14px":"16px 18px",marginBottom:10,cursor:onSelect?"pointer":"default",transition:"border-color 0.2s"}}>
+      {/* Header row */}
+      <div style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:compact?0:9}}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:6}}>
-            <Tag color={dc}>{isCrit?t.critical:isPos?t.positive:t.high}</Tag>
-            {deptInfo&&<span style={{fontSize:9,color:deptInfo.color,background:deptInfo.color+"18",borderRadius:5,padding:"1px 7px",fontWeight:700}}>{deptInfo.icon} {deptInfo.name}</span>}
+          <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:5}}>
+            <span style={{fontSize:8.5,fontWeight:800,color:col,background:col+"16",border:"1px solid "+col+"28",borderRadius:5,padding:"1px 7px",letterSpacing:"0.04em",fontFamily:"var(--font-m)"}}>{isPos?t.positive:isCrit?t.critical:t.high}</span>
+            {d&&<span style={{fontSize:8.5,color:d.color,background:d.color+"12",border:"1px solid "+d.color+"22",borderRadius:5,padding:"1px 7px",fontWeight:700}}>{d.icon} {d.name}</span>}
+            {s.storyType&&!compact&&<StoryTypeBadge type={s.storyType} t={t}/>}
             {s.state&&<Pill color="var(--blue)">{s.state}</Pill>}
-            <span style={{fontSize:9,color:"var(--t3)",textTransform:"uppercase"}}>{s.scope||"national"}</span>
-            <div style={{marginLeft:"auto",padding:"2px 8px",borderRadius:6,background:dc+"18",border:"1px solid "+dc+"44"}}>
-              <span style={{fontFamily:"var(--font-m)",fontSize:11,fontWeight:800,color:dc}}>{isPos?"+":""}{s.aiScore||s.delta} pts</span>
+            <div style={{marginLeft:"auto",padding:"2px 8px",borderRadius:6,background:col+"14",border:"1px solid "+col+"28"}}>
+              <span style={{fontFamily:"var(--font-m)",fontSize:11,fontWeight:800,color:col,letterSpacing:"-0.02em"}}>{isPos?"+":""}{wt} pts</span>
             </div>
           </div>
-          <h3 style={{fontSize:13,fontWeight:600,color:"var(--t1)",lineHeight:1.5,marginBottom:5,wordBreak:"break-word"}}>{s.headline}</h3>
+          <h3 style={{fontSize:13,fontWeight:600,color:"var(--t1)",lineHeight:1.55,marginBottom:6,wordBreak:"break-word"}}>{s.headline}</h3>
           <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:9,color:pc.color,background:pc.bg,borderRadius:4,padding:"1px 6px",fontWeight:700}}>{pc.dot} {pc.label}</span>
-            {s.aiDone&&<span style={{fontSize:9,color:"var(--purple)",background:"var(--purple-s)",borderRadius:4,padding:"1px 6px",fontWeight:700}}>✦ AI</span>}
-            <span style={{fontSize:9,fontWeight:700,color:"var(--t3)",background:"rgba(255,255,255,0.05)",borderRadius:4,padding:"1px 6px"}}>WT {Math.abs(s.aiScore||s.delta||0)}/5</span>
-            <span style={{fontSize:9,color:"var(--t3)"}}>{new Date(s.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
+            <span style={{fontSize:8.5,color:pc.color,background:pc.bg,borderRadius:4,padding:"1px 6px",fontWeight:700,border:"1px solid "+pc.color+"22"}}>{pc.dot} {pc.label}</span>
+            <EvidenceBadge level={s.evidenceLevel} t={t}/>
+            <ConfidenceBadge confidence={s.confidence} t={t}/>
+            {s.courtStatus&&s.courtStatus!=="none"&&<CourtBadge status={s.courtStatus}/>}
+            {s.aiDone&&<span style={{fontSize:8.5,color:"var(--purple)",background:"var(--purple-s)",border:"1px solid var(--purple-b)",borderRadius:4,padding:"1px 6px",fontWeight:700}}>✦ AI</span>}
+            <span style={{fontSize:8.5,color:"var(--t3)",marginLeft:"auto"}}>{new Date(s.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
           </div>
         </div>
       </div>
       {!compact&&(<>
-        <div style={{display:"flex",gap:2,marginBottom:8,flexWrap:"wrap"}}>
-          {[["impact",t.impact],["facts",t.facts],["mythos",t.mythos]].map(([k,label])=>(
-            <button key={k} onClick={()=>setTab(k)} style={{padding:"3px 9px",borderRadius:6,border:"none",background:tab===k?"rgba(255,255,255,0.1)":"transparent",color:tab===k?"var(--t1)":"var(--t2)",fontSize:10,fontWeight:tab===k?700:400,cursor:"pointer"}}>{label}</button>
+        {/* Tabs */}
+        <div style={{display:"flex",gap:2,marginTop:8,marginBottom:9,borderBottom:"1px solid var(--border)",paddingBottom:7}}>
+          {[["impact",t.impact],["facts",t.facts],["mythos",t.mythos],...(mode==="expert"?[["expert","🔍 Expert"]]:[])].map(([k,label])=>(
+            <button key={k} onClick={()=>setTab(k)} style={{padding:"3px 10px",borderRadius:6,border:"none",background:tab===k?"rgba(255,255,255,0.08)":"transparent",color:tab===k?"var(--t1)":"var(--t2)",fontSize:10.5,fontWeight:tab===k?700:400,cursor:"pointer",transition:"all 0.14s"}}>{label}</button>
           ))}
         </div>
-        {tab==="impact"&&<ImpactBar story={s} t={t}/>}
+        {tab==="impact"&&(<>
+          <ImpactBar story={s} t={t}/>
+          {s.govResponse&&(<div style={{marginTop:8,padding:"8px 12px",background:"rgba(74,143,255,0.04)",border:"1px solid rgba(74,143,255,0.12)",borderRadius:8}}>
+            <div style={{fontSize:8.5,color:"var(--blue)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:3}}>🏢 {t.govResponse}</div>
+            <p style={{fontSize:10.5,color:"var(--t2)",margin:0,lineHeight:1.6}}>{s.govResponse}</p>
+          </div>)}
+          <ScoreExplanation story={s}/>
+        </>)}
         {tab==="facts"&&<ConstitutionPanel violations={s.violations} supports={s.supports} t={t}/>}
-        {tab==="mythos"&&(<div style={{padding:"12px 14px",background:"rgba(255,255,255,0.03)",borderRadius:9,borderLeft:"3px solid var(--purple)"}}>{s.mythos?<p style={{fontSize:13,color:"var(--t1)",fontStyle:"italic",lineHeight:1.8,margin:0}}>{s.mythos}</p>:<p style={{fontSize:12,color:"var(--t2)",margin:0}}>AI narrative pending...</p>}{s.aiAnalysis&&<p style={{fontSize:11,color:"var(--t2)",marginTop:8,padding:"6px 10px",background:"var(--purple-s)",borderRadius:6,margin:"8px 0 0"}}>{s.aiAnalysis}</p>}</div>)}
+        {tab==="mythos"&&(<div style={{padding:"12px 15px",background:"rgba(155,125,255,0.04)",border:"1px solid rgba(155,125,255,0.11)",borderRadius:9,borderLeft:"3px solid var(--purple)"}}>{s.mythos?<p style={{fontSize:12.5,color:"var(--t1)",fontStyle:"italic",lineHeight:1.9,margin:0}}>{s.mythos}</p>:<p style={{fontSize:11,color:"var(--t2)",margin:0}}>AI insight pending — tap ✦ AI in newsroom</p>}{s.aiAnalysis&&<p style={{fontSize:10.5,color:"var(--t2)",marginTop:9,padding:"7px 11px",background:"rgba(155,125,255,0.06)",borderRadius:7,lineHeight:1.7}}>{s.aiAnalysis}</p>}</div>)}
+        {tab==="expert"&&mode==="expert"&&(<div style={{padding:"12px 14px",background:"rgba(255,255,255,0.02)",border:"1px solid var(--border)",borderRadius:9}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+            {[["Evidence Level",s.evidenceLevel?.replace(/_/g," ")||"unknown"],["Confidence",s.confidence||"moderate"],["Story Type",s.storyType||"policy"],["Pattern Class",s.pattern||"isolated"],["Pillar",s.pillar||"justice"],["Scope",s.scope||"national"],["AI Score",s.aiScore||s.delta||0],["Source",s.source||"unknown"]].map(([k,v])=>(<div key={k} style={{fontSize:10,color:"var(--t1)"}}><span style={{color:"var(--t3)",fontWeight:700,display:"block",fontSize:8.5,marginBottom:2,textTransform:"uppercase",letterSpacing:"0.1em"}}>{k}</span>{String(v)}</div>))}
+          </div>
+          {(s.violations||[]).length>0&&<div style={{fontSize:10,color:"var(--t2)",fontFamily:"var(--font-m)",padding:"8px 10px",background:"rgba(0,0,0,0.2)",borderRadius:6,overflow:"auto"}}>{JSON.stringify({violations:s.violations,supports:s.supports},null,2)}</div>}
+        </div>)}
       </>)}
-      {onReview&&(<div style={{display:"flex",gap:5,marginTop:8,flexWrap:"wrap"}}>
-        <button onClick={()=>onReview(s.id,"approve")} style={{padding:"4px 11px",borderRadius:7,border:"1px solid var(--green)",background:"var(--green-s)",color:"var(--green)",fontSize:10,fontWeight:600,cursor:"pointer"}}>✓</button>
-        <button onClick={()=>onReview(s.id,"hold")} style={{padding:"4px 11px",borderRadius:7,border:"1px solid var(--amber)",background:"var(--amber-s)",color:"var(--amber)",fontSize:10,fontWeight:600,cursor:"pointer"}}>⏸</button>
-        <button onClick={()=>onReview(s.id,"reject")} style={{padding:"4px 11px",borderRadius:7,border:"1px solid var(--red)",background:"var(--red-s)",color:"var(--red)",fontSize:10,fontWeight:600,cursor:"pointer"}}>✗</button>
+      {onReview&&(<div style={{display:"flex",gap:5,marginTop:9,flexWrap:"wrap"}}>
+        <Btn onClick={()=>onReview(s.id,"approve")} variant="success">✓</Btn>
+        <Btn onClick={()=>onReview(s.id,"hold")} variant="amber">⏸</Btn>
+        <Btn onClick={()=>onReview(s.id,"reject")} variant="danger">✗</Btn>
       </div>)}
     </div>
-  );
-}
+  );}
 
-// ── SIGN IN PAGE ─────────────────────────────────────────────────
+
+// ── SIGN IN ────────────────────────────────────────────────────
 function SignInPage({onSignIn,lang,setLang,t}){
-  const[name,setName]=useState("");
-  const[email,setEmail]=useState("");
-  return(
-    <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
-      <div style={{position:"fixed",top:16,right:16,display:"flex",gap:5,flexWrap:"wrap",justifyContent:"flex-end",maxWidth:"80vw"}}>
-        {Object.entries(LANG).map(([k,l])=>(<button key={k} onClick={()=>setLang(k)} style={{padding:"3px 7px",borderRadius:6,border:"1px solid "+(lang===k?"var(--blue)":"var(--border)"),background:lang===k?"var(--blue-s)":"var(--surface)",color:lang===k?"var(--blue)":"var(--t2)",fontSize:10,fontWeight:lang===k?700:400,cursor:"pointer"}}>{l.flag} {l.name}</button>))}
+  const[name,setName]=useState("");const[email,setEmail]=useState("");
+  return(<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px",position:"relative",overflow:"hidden"}}>
+    <div style={{position:"absolute",top:"20%",left:"30%",width:700,height:700,background:"radial-gradient(circle,rgba(124,92,252,0.07) 0%,transparent 65%)",pointerEvents:"none"}}/>
+    <div style={{position:"absolute",bottom:"20%",right:"20%",width:500,height:500,background:"radial-gradient(circle,rgba(240,74,90,0.05) 0%,transparent 65%)",pointerEvents:"none"}}/>
+    <div style={{position:"fixed",top:14,right:14,display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end",maxWidth:"85vw",zIndex:10}}>
+      {Object.entries(LANG).map(([k,l])=>(<button key={k} onClick={()=>setLang(k)} style={{padding:"2px 7px",borderRadius:6,border:"1px solid "+(lang===k?"rgba(74,143,255,0.45)":"var(--border)"),background:lang===k?"rgba(74,143,255,0.1)":"var(--surface)",color:lang===k?"var(--blue)":"var(--t2)",fontSize:9.5,fontWeight:lang===k?700:400,cursor:"pointer"}}>{l.flag} {l.name}</button>))}
+    </div>
+    <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:1}}>
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{width:60,height:60,borderRadius:17,background:"var(--grad)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,fontWeight:900,fontFamily:"var(--font-h)",color:"#fff",margin:"0 auto 16px",boxShadow:"0 8px 32px rgba(124,92,252,0.4),0 0 0 1px rgba(124,92,252,0.25)"}}>D</div>
+        <h1 style={{fontFamily:"var(--font-h)",fontSize:24,fontWeight:900,color:"var(--t1)",marginBottom:5,letterSpacing:"-0.02em"}}>{t.appName}</h1>
+        <div style={{fontSize:11,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>{t.appSub}</div>
+        <p style={{fontSize:11.5,color:"var(--t2)",lineHeight:1.7,maxWidth:310,margin:"0 auto"}}>{t.signInSub}</p>
       </div>
-      <div style={{width:"100%",maxWidth:420}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{width:60,height:60,borderRadius:16,background:"linear-gradient(135deg,#7C5CFC,#EF4444)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,fontWeight:900,fontFamily:"var(--font-h)",color:"#fff",margin:"0 auto 12px"}}>D</div>
-          <h1 style={{fontFamily:"var(--font-h)",fontSize:22,fontWeight:800,color:"var(--t1)",marginBottom:4}}>{t.appName}</h1>
-          <p style={{fontSize:12,color:"var(--t2)",lineHeight:1.6}}>{t.appSub}</p>
-        </div>
-        <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:16,padding:"24px"}}>
-          <h2 style={{fontFamily:"var(--font-h)",fontSize:17,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.signIn}</h2>
-          <p style={{fontSize:12,color:"var(--t2)",marginBottom:18,lineHeight:1.6}}>{t.signInSub}</p>
-          <div style={{marginBottom:12}}>
-            <label style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>{t.yourName} *</label>
-            <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&onSignIn({name:name.trim(),email:email.trim()})} placeholder={t.yourName} style={{width:"100%",padding:"10px 14px",borderRadius:9,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:13,outline:"none"}}/>
+      <div style={{background:"var(--surface)",border:"1px solid var(--border2)",borderRadius:18,padding:"26px",boxShadow:"0 20px 70px rgba(0,0,0,0.5)"}}>
+        <h2 style={{fontFamily:"var(--font-h)",fontSize:17,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.signIn}</h2>
+        {[{k:"name",label:t.yourName,val:name,set:setName,req:true,type:"text"},{k:"email",label:t.yourEmail,val:email,set:setEmail,req:false,type:"email"}].map(f=>(
+          <div key={f.k} style={{marginBottom:13}}>
+            <label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{f.label}{f.req?" *":""}</label>
+            <input value={f.val} onChange={e=>f.set(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&onSignIn({name:name.trim(),email:email.trim()})} type={f.type} placeholder={f.label} style={{width:"100%",padding:"11px 13px",borderRadius:10,border:"1px solid "+(f.req&&f.val?"rgba(74,143,255,0.4)":"var(--border2)"),background:"var(--surface2)",color:"var(--t1)",fontSize:13,outline:"none",fontFamily:"var(--font-b)",transition:"border-color 0.2s"}}/>
           </div>
-          <div style={{marginBottom:20}}>
-            <label style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>{t.yourEmail}</label>
-            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder={t.yourEmail} type="email" style={{width:"100%",padding:"10px 14px",borderRadius:9,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:13,outline:"none"}}/>
-          </div>
-          <button onClick={()=>name.trim()&&onSignIn({name:name.trim(),email:email.trim()})} disabled={!name.trim()} style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:name.trim()?"var(--blue)":"var(--surface2)",color:name.trim()?"#fff":"var(--t3)",fontSize:14,fontWeight:700,cursor:name.trim()?"pointer":"default",transition:"all 0.2s"}}>{t.continueBtn}</button>
+        ))}
+        <button onClick={()=>name.trim()&&onSignIn({name:name.trim(),email:email.trim()})} disabled={!name.trim()} style={{width:"100%",padding:"13px",borderRadius:11,border:"none",background:name.trim()?"var(--grad)":"var(--surface3)",color:name.trim()?"#fff":"var(--t3)",fontSize:14,fontWeight:700,cursor:name.trim()?"pointer":"default",transition:"all 0.25s",boxShadow:name.trim()?"0 4px 24px rgba(124,92,252,0.4)":"none",fontFamily:"var(--font-h)",letterSpacing:"0.01em"}}>{t.continueBtn}</button>
+        <div style={{textAlign:"center",marginTop:14}}>
+          <button onClick={()=>onSignIn({name:"Guest",email:""})} style={{fontSize:11,color:"var(--t2)",background:"transparent",border:"none",cursor:"pointer",textDecoration:"underline"}}>{t.guestMode}</button>
         </div>
-        <div style={{display:"flex",gap:12,justifyContent:"center",marginTop:18,flexWrap:"wrap"}}>
-          {["🔒 No data sold","🌐 Open source","📜 Constitutional basis","💰 Free forever"].map(b=>(<span key={b} style={{fontSize:10,color:"var(--t3)"}}>{b}</span>))}
+        <div style={{display:"flex",gap:14,justifyContent:"center",marginTop:16,flexWrap:"wrap"}}>
+          {["🔒 No data sold","⚡ Always free","📜 Evidence-based","🌐 10 Languages"].map(b=>(<span key={b} style={{fontSize:9.5,color:"var(--t3)"}}>{b}</span>))}
         </div>
       </div>
     </div>
-  );
-}
+  </div>);}
 
-// ── DISCLAIMER PAGE ───────────────────────────────────────────────
+// ── DISCLAIMER ─────────────────────────────────────────────────
 function DisclaimerPage({onAccept,t,userName}){
-  const[read,setRead]=useState(false);
-  const ref=useRef(null);
-  useEffect(()=>{const el=ref.current;if(!el)return;const h=()=>{if(el.scrollTop+el.clientHeight>=el.scrollHeight-30)setRead(true);};el.addEventListener("scroll",h);return()=>el.removeEventListener("scroll",h);},[]);
+  const[read,setRead]=useState(false);const ref=useRef(null);
+  useEffect(()=>{const el=ref.current;if(!el)return;const h=()=>{if(el.scrollTop+el.clientHeight>=el.scrollHeight-50)setRead(true);};el.addEventListener("scroll",h);return()=>el.removeEventListener("scroll",h);},[]);
   const sections=[
-    {icon:"📊",title:"How We Calculate the Democracy Score",body:"India's national democracy score starts at a baseline of 41/100, calibrated against four international indices: Freedom House (63/100, 2025), V-Dem Democracy Rank (100th of 179 nations), RSF Press Freedom Index (151st of 180), and EIU Democracy Index (6.6/10).\n\nEach news story is classified for its constitutional pillar, the government department involved, and whether it represents a violation or support of fundamental rights. The story is then assigned a Democracy Weight Score from -5 (severe constitutional harm) to +5 (significant democratic benefit)."},
-    {icon:"🌐",title:"The Impact Radius System — All 3 Scores Update Simultaneously",body:"Every story affects democracy at National, State, and Local levels simultaneously:\n\n• National news (Parliament, Supreme Court, Central Govt): 100% national · 40% state · 20% local\n• State news (High Court, State Police, State Govt): 30% national · 100% state · 50% local\n• Local/District news: 5% national · 15% state · 100% local\n\nThis means every story you see moves all three score rings in real time — the national ring, your state ring, and your local ring — by exact amounts based on geographic relevance."},
-    {icon:"⚖",title:"Constitutional Violations & Supports — Every Story, Every Department",body:"Every news story is mapped to specific Articles of the Indian Constitution of 1950. We display:\n\n• VIOLATIONS (red ⚠): Where police, courts, government or media have acted against constitutional guarantees\n• SUPPORTS (green ✓): Where institutions have upheld fundamental rights\n\nWe track 7 constitutional pillars: Press Freedom (Art.19(1)(a)), Liberty (Art.21), Equality (Art.14-15), Electoral Integrity (Art.324-326), Separation of Powers (Art.50), Religious Freedom (Art.25-28), Access to Justice (Art.32)."},
-    {icon:"🏛",title:"Government Department Scoring",body:"Each of India's 8 major government departments gets its own live democracy score based on how stories involving that institution affect constitutional rights:\n\n• Parliament: Legislative integrity, anti-defection, delimitation\n• Executive/Government: Policy violations, demolitions, ED/CBI misuse\n• Judiciary: Court rulings, bail, landmark judgments\n• Police: Custodial deaths, arbitrary arrests, encounter killings\n• Election Commission: Electoral integrity, voter rolls, EVM issues\n• Media/Press: Journalist arrests, press freedom, censorship\n• Armed Forces: AFSPA, civilian casualties, accountability\n• Local Government: Panchayat functioning, grassroots rights"},
-    {icon:"📰",title:"Data Sources — 100% Free, No API Keys",body:"News is fetched in real time from Google News RSS feeds — covering thousands of Indian newspapers, TV channels, and digital media. Stories are filtered by constitutional relevance using 40+ keyword categories.\n\nAI verification is performed by Groq Llama 3.3 70B (free) which reviews each story for constitutional accuracy, identifies violations and supports with article numbers, and calculates precise National/State/Local impact percentages."},
-    {icon:"⚠",title:"Important Limitations & Legal Disclaimer",body:"DTN Mythos is an independent analytical platform. All scores are estimates based on public news and are NOT legal, constitutional, or journalistic determinations. They reflect algorithmic assessment only.\n\nThis platform does not provide legal advice. For genuine legal emergencies: NALSA: 15100 · NHRC: 14433. Not affiliated with any political party, government body, or NGO. Free to use, no data sold, no advertising."},
+    {icon:"📊",color:"var(--blue)",title:"How We Calculate the Democracy Score",body:`India's constitutional health score starts at a calibrated baseline of 41/100, anchored to four international indices:\n\n• Freedom House: 63/100 (2025) · V-Dem: 100th of 179 nations · RSF Press: 151st of 180 · EIU: 6.6/10\n\nEvery news story is assigned a multi-factor Democracy Weight Score from -5 (severe constitutional harm) to +5 (strong constitutional benefit). The score formula: story_effect = directional_score × evidence_weight × credibility × confidence × recency × pillar_weight × pattern_multiplier × impact_radius`},
+    {icon:"🔍",color:"var(--amber)",title:"Evidence Levels — What We Track",body:`Every story is classified by evidence level. This is our core safeguard:\n\n• ALLEGATION (0.2× weight): Unverified claim — low impact until confirmed\n• SINGLE SOURCE (0.4× weight): One outlet reports — moderate weight\n• CORROBORATED (0.65× weight): Multiple independent sources\n• OFFICIAL DOCUMENT (0.85× weight): Gazette, notification, official order\n• COURT FINDING (0.92× weight): Judicial determination or order\n• FINAL ADJUDICATION (1.0× weight): Full legal resolution\n\nThis means an unconfirmed allegation barely moves the score, while an official document or court order has full effect.`},
+    {icon:"🌐",color:"var(--green)",title:"Impact Radius — All 3 Scores Update Simultaneously",body:`Every story updates National, State, and Local democracy scores at the same time but at different intensities based on geographic reach:\n\n• National news: 100% national · 40% state · 20% local\n• State news: 30% national · 100% state · 50% local\n• Local/District: 5% national · 15% state · 100% local\n\nAll three score rings update from every story — adjusted for evidence weight and confidence level.`},
+    {icon:"⚖",color:"var(--purple)",title:"Constitutional Violations & Supports — Mapped to Articles",body:`Every story maps to specific Articles of the Indian Constitution of 1950. We display:\n\n• VIOLATIONS (red ⚠): Where state, police, courts, or media acted against constitutional guarantees\n• SUPPORTS (green ✓): Where institutions upheld fundamental rights\n\nSeven constitutional pillars tracked: Press Freedom (Art.19) · Liberty (Art.21) · Equality (Art.14-15) · Electoral Integrity (Art.324-326) · Separation of Powers (Art.50) · Religious Freedom (Art.25-28) · Access to Justice (Art.32)`},
+    {icon:"🏛",color:"var(--cyan)",title:"16 Government Departments — Each Scored Live",body:`PMO · Home · Law & Justice · Finance · Education · Health · Women & Child · Minority Affairs · Rural Development · Urban Development · Environment · Defence · Police · Election Commission · Media/Information · Judiciary\n\nEach department has its own live democracy score based on stories involving that institution. Scores are adjusted for evidence quality and confidence level. The judiciary is tracked carefully — institutional developments only, never pending cases treated as wrongdoing.`},
+    {icon:"⚠",color:"var(--red)",title:"Critical Safeguards — What This Platform Is NOT",body:`This platform is NOT a court. NEVER use it as legal evidence.\n\n• ALLEGATION ≠ FACT: Low-evidence stories have minimal score impact\n• CONCERN ≠ CONVICTION: We say "potential violation," not "guilty"\n• PENDING ≠ WRONG: Court pending status means matter unresolved — NOT that wrongdoing is established\n• We always show government response when available\n• We always show court status when available\n• Confidence bands tell you how certain we are\n\nFor genuine legal emergencies: NALSA: 15100 · NHRC: 14433 · Women Helpline: 181\n\nNot affiliated with any political party, government body, or NGO.`},
   ];
-  return(
-    <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 16px"}}>
-      <div style={{width:"100%",maxWidth:680}}>
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontFamily:"var(--font-h)",fontSize:18,fontWeight:800,color:"var(--t1)",marginBottom:4}}>{t.disclaimerTitle}</div>
-          <p style={{fontSize:12,color:"var(--t2)"}}>Hello {userName} — please read all sections before entering</p>
-        </div>
-        <div ref={ref} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:16,padding:"24px",maxHeight:"60vh",overflowY:"auto",marginBottom:14}}>
-          {sections.map((s,i)=>(
-            <div key={i} style={{marginBottom:24,paddingBottom:24,borderBottom:i<sections.length-1?"1px solid var(--border)":"none"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                <span style={{fontSize:20}}>{s.icon}</span>
-                <h3 style={{fontFamily:"var(--font-h)",fontSize:14,fontWeight:700,color:"var(--t1)"}}>{s.title}</h3>
-              </div>
-              {s.body.split("\n\n").map((para,j)=>(<p key={j} style={{fontSize:12,color:"var(--t2)",lineHeight:1.8,marginBottom:8,whiteSpace:"pre-line"}}>{para}</p>))}
-            </div>
-          ))}
-          {!read&&<div style={{textAlign:"center",padding:"12px",fontSize:11,color:"var(--t3)"}}>↓ Scroll down to read all sections</div>}
-        </div>
-        <button onClick={onAccept} disabled={!read} style={{width:"100%",padding:"13px",borderRadius:11,border:"none",background:read?"linear-gradient(135deg,#7C5CFC,#3b82f6)":"var(--surface2)",color:read?"#fff":"var(--t3)",fontSize:14,fontWeight:700,cursor:read?"pointer":"default",transition:"all 0.3s",boxShadow:read?"0 4px 24px rgba(124,92,252,0.3)":"none"}}>
-          {read?t.disclaimerAccept:"↓ Scroll to read all first"}
-        </button>
+  return(<div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 16px"}}>
+    <div style={{width:"100%",maxWidth:700}}>
+      <div style={{textAlign:"center",marginBottom:22,paddingTop:10}}>
+        <div style={{width:46,height:46,borderRadius:13,background:"var(--grad)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:19,fontWeight:900,fontFamily:"var(--font-h)",color:"#fff",margin:"0 auto 12px",boxShadow:"0 4px 20px rgba(124,92,252,0.35)"}}>D</div>
+        <div style={{fontFamily:"var(--font-h)",fontSize:19,fontWeight:800,color:"var(--t1)",marginBottom:4,letterSpacing:"-0.01em"}}>{t.disclaimerTitle}</div>
+        <p style={{fontSize:11.5,color:"var(--t2)",lineHeight:1.6}}>Welcome, {userName} — {t.disclaimerSub}</p>
       </div>
+      <div ref={ref} style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:16,padding:"22px",maxHeight:"62vh",overflowY:"auto",marginBottom:12}}>
+        {sections.map((s,i)=>(<div key={i} style={{marginBottom:26,paddingBottom:26,borderBottom:i<sections.length-1?"1px solid var(--border)":"none"}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:11,marginBottom:10}}>
+            <div style={{width:34,height:34,borderRadius:9,background:s.color+"12",border:"1px solid "+s.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{s.icon}</div>
+            <h3 style={{fontFamily:"var(--font-h)",fontSize:13.5,fontWeight:700,color:"var(--t1)",lineHeight:1.3,paddingTop:2}}>{s.title}</h3>
+          </div>
+          {s.body.split("\n\n").map((para,j)=>(<p key={j} style={{fontSize:11.5,color:"var(--t2)",lineHeight:1.85,marginBottom:8,whiteSpace:"pre-line"}}>{para}</p>))}
+        </div>))}
+        {!read&&<div style={{textAlign:"center",padding:"14px",fontSize:11,color:"var(--t3)",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><span style={{animation:"pulse 1.5s infinite"}}>↓</span> Scroll to read all 6 sections</div>}
+      </div>
+      <button onClick={onAccept} disabled={!read} style={{width:"100%",padding:"14px",borderRadius:12,border:"none",background:read?"var(--grad)":"var(--surface2)",color:read?"#fff":"var(--t3)",fontSize:14,fontWeight:700,cursor:read?"pointer":"default",transition:"all 0.3s",boxShadow:read?"0 4px 32px rgba(124,92,252,0.4)":"none",fontFamily:"var(--font-h)",letterSpacing:"0.01em"}}>
+        {read?t.disclaimerAccept:"↓ Read all sections first"}
+      </button>
     </div>
-  );
-}
+  </div>);}
 
 
 // ── SIDEBAR + TOPBAR + TICKER ──────────────────────────────────
-const NAV=[{g:"Overview",items:[{id:"dashboard",tk:"dashboard",icon:"◉"},{id:"feed",tk:"liveFeed",icon:"⚡"},{id:"rights",tk:"myRights",icon:"🛡"}]},{g:"Analysis",items:[{id:"patterns",tk:"patterns",icon:"◈"},{id:"timeline",tk:"timeline",icon:"◷"},{id:"constitution",tk:"constitution",icon:"⚖"},{id:"score",tk:"scoreAnalysis",icon:"◎"},{id:"anomalies",tk:"anomalies",icon:"⚠"}]},{g:"India",items:[{id:"states",tk:"states",icon:"◱"},{id:"departments",tk:"departments",icon:"🏛"}]},{g:"Community",items:[{id:"submit",tk:"submit",icon:"+"},{id:"review",tk:"review",icon:"◻"}]},{g:"Platform",items:[{id:"method",tk:"methodology",icon:"◈"},{id:"about",tk:"about",icon:"ℹ"}]}];
+const NAV=[{g:"Intelligence",items:[{id:"dashboard",tk:"dashboard",icon:"◉"},{id:"newsroom",tk:"newsroom",icon:"⚡"},{id:"tracker",tk:"tracker",icon:"📜"}]},{g:"Scores",items:[{id:"demoscore",tk:"demoScore",icon:"◎"},{id:"departments",tk:"departments",icon:"🏛"},{id:"states",tk:"states",icon:"◱"}]},{g:"Rights",items:[{id:"rights",tk:"rights",icon:"🛡"},{id:"journalist",tk:"journalist",icon:"🔍"}]},{g:"Community",items:[{id:"submit",tk:"submit",icon:"+"},{id:"review",tk:"review",icon:"◻"}]},{g:"Platform",items:[{id:"method",tk:"method",icon:"◈"},{id:"about",tk:"about",icon:"ℹ"}]}];
 
-function Sidebar({page,setPage,pending,t,user,lang,setLang}){return(<aside className="sidebar"><div className="sidebar-logo"><div style={{display:"flex",alignItems:"center",gap:10}}><div className="logo-mark">D</div><div><div style={{fontFamily:"var(--font-h)",fontSize:12,fontWeight:800,color:"var(--t1)"}}>{t.appName}</div><div style={{fontSize:9,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.08em"}}>dtn.today</div></div></div></div>{user&&<div style={{padding:"8px 14px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8}}><div style={{width:26,height:26,borderRadius:"50%",background:"linear-gradient(135deg,#7C5CFC,#3b82f6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",flexShrink:0}}>{user.name[0].toUpperCase()}</div><div style={{minWidth:0}}><div style={{fontSize:11,fontWeight:600,color:"var(--t1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:9,color:"var(--t3)"}}>Citizen Analyst</div></div></div>}<nav className="sidebar-nav">{NAV.map(g=>(<div key={g.g} className="nav-section"><div className="nav-section-label">{g.g}</div>{g.items.map(item=>(<button key={item.id} className={"nav-btn"+(page===item.id?" active":"")} onClick={()=>setPage(item.id)}><span className="icon">{item.icon}</span>{t[item.tk]||item.tk}{item.id==="review"&&pending>0&&<span className="nav-badge">{pending}</span>}{item.id==="feed"&&<span style={{marginLeft:"auto",width:6,height:6,borderRadius:"50%",background:"var(--green)",display:"inline-block",boxShadow:"0 0 6px var(--green)"}}/>}</button>))}</div>))}</nav><div style={{padding:"8px 12px",borderTop:"1px solid var(--border)"}}><div style={{fontSize:9,color:"var(--t3)",marginBottom:5,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>Language</div><div style={{display:"flex",flexWrap:"wrap",gap:3}}>{Object.entries(LANG).map(([k,l])=>(<button key={k} onClick={()=>setLang(k)} style={{padding:"2px 5px",borderRadius:4,border:"1px solid "+(lang===k?"var(--blue)":"var(--border)"),background:lang===k?"var(--blue-s)":"transparent",color:lang===k?"var(--blue)":"var(--t3)",fontSize:9,cursor:"pointer"}}>{l.flag}</button>))}</div></div></aside>);}
+function Sidebar({page,setPage,pending,t,user,lang,setLang,mode,setMode}){return(<aside className="sidebar">
+  <div className="sidebar-logo"><div style={{display:"flex",alignItems:"center",gap:9}}><div className="logo-mark">D</div><div><div style={{fontFamily:"var(--font-h)",fontSize:11.5,fontWeight:800,color:"var(--t1)",letterSpacing:"0.02em"}}>{t.appName}</div><div style={{fontSize:8.5,color:"var(--t3)",letterSpacing:"0.07em"}}>dtn.today · Intelligence</div></div></div></div>
+  {user&&<div style={{padding:"9px 13px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",gap:8}}>
+    <div style={{width:26,height:26,borderRadius:"50%",background:"var(--grad)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",flexShrink:0,boxShadow:"0 2px 8px rgba(124,92,252,0.3)"}}>{user.name[0].toUpperCase()}</div>
+    <div style={{minWidth:0}}><div style={{fontSize:11.5,fontWeight:600,color:"var(--t1)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.name}</div><div style={{fontSize:8.5,color:"var(--t3)"}}>Citizen Analyst</div></div>
+  </div>}
+  {/* Mode toggle */}
+  <div style={{padding:"8px 13px",borderBottom:"1px solid var(--border)",display:"flex",gap:4}}>
+    {[["citizen",t.citizenMode||"Citizen","var(--green)"],["normal","Standard","var(--blue)"],["expert",t.expertMode||"Expert","var(--purple)"]].map(([m,label,col])=>(
+      <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"4px 2px",borderRadius:6,border:"1px solid "+(mode===m?col+"44":"var(--border)"),background:mode===m?col+"12":"transparent",color:mode===m?col:"var(--t3)",fontSize:8,fontWeight:700,cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.06em",transition:"all 0.15s"}}>{label}</button>
+    ))}
+  </div>
+  <nav className="sidebar-nav">
+    {NAV.map(g=>(<div key={g.g} className="nav-section">
+      <div className="nav-section-label">{g.g}</div>
+      {g.items.map(item=>(<button key={item.id} className={"nav-btn"+(page===item.id?" active":"")} onClick={()=>setPage(item.id)}>
+        <span className="icon">{item.icon}</span>{t[item.tk]||item.tk}
+        {item.id==="review"&&pending>0&&<span className="nav-badge">{pending}</span>}
+        {item.id==="newsroom"&&<span style={{marginLeft:"auto",width:5,height:5,borderRadius:"50%",background:"var(--green)",display:"inline-block",boxShadow:"0 0 8px var(--green)",animation:"pulse 2s infinite"}}/>}
+      </button>))}
+    </div>))}
+  </nav>
+  <div style={{padding:"9px 11px",borderTop:"1px solid var(--border)",flexShrink:0}}>
+    <div style={{fontSize:7.5,color:"var(--t3)",marginBottom:5,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.13em"}}>Language</div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+      {Object.entries(LANG).map(([k,l])=>(<button key={k} onClick={()=>setLang(k)} style={{padding:"2px 5px",borderRadius:4,border:"1px solid "+(lang===k?"rgba(74,143,255,0.4)":"var(--border)"),background:lang===k?"rgba(74,143,255,0.1)":"transparent",color:lang===k?"var(--blue)":"var(--t3)",fontSize:8.5,cursor:"pointer"}}>{l.flag}</button>))}
+    </div>
+  </div>
+</aside>);}
 
-function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl,fetchScope,setFetchScope,fetchState,setFetchState,fetchDistrict,setFetchDistrict,t}){const states=Object.keys(STATE_BASELINES).sort();return(<div className="topbar"><div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}><span style={{fontFamily:"var(--font-m)",fontSize:12,fontWeight:700,color:scoreColor(natScore)}}>🌐{natScore}</span><span style={{fontFamily:"var(--font-m)",fontSize:12,fontWeight:700,color:scoreColor(stScore)}}>🏛{stScore}</span><span style={{fontFamily:"var(--font-m)",fontSize:12,fontWeight:700,color:scoreColor(distScore)}}>📍{distScore}</span></div><div style={{flex:1,display:"flex",alignItems:"center",gap:5,overflow:"hidden",padding:"0 5px"}}><select value={fetchScope} onChange={e=>setFetchScope(e.target.value)} style={{padding:"3px 6px",borderRadius:6,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",cursor:"pointer"}}><option value="national">🌐 {t.national}</option><option value="state">🏛 {t.state}</option><option value="district">📍 {t.district}</option></select>{fetchScope==="state"&&(<select value={fetchState} onChange={e=>setFetchState(e.target.value)} style={{padding:"3px 6px",borderRadius:6,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",cursor:"pointer",maxWidth:90}}>{states.map(s=><option key={s} value={s}>{s}</option>)}</select>)}{fetchScope==="district"&&(<input value={fetchDistrict} onChange={e=>setFetchDistrict(e.target.value)} placeholder={t.district} style={{padding:"3px 8px",borderRadius:6,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",width:90}}/>)}</div>{rl&&<span style={{fontSize:9,color:"var(--red)",background:"var(--red-s)",borderRadius:99,padding:"2px 6px",flexShrink:0}}>⏸RL</span>}<button onClick={onFetch} disabled={fetching||rl} style={{padding:"5px 10px",borderRadius:7,border:"1px solid var(--border2)",background:fetching?"var(--surface2)":"var(--surface)",color:fetching?"var(--t2)":"var(--t1)",fontSize:11,fontWeight:600,cursor:fetching?"default":"pointer",display:"flex",alignItems:"center",gap:4,flexShrink:0}}><span style={fetching?{display:"inline-block",animation:"spin 1s linear infinite"}:{}}>{fetching?"⟳":"⚡"}</span><span className="hide-xs">{t.fetch}</span></button><button onClick={()=>setAutoOn(a=>!a)} style={{padding:"4px 8px",borderRadius:7,border:"1px solid "+(autoOn?"var(--green)":"var(--border)"),background:autoOn?"var(--green-s)":"transparent",color:autoOn?"var(--green)":"var(--t2)",fontSize:9,fontWeight:700,cursor:"pointer",flexShrink:0}}>{t.auto}{autoOn?"✓":""}</button></div>);}
+function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl,fScope,setFScope,fState,setFState,fDist,setFDist,t,countdown,mode}){
+  const states=Object.keys(STATE_BASELINES).sort();
+  const modeColor=mode==="citizen"?"var(--green)":mode==="expert"?"var(--purple)":"var(--blue)";
+  return(<div className="topbar">
+    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+      {[["🌐",natScore],["🏛",stScore],["📍",distScore]].map(([icon,score],i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:2}}>
+          <span style={{fontSize:9.5}}>{icon}</span>
+          <span style={{fontFamily:"var(--font-m)",fontSize:13,fontWeight:700,color:sColor(score),letterSpacing:"-0.03em"}}>{score}</span>
+        </div>
+      ))}
+    </div>
+    <div style={{width:1,height:16,background:"var(--border)",flexShrink:0}}/>
+    {mode!=="normal"&&<span style={{fontSize:8,fontWeight:800,color:modeColor,background:modeColor+"15",border:"1px solid "+modeColor+"30",borderRadius:99,padding:"2px 7px",textTransform:"uppercase",letterSpacing:"0.08em",flexShrink:0}}>{mode==="citizen"?t.citizenMode||"Citizen":t.expertMode||"Expert"}</span>}
+    <div style={{flex:1,display:"flex",alignItems:"center",gap:5,overflow:"hidden"}}>
+      <select value={fScope} onChange={e=>setFScope(e.target.value)} style={{padding:"3px 6px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:9.5,outline:"none",cursor:"pointer",fontFamily:"var(--font-b)"}}>
+        <option value="national">🌐 {t.national}</option><option value="state">🏛 {t.state}</option><option value="district">📍 {t.district}</option>
+      </select>
+      {fScope==="state"&&<select value={fState} onChange={e=>setFState(e.target.value)} style={{padding:"3px 6px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:9.5,outline:"none",cursor:"pointer",maxWidth:95,fontFamily:"var(--font-b)"}}>{states.map(s=><option key={s} value={s}>{s}</option>)}</select>}
+      {fScope==="district"&&<input value={fDist} onChange={e=>setFDist(e.target.value)} placeholder={t.district} style={{padding:"3px 8px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:9.5,outline:"none",width:90,fontFamily:"var(--font-b)"}}/>}
+    </div>
+    {rl&&<span style={{fontSize:8.5,color:"var(--red)",background:"var(--red-s)",border:"1px solid var(--red-b)",borderRadius:99,padding:"2px 6px",flexShrink:0,fontWeight:700}}>⏸ RL</span>}
+    <Btn onClick={onFetch} disabled={fetching||rl} style={{padding:"5px 11px",fontSize:10.5}} variant="ghost">
+      <span style={fetching?{display:"inline-block",animation:"spin 1s linear infinite"}:{}}>{fetching?"⟳":"⚡"}</span>
+      <span className="hide-xs">{t.fetch}</span>
+    </Btn>
+    <Btn onClick={()=>setAutoOn(a=>!a)} variant={autoOn?"success":"ghost"} style={{padding:"4px 8px",fontSize:9}}>
+      {t.auto}{autoOn?` ↻${countdown}s`:""}
+    </Btn>
+  </div>);}
 
-function LiveTicker({stories,countdown,autoOn,natScore,stScore,distScore}){const approved=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);const[idx,setIdx]=useState(0);useEffect(()=>{if(!approved.length)return;const timer=setInterval(()=>setIdx(i=>(i+1)%approved.length),3500);return()=>clearInterval(timer);},[approved.length]);const s=approved[idx];const dc=s?.direction==="positive"?"var(--green)":s?.severity==="critical"?"var(--red)":"var(--amber)";return(<div style={{background:"var(--surface)",borderBottom:"1px solid var(--border)",padding:"5px 12px",display:"flex",alignItems:"center",gap:8,overflow:"hidden",flexShrink:0}}><span style={{fontSize:9,fontWeight:800,color:"var(--red)",background:"var(--red-s)",borderRadius:3,padding:"1px 6px",letterSpacing:"0.1em",flexShrink:0,animation:"pulse 2s infinite"}}>LIVE</span>{s?<><span style={{fontFamily:"var(--font-m)",fontSize:9,fontWeight:700,color:dc,flexShrink:0}}>{(s.aiScore||s.delta)>0?"+":""}{s.aiScore||s.delta}</span><span style={{fontSize:11,color:"var(--t2)",flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.headline}</span></>:<span style={{fontSize:11,color:"var(--t3)",flex:1}}>Fetching news...</span>}<div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}><span style={{fontSize:9,fontFamily:"var(--font-m)",color:scoreColor(natScore)}}>🌐{natScore}</span><span style={{fontSize:9,fontFamily:"var(--font-m)",color:scoreColor(stScore)}}>🏛{stScore}</span><span style={{fontSize:9,fontFamily:"var(--font-m)",color:scoreColor(distScore)}}>📍{distScore}</span>{autoOn&&<span style={{fontSize:9,color:"var(--green)",background:"var(--green-s)",borderRadius:3,padding:"1px 5px"}}>↻{countdown}s</span>}</div></div>);}
+function LiveTicker({stories,natScore,stScore,distScore,countdown,autoOn}){
+  const approved=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);
+  const[idx,setIdx]=useState(0);
+  useEffect(()=>{if(!approved.length)return;const timer=setInterval(()=>setIdx(i=>(i+1)%approved.length),4200);return()=>clearInterval(timer);},[approved.length]);
+  const s=approved[idx];const col=s?.direction==="positive"?"var(--green)":s?.severity==="critical"?"var(--red)":"var(--amber)";
+  return(<div style={{background:"rgba(3,5,12,0.8)",borderBottom:"1px solid var(--border)",padding:"4px 18px",display:"flex",alignItems:"center",gap:8,overflow:"hidden",flexShrink:0,backdropFilter:"blur(14px)"}}>
+    <div style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+      <div className="live-dot"/>
+      <span style={{fontSize:8,fontWeight:800,color:"var(--red)",letterSpacing:"0.15em",fontFamily:"var(--font-m)"}}>LIVE</span>
+    </div>
+    {s?(<>
+      <span style={{fontFamily:"var(--font-m)",fontSize:8.5,fontWeight:700,color:col,flexShrink:0}}>{(s.aiScore||s.delta)>0?"+":""}{s.aiScore||s.delta}</span>
+      {s.evidenceLevel&&<span style={{fontSize:8,color:EVIDENCE_LEVELS[s.evidenceLevel]?.color||"var(--t3)",flexShrink:0,fontWeight:700,fontFamily:"var(--font-m)"}}>[{s.evidenceLevel?.replace(/_/g,"-")}]</span>}
+      <span style={{fontSize:10.5,color:"var(--t2)",flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.headline}</span>
+    </>):(<span style={{fontSize:10.5,color:"var(--t3)",flex:1}}>Fetching live constitutional intelligence...</span>)}
+    <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center",borderLeft:"1px solid var(--border)",paddingLeft:9,marginLeft:4}}>
+      <span style={{fontSize:8.5,fontFamily:"var(--font-m)",fontWeight:600,color:sColor(natScore)}}>🌐{natScore}</span>
+      <span style={{fontSize:8.5,fontFamily:"var(--font-m)",fontWeight:600,color:sColor(stScore)}}>🏛{stScore}</span>
+      <span style={{fontSize:8.5,fontFamily:"var(--font-m)",fontWeight:600,color:sColor(distScore)}}>📍{distScore}</span>
+    </div>
+  </div>);}
 
 
-// ── DEPARTMENTS PAGE ───────────────────────────────────────────
-function DepartmentsPage({stories,t}){
+// ── DASHBOARD ──────────────────────────────────────────────────
+function Dashboard({natScore,stScore,distScore,stories,natHistory,fState,fDist,t,mode,setPage,setFScope}){
+  const approved=stories.filter(s=>s.approved);
+  const pillarData=Object.entries(PILLARS).map(([k,p])=>{const rel=approved.filter(s=>s.pillar===k);const delta=rel.reduce((a,s)=>a+calcStoryEffect(s,"national",fState),0);return{full:p.label,color:p.color,score:Math.max(0,Math.min(100,Math.round(p.base+delta))),delta:Math.round(delta)};});
+  const topDepts=Object.entries(DEPT).slice(0,4).map(([k,d])=>({...d,score:calcDept(approved,k)}));
+  const critCount=approved.filter(s=>s.severity==="critical").length;const posCount=approved.filter(s=>s.direction==="positive").length;
+  const unresolved=approved.filter(s=>s.courtStatus==="pending").length;
+  const band=scoreBand(natScore);
+  return(<div className="fade-up">
+    <div style={{marginBottom:18}}><div style={{fontSize:8.5,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.14em",fontWeight:700,marginBottom:4}}>Constitutional Intelligence · Live 24/7</div><h1 style={{fontFamily:"var(--font-h)",fontSize:"clamp(17px,4vw,24px)",fontWeight:900,color:"var(--t1)",letterSpacing:"-0.02em"}}>{t.appName}</h1><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>{t.tagline}</p></div>
+    {/* 3 Scope Rings */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9,marginBottom:12}}>
+      {[{scope:"national",score:natScore,label:"🌐 "+t.national},{scope:"state",score:stScore,label:"🏛 "+fState},{scope:"district",score:distScore,label:"📍 "+(fDist||t.district)}].map(item=>(
+        <Card key={item.scope} onClick={()=>setFScope(item.scope)} glow={sColor(item.score)} style={{padding:"14px 11px",textAlign:"center"}}>
+          <div style={{fontSize:8.5,color:"var(--t3)",fontWeight:700,marginBottom:7,textTransform:"uppercase",letterSpacing:"0.09em"}}>{item.label}</div>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:6}}><ScoreRing score={item.score} size={70}/></div>
+          <div style={{fontSize:9,fontWeight:700,color:sColor(item.score)}}>{t[sLabelK(item.score)]}</div>
+        </Card>
+      ))}
+    </div>
+    {/* Score band */}
+    <Card style={{marginBottom:11,padding:"11px 15px",border:"1px solid "+band.color+"30",background:band.color+"06"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:8,height:8,borderRadius:"50%",background:band.color,boxShadow:"0 0 8px "+band.color,flexShrink:0}}/>
+        <span style={{fontSize:11,fontWeight:600,color:band.color}}>{band.label}</span>
+        <span style={{fontSize:10,color:"var(--t2)",flex:1}}>National Democracy Score: {natScore}/100</span>
+        <span style={{fontSize:9,color:"var(--t3)"}}>Calibrated: Freedom House · V-Dem · RSF · EIU</span>
+      </div>
+    </Card>
+    {/* Stats */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:11}}>
+      <Metric label={t.storiesTracked} value={approved.length} color="var(--blue)"/>
+      <Metric label={t.critical} value={critCount} color="var(--red)"/>
+      <Metric label={t.positive} value={posCount} color="var(--green)"/>
+      <Metric label="Court Pending" value={unresolved} color="var(--amber)"/>
+    </div>
+    {/* Global benchmarks */}
+    <Card style={{marginBottom:11,padding:"12px 15px"}}>
+      <STitle>Global Democracy Indices · 2024-25</STitle>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+        {[{l:"Freedom House",v:"63/100",sub:"Partly Free",c:"var(--amber)"},{l:"V-Dem Rank",v:"100/179",sub:"Electoral Autocracy",c:"var(--red)"},{l:"RSF Press",v:"151/180",sub:"Difficult",c:"var(--red)"},{l:"EIU Index",v:"6.6/10",sub:"Flawed Democracy",c:"var(--amber)"}].map(e=>(<div key={e.l} style={{textAlign:"center"}}><div style={{fontFamily:"var(--font-m)",fontSize:14,fontWeight:800,color:e.c,letterSpacing:"-0.03em"}}>{e.v}</div><div style={{fontSize:8.5,color:"var(--t3)",marginTop:2,fontWeight:600}}>{e.l}</div><div style={{fontSize:8,color:"var(--t3)"}}>{e.sub}</div></div>))}
+      </div>
+    </Card>
+    {/* Dept mini */}
+    <Card style={{marginBottom:11}}>
+      <STitle action={<Btn onClick={()=>setPage("departments")} style={{fontSize:9,padding:"2px 8px"}} variant="ghost">All 16 →</Btn>}>Department Scores · Top 4</STitle>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+        {topDepts.map(d=>(<div key={d.name} onClick={()=>setPage("departments")} style={{textAlign:"center",cursor:"pointer",padding:"8px 4px",borderRadius:9,transition:"background 0.15s"}}>
+          <div style={{fontSize:18,marginBottom:3}}>{d.icon}</div>
+          <div style={{fontFamily:"var(--font-m)",fontSize:15,fontWeight:800,color:sColor(d.score),letterSpacing:"-0.03em"}}>{d.score}</div>
+          <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",margin:"4px 0"}}><div style={{height:"100%",background:d.color,borderRadius:99,width:d.score+"%"}}/></div>
+          <div style={{fontSize:8.5,color:"var(--t2)",fontWeight:500}}>{d.name.split(" ")[0]}</div>
+        </div>))}
+      </div>
+    </Card>
+    {/* Pillars */}
+    <Card style={{marginBottom:11}}>
+      <STitle>Constitutional Pillars</STitle>
+      {pillarData.map(p=>(<div key={p.full} style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
+        <span style={{fontSize:9.5,color:"var(--t2)",width:90,flexShrink:0,fontWeight:500}}>{p.full}</span>
+        <div style={{flex:1,height:4,background:"rgba(255,255,255,0.04)",borderRadius:99,overflow:"hidden"}}>
+          <div style={{height:"100%",borderRadius:99,background:p.color,width:p.score+"%",transition:"width 1.4s ease",boxShadow:`0 0 7px ${p.color}55`}}/>
+        </div>
+        <span style={{fontFamily:"var(--font-m)",fontSize:10,fontWeight:700,color:p.color,width:24,textAlign:"right",letterSpacing:"-0.02em"}}>{p.score}</span>
+        <span style={{fontSize:9,color:p.delta>=0?"var(--green)":"var(--red)",fontWeight:600,width:24,textAlign:"right"}}>{p.delta>=0?"+":""}{p.delta}</span>
+      </div>))}
+    </Card>
+    {natHistory.length>1&&(<Card style={{marginBottom:11}}>
+      <STitle>Score Trend</STitle>
+      <ResponsiveContainer width="100%" height={65}>
+        <AreaChart data={natHistory}><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={sColor(natScore)} stopOpacity={0.22}/><stop offset="95%" stopColor={sColor(natScore)} stopOpacity={0}/></linearGradient></defs>
+        <XAxis dataKey="label" tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false} width={18}/>
+        <Tooltip contentStyle={{background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:9,fontSize:10}}/>
+        <Area type="monotone" dataKey="score" stroke={sColor(natScore)} fill="url(#sg)" strokeWidth={2} dot={false}/></AreaChart>
+      </ResponsiveContainer>
+    </Card>)}
+    {approved.length===0&&<Card style={{textAlign:"center",padding:"36px"}}><div style={{fontSize:36,marginBottom:10}}>⚡</div><div style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.tapFetch}</div><div style={{fontSize:11,color:"var(--t2)",marginBottom:14}}>Constitutional intelligence from 1000s of Indian news sources</div><Btn onClick={()=>setPage("newsroom")} variant="primary" style={{padding:"8px 20px",fontSize:13}}>{t.fetchLive}</Btn></Card>}
+  </div>);}
+
+// ── NEWSROOM (Main Intelligence Feed) ──────────────────────────
+function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fState}){
+  const[filter,setFilter]=useState("all");const[selStory,setSelStory]=useState(null);
+  const sorted=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);
+  const filtered=filter==="all"?sorted:filter==="critical"?sorted.filter(s=>s.severity==="critical"):filter==="positive"?sorted.filter(s=>s.direction==="positive"):filter==="court"?sorted.filter(s=>s.courtStatus&&s.courtStatus!=="none"):filter==="unresolved"?sorted.filter(s=>s.courtStatus==="pending"):STORY_TYPES.includes(filter)?sorted.filter(s=>s.storyType===filter):sorted.filter(s=>s.scope===filter);
+  return(<div className="fade-up">
+    <div style={{marginBottom:16}}><div style={{fontSize:8.5,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.14em",fontWeight:700,marginBottom:4}}>Constitutional Journalism Intelligence</div><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)",marginBottom:3}}>⚡ {t.newsroom}</h2><p style={{fontSize:11,color:"var(--t2)"}}>Every story scored · Evidence classified · Constitutional violations & supports · All 3 scopes live</p></div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:12}}>
+      <Metric label="Total" value={stories.filter(s=>s.approved).length} color="var(--blue)"/>
+      <Metric label={t.critical||"Critical"} value={stories.filter(s=>s.approved&&s.severity==="critical").length} color="var(--red)"/>
+      <Metric label="Court Active" value={stories.filter(s=>s.approved&&s.courtStatus&&s.courtStatus!=="none").length} color="var(--amber)"/>
+      <Metric label={t.positive||"Support"} value={stories.filter(s=>s.approved&&s.direction==="positive").length} color="var(--green)"/>
+    </div>
+    <div style={{display:"flex",gap:4,marginBottom:11,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:3,flex:1,flexWrap:"wrap"}}>
+        {["all","national","state","local","critical","positive","court","unresolved"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 9px",borderRadius:6,border:"1px solid "+(filter===f?"rgba(74,143,255,0.4)":"var(--border)"),background:filter===f?"rgba(74,143,255,0.1)":"transparent",color:filter===f?"var(--blue)":"var(--t2)",fontSize:9,fontWeight:filter===f?700:500,cursor:"pointer",textTransform:"capitalize"}}>{f}</button>))}
+        {STORY_TYPES.slice(0,4).map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 9px",borderRadius:6,border:"1px solid "+(filter===f?"rgba(245,166,35,0.4)":"var(--border)"),background:filter===f?"rgba(245,166,35,0.1)":"transparent",color:filter===f?"var(--amber)":"var(--t2)",fontSize:9,fontWeight:filter===f?700:500,cursor:"pointer",textTransform:"capitalize"}}>{f}</button>))}
+      </div>
+      <Btn onClick={onAI} variant="purple" style={{flexShrink:0,fontSize:9}}>✦ AI All</Btn>
+    </div>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,padding:"7px 13px",background:"rgba(15,212,124,0.04)",border:"1px solid rgba(15,212,124,0.11)",borderRadius:8}}>
+      <div className="live-dot" style={{width:6,height:6}}/>
+      <span style={{fontSize:10.5,fontWeight:600,color:"var(--green)"}}>Constitutional Intelligence Active</span>
+      {autoOn&&<span style={{fontSize:9.5,color:"var(--t2)",marginLeft:"auto"}}>Auto-fetch in {countdown}s</span>}
+    </div>
+    {filtered.length===0&&<Card style={{textAlign:"center",padding:"48px 20px"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.noStories}</div><div style={{fontSize:11,color:"var(--t2)",marginBottom:14}}>{t.tapFetch}</div><Btn onClick={onFetch} variant="primary" style={{padding:"9px 22px",fontSize:12}}>{t.fetchLive}</Btn></Card>}
+    {filtered.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onSelect={setSelStory}/>)}
+    {/* Story detail modal */}
+    {selStory&&(<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"}} onClick={()=>setSelStory(null)}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:640,maxHeight:"88vh",overflowY:"auto",background:"var(--surface)",border:"1px solid var(--border2)",borderRadius:18,padding:"20px 22px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:7}}>
+              <EvidenceBadge level={selStory.evidenceLevel} t={t}/>
+              <ConfidenceBadge confidence={selStory.confidence} t={t}/>
+              <CourtBadge status={selStory.courtStatus}/>
+              {selStory.storyType&&<StoryTypeBadge type={selStory.storyType} t={t}/>}
+            </div>
+            <h2 style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",lineHeight:1.4,marginBottom:6}}>{selStory.headline}</h2>
+            <div style={{fontSize:9.5,color:"var(--t3)"}}>{new Date(selStory.ts).toLocaleString("en-IN")}</div>
+          </div>
+          <button onClick={()=>setSelStory(null)} style={{background:"transparent",border:"none",color:"var(--t2)",cursor:"pointer",fontSize:20,marginLeft:14,lineHeight:1}}>✕</button>
+        </div>
+        {selStory.citizenExplanation&&mode!=="expert"&&(<div style={{padding:"12px 14px",background:"rgba(74,143,255,0.05)",border:"1px solid rgba(74,143,255,0.12)",borderRadius:9,marginBottom:12}}>
+          <div style={{fontSize:8.5,color:"var(--blue)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:5}}>🙋 {t.citizenWhy}</div>
+          <p style={{fontSize:12,color:"var(--t1)",lineHeight:1.75,margin:0}}>{selStory.citizenExplanation}</p>
+        </div>)}
+        <ImpactBar story={selStory} t={t}/>
+        <div style={{marginTop:12}}><ConstitutionPanel violations={selStory.violations} supports={selStory.supports} t={t}/></div>
+        {selStory.govResponse&&(<div style={{marginTop:12,padding:"10px 13px",background:"rgba(74,143,255,0.04)",border:"1px solid rgba(74,143,255,0.12)",borderRadius:8}}>
+          <div style={{fontSize:8.5,color:"var(--blue)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>🏢 {t.govResponse}</div>
+          <p style={{fontSize:11,color:"var(--t2)",margin:0,lineHeight:1.65}}>{selStory.govResponse}</p>
+        </div>)}
+        {mode==="expert"&&<ScoreExplanation story={selStory}/>}
+        {selStory.mythos&&<div style={{marginTop:12,padding:"12px 14px",background:"rgba(155,125,255,0.04)",borderRadius:9,borderLeft:"2px solid var(--purple)"}}><p style={{fontSize:12.5,color:"var(--t1)",fontStyle:"italic",lineHeight:1.9,margin:0}}>{selStory.mythos}</p></div>}
+      </div>
+    </div>)}
+  </div>);}
+
+
+// ── CONSTITUTION TRACKER ───────────────────────────────────────
+function ConstitutionTrackerPage({stories,t,mode}){
+  const[selArt,setSelArt]=useState(null);
+  const approved=stories.filter(s=>s.approved);
+  // Count how many times each article appears
+  const artCounts={};const artViol={};const artSupp={};
+  approved.forEach(s=>{[...(s.violations||[]),...(s.supports||[])].forEach(v=>{artCounts[v.a]=(artCounts[v.a]||0)+1;});(s.violations||[]).forEach(v=>{artViol[v.a]=(artViol[v.a]||0)+1;});(s.supports||[]).forEach(v=>{artSupp[v.a]=(artSupp[v.a]||0)+1;});});
+  const sortedArts=Object.entries(CA).sort(([a],[b])=>(artCounts[b]||0)-(artCounts[a]||0));
+  const selStories=selArt?approved.filter(s=>[...(s.violations||[]),...(s.supports||[])].some(v=>v.a===selArt)):[];
+  return(<div className="fade-up">
+    <div style={{marginBottom:18}}><div style={{fontSize:8.5,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.14em",fontWeight:700,marginBottom:4}}>Live Constitutional Mapping</div><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>📜 {t.tracker||"Constitution Tracker"}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Which constitutional articles are most affected by current news — live</p></div>
+    {selArt&&(<Card style={{marginBottom:14,border:"1px solid "+(CA[selArt]?.c||"var(--blue)")+"33"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+        <div>
+          <Tag color={CA[selArt]?.c||"var(--blue)"}>{selArt}</Tag>
+          <h3 style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",marginTop:6,marginBottom:4}}>{CA[selArt]?.t||selArt}</h3>
+          <div style={{display:"flex",gap:8}}>
+            {artViol[selArt]>0&&<span style={{fontSize:9.5,color:"var(--red)",background:"var(--red-s)",border:"1px solid var(--red-b)",borderRadius:4,padding:"1px 7px",fontWeight:700}}>⚠ {artViol[selArt]} violations</span>}
+            {artSupp[selArt]>0&&<span style={{fontSize:9.5,color:"var(--green)",background:"var(--green-s)",border:"1px solid var(--green-b)",borderRadius:4,padding:"1px 7px",fontWeight:700}}>✓ {artSupp[selArt]} supports</span>}
+          </div>
+        </div>
+        <button onClick={()=>setSelArt(null)} style={{background:"transparent",border:"none",color:"var(--t2)",cursor:"pointer",fontSize:18}}>✕</button>
+      </div>
+      {selStories.slice(0,3).map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} compact/>)}
+    </Card>)}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(148px,1fr))",gap:8}}>
+      {sortedArts.map(([k,v])=>{const cnt=artCounts[k]||0;const viol=artViol[k]||0;const supp=artSupp[k]||0;const heat=Math.min(1,cnt/Math.max(1,Math.max(...Object.values(artCounts))));return(
+        <div key={k} onClick={()=>setSelArt(k===selArt?null:k)} style={{padding:"12px 13px",background:selArt===k?v.c+"0D":"var(--surface)",border:"2px solid "+(selArt===k?v.c+"55":"var(--border)"),borderRadius:11,cursor:"pointer",transition:"all 0.18s",boxShadow:selArt===k?`0 0 0 1px ${v.c}22`:"none"}}>
+          <Tag color={v.c} sm>{k}</Tag>
+          <div style={{fontSize:10,color:"var(--t1)",fontWeight:600,marginTop:5,marginBottom:7,lineHeight:1.35}}>{v.t}</div>
+          {cnt>0?(<>
+            <div style={{height:3,background:"rgba(255,255,255,0.06)",borderRadius:99,overflow:"hidden",marginBottom:5}}>
+              <div style={{height:"100%",background:viol>supp?"var(--red)":"var(--green)",borderRadius:99,width:(heat*100)+"%"}}/>
+            </div>
+            <div style={{display:"flex",gap:5}}>
+              {viol>0&&<span style={{fontSize:8,color:"var(--red)",fontWeight:700}}>⚠{viol}</span>}
+              {supp>0&&<span style={{fontSize:8,color:"var(--green)",fontWeight:700}}>✓{supp}</span>}
+            </div>
+          </>):<div style={{fontSize:8.5,color:"var(--t3)"}}>No active stories</div>}
+        </div>
+      );})}
+    </div>
+  </div>);}
+
+// ── DEMOCRACY SCORE DASHBOARD ──────────────────────────────────
+function DemoScorePage({natScore,stScore,distScore,stories,natHistory,fState,fDist,t}){
+  const approved=stories.filter(s=>s.approved);
+  const pillarData=Object.entries(PILLARS).map(([k,p])=>{const rel=approved.filter(s=>s.pillar===k);const delta=rel.reduce((a,s)=>a+calcStoryEffect(s,"national",fState),0);const score=Math.max(0,Math.min(100,Math.round(p.base+delta)));return{subject:p.label,score,color:p.color,base:p.base,delta:Math.round(delta)};});
+  return(<div className="fade-up">
+    <div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.demoScore||"Democracy Score"}</h2></div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9,marginBottom:13}}>
+      {[["🌐 "+t.national,natScore],["🏛 "+fState,stScore],["📍 "+(fDist||t.district),distScore]].map(([l,v])=>(
+        <Card key={l} style={{textAlign:"center",padding:"14px 11px"}}>
+          <div style={{fontSize:8.5,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:7,letterSpacing:"0.09em"}}>{l}</div>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:6}}><ScoreRing score={v} size={62}/></div>
+          <div style={{fontSize:9,fontWeight:700,color:sColor(v)}}>{t[sLabelK(v)]}</div>
+          <div style={{fontSize:8,color:"var(--t3)",marginTop:3}}>{scoreBand(v).label}</div>
+        </Card>
+      ))}
+    </div>
+    {/* Score bands explanation */}
+    <Card style={{marginBottom:13,padding:"13px 15px"}}>
+      <STitle>Score Bands</STitle>
+      {[{min:80,max:100,label:"Strong Constitutional Support",color:"#0FD47C"},{min:65,max:79,label:"Mostly Stable",color:"#0FD47C"},{min:50,max:64,label:"Mixed Democratic Health",color:"#F5A623"},{min:35,max:49,label:"Significant Constitutional Concerns",color:"#f97316"},{min:0,max:34,label:"Severe Democratic Stress",color:"#F04A5A"}].map(b=>(
+        <div key={b.min} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+          <div style={{width:5,height:5,borderRadius:"50%",background:b.color,flexShrink:0}}/>
+          <span style={{fontSize:9.5,color:"var(--t2)",width:60,fontFamily:"var(--font-m)",flexShrink:0}}>{b.min}–{b.max}</span>
+          <span style={{fontSize:10,color:b.color,fontWeight:600}}>{b.label}</span>
+        </div>
+      ))}
+    </Card>
+    {pillarData.map(p=>(<Card key={p.subject} style={{marginBottom:7,padding:"11px 15px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+        <span style={{fontSize:12,color:"var(--t1)",fontWeight:600}}>{p.subject}</span>
+        <div style={{display:"flex",gap:7,alignItems:"center"}}>
+          <span style={{fontSize:8.5,color:"var(--t3)"}}>base {p.base}</span>
+          <span style={{fontFamily:"var(--font-m)",fontSize:13,fontWeight:800,color:p.color,letterSpacing:"-0.03em"}}>{p.score}</span>
+          <span style={{fontSize:9.5,color:p.delta>=0?"var(--green)":"var(--red)",fontWeight:700}}>{p.delta>=0?"+":""}{p.delta}</span>
+        </div>
+      </div>
+      <div style={{height:4,background:"rgba(255,255,255,0.04)",borderRadius:99,overflow:"hidden"}}>
+        <div style={{height:"100%",borderRadius:99,background:p.color,width:p.score+"%",transition:"width 1.3s ease",boxShadow:`0 0 7px ${p.color}55`}}/>
+      </div>
+    </Card>))}
+  </div>);}
+
+// ── DEPARTMENTS PAGE (16 depts) ────────────────────────────────
+function DepartmentsPage({stories,t,mode}){
   const[sel,setSel]=useState(null);
   const approved=stories.filter(s=>s.approved);
-  const deptList=Object.values(DEPARTMENTS);
-  const selDept=sel?DEPARTMENTS[sel]:null;
+  const selDept=sel?DEPT[sel]:null;
   const selStories=sel?approved.filter(s=>s.institution===sel):[];
   const allViol=selStories.flatMap(s=>s.violations||[]);
   const allSupp=selStories.flatMap(s=>s.supports||[]);
-  const vCounts={},sCounts={};
-  allViol.forEach(v=>{vCounts[v.a]=(vCounts[v.a]||0)+1;});
-  allSupp.forEach(v=>{sCounts[v.a]=(sCounts[v.a]||0)+1;});
-  return(
-    <div className="fade-up">
-      <h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:6}}>{t.departments}</h2>
-      <p style={{fontSize:11,color:"var(--t2)",marginBottom:14}}>Live democracy scores · Constitutional violations & supports per institution</p>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:8,marginBottom:14}}>
-        {deptList.map(dept=>{
-          const ds=calcDeptScore(approved,dept.id);
-          const dStories=approved.filter(s=>s.institution===dept.id);
-          const dViol=dStories.reduce((a,s)=>a+(s.violations||[]).length,0);
-          const dSupp=dStories.reduce((a,s)=>a+(s.supports||[]).length,0);
-          return(
-            <div key={dept.id} onClick={()=>setSel(dept.id===sel?null:dept.id)} style={{padding:"14px",background:sel===dept.id?"var(--surface2)":"var(--surface)",border:"2px solid "+(sel===dept.id?dept.color:"var(--border)"),borderRadius:12,cursor:"pointer",transition:"all 0.2s"}}>
-              <div style={{fontSize:22,marginBottom:5}}>{dept.icon}</div>
-              <div style={{fontSize:11,fontWeight:700,color:"var(--t1)",marginBottom:4,lineHeight:1.3}}>{dept.name}</div>
-              <div style={{fontFamily:"var(--font-m)",fontSize:20,fontWeight:700,color:scoreColor(ds),marginBottom:5}}>{ds}</div>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                {dViol>0&&<span style={{fontSize:9,color:"var(--red)",background:"var(--red-s)",borderRadius:4,padding:"1px 5px",fontWeight:700}}>⚠{dViol}</span>}
-                {dSupp>0&&<span style={{fontSize:9,color:"var(--green)",background:"var(--green-s)",borderRadius:4,padding:"1px 5px",fontWeight:700}}>✓{dSupp}</span>}
-                {dStories.length===0&&<span style={{fontSize:9,color:"var(--t3)"}}>base {dept.base}</span>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      {selDept&&(
-        <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:14,padding:"16px 18px"}}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:12}}>
-            <span style={{fontSize:24}}>{selDept.icon}</span>
-            <div style={{flex:1}}>
-              <h3 style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",marginBottom:2}}>{selDept.name}</h3>
-              <p style={{fontSize:11,color:"var(--t2)",marginBottom:8}}>{selDept.description}</p>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{selDept.articles.map(a=><Tag key={a} color={CA[a]?.c||"var(--blue)"}>{a}</Tag>)}</div>
-            </div>
-            <ScoreRing score={calcDeptScore(approved,sel)} size={60}/>
+  const vC={},sC={};allViol.forEach(v=>{vC[v.a]=(vC[v.a]||0)+1;});allSupp.forEach(v=>{sC[v.a]=(sC[v.a]||0)+1;});
+  return(<div className="fade-up">
+    <div style={{marginBottom:16}}><div style={{fontSize:8.5,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.14em",fontWeight:700,marginBottom:4}}>16 Institutions · Live Constitutional Scoring</div><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.departments}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Click any institution to see constitutional violations, supports & score explanation</p></div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(145px,1fr))",gap:8,marginBottom:16}}>
+      {Object.values(DEPT).map(dept=>{
+        const ds=calcDept(approved,dept.id);const dStories=approved.filter(s=>s.institution===dept.id);
+        const dViol=dStories.reduce((a,s)=>a+(s.violations||[]).length,0);const dSupp=dStories.reduce((a,s)=>a+(s.supports||[]).length,0);const isSel=sel===dept.id;
+        return(<div key={dept.id} onClick={()=>setSel(dept.id===sel?null:dept.id)} style={{padding:"13px",background:isSel?dept.color+"0D":"var(--surface)",border:"2px solid "+(isSel?dept.color:"var(--border)"),borderRadius:12,cursor:"pointer",transition:"all 0.18s",boxShadow:isSel?`0 0 0 1px ${dept.color}28, 0 6px 22px ${dept.color}14`:"none"}}>
+          <div style={{fontSize:21,marginBottom:6}}>{dept.icon}</div>
+          <div style={{fontSize:10.5,fontWeight:700,color:"var(--t1)",marginBottom:4,lineHeight:1.3}}>{dept.name}</div>
+          <div style={{fontFamily:"var(--font-m)",fontSize:19,fontWeight:800,color:sColor(ds),marginBottom:5,letterSpacing:"-0.03em"}}>{ds}</div>
+          <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",marginBottom:6}}>
+            <div style={{height:"100%",background:dept.color,borderRadius:99,width:ds+"%",transition:"width 1.2s ease"}}/>
           </div>
-          {Object.keys(vCounts).length>0&&(
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:9,color:"var(--red)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>⚠ {t.constitutionViolations} — Frequency Analysis</div>
-              {Object.entries(vCounts).sort((a,b)=>b[1]-a[1]).map(([art,count])=>{const maxC=Math.max(...Object.values(vCounts));return(
-                <div key={art} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                  <Tag color={CA[art]?.c||"var(--red)"}>{art}</Tag>
-                  <div style={{flex:1}}><div style={{fontSize:10,color:"var(--t1)",fontWeight:600}}>{CA[art]?.t||art}</div></div>
-                  <div style={{width:70,height:5,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",flexShrink:0}}>
-                    <div style={{height:"100%",background:"var(--red)",borderRadius:99,width:(count/maxC*100)+"%"}}/>
-                  </div>
-                  <span style={{fontSize:10,fontFamily:"var(--font-m)",color:"var(--red)",width:18,textAlign:"right",flexShrink:0}}>{count}x</span>
-                </div>
-              );})}
-            </div>
-          )}
-          {Object.keys(sCounts).length>0&&(
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:9,color:"var(--green)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>✓ {t.constitutionSupports} — Frequency Analysis</div>
-              {Object.entries(sCounts).sort((a,b)=>b[1]-a[1]).map(([art,count])=>{const maxC=Math.max(...Object.values(sCounts));return(
-                <div key={art} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                  <Tag color="var(--green)">{art}</Tag>
-                  <div style={{flex:1}}><div style={{fontSize:10,color:"var(--t1)",fontWeight:600}}>{CA[art]?.t||art}</div></div>
-                  <div style={{width:70,height:5,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",flexShrink:0}}>
-                    <div style={{height:"100%",background:"var(--green)",borderRadius:99,width:(count/maxC*100)+"%"}}/>
-                  </div>
-                  <span style={{fontSize:10,fontFamily:"var(--font-m)",color:"var(--green)",width:18,textAlign:"right",flexShrink:0}}>{count}x</span>
-                </div>
-              );})}
-            </div>
-          )}
-          {selStories.length>0?(<><div style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>Recent Stories</div>{selStories.slice(0,3).map(s=><StoryCard key={s.id} s={s} t={t} compact/>)}</>):(<div style={{fontSize:12,color:"var(--t2)",padding:"14px",textAlign:"center"}}>No stories yet — fetch news to populate this department</div>)}
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+            {dViol>0&&<span style={{fontSize:8.5,color:"var(--red)",background:"var(--red-s)",border:"1px solid var(--red-b)",borderRadius:4,padding:"1px 5px",fontWeight:700}}>⚠{dViol}</span>}
+            {dSupp>0&&<span style={{fontSize:8.5,color:"var(--green)",background:"var(--green-s)",border:"1px solid var(--green-b)",borderRadius:4,padding:"1px 5px",fontWeight:700}}>✓{dSupp}</span>}
+            {dStories.length===0&&<span style={{fontSize:8.5,color:"var(--t3)"}}>base {dept.base}</span>}
+          </div>
+        </div>);})}
+    </div>
+    {selDept&&(<Card style={{padding:"18px 20px"}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:12,marginBottom:14}}>
+        <div style={{width:42,height:42,borderRadius:11,background:selDept.color+"14",border:"1px solid "+selDept.color+"28",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{selDept.icon}</div>
+        <div style={{flex:1}}>
+          <h3 style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:800,color:"var(--t1)",marginBottom:3}}>{selDept.name}</h3>
+          <p style={{fontSize:10.5,color:"var(--t2)",marginBottom:7,lineHeight:1.5}}>{selDept.desc}</p>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{selDept.articles.map(a=><Tag key={a} color={CA[a]?.c||selDept.color} sm>{a}</Tag>)}</div>
         </div>
-      )}
-    </div>
-  );
-}
+        <ScoreRing score={calcDept(approved,sel)} size={60}/>
+      </div>
+      {Object.keys(vC).length>0&&(<div style={{marginBottom:13}}>
+        <STitle>⚠ {t.constitutionViolations} — Frequency</STitle>
+        {Object.entries(vC).sort((a,b)=>b[1]-a[1]).map(([art,cnt])=>{const max=Math.max(...Object.values(vC));return(<div key={art} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(240,74,90,0.03)",border:"1px solid rgba(240,74,90,0.1)",borderRadius:8}}>
+          <Tag color={CA[art]?.c||"var(--red)"} sm>{art}</Tag>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:10,color:"var(--t1)",fontWeight:600}}>{CA[art]?.t||art}</div></div>
+          <div style={{width:75,height:4,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",flexShrink:0}}><div style={{height:"100%",background:"var(--red)",borderRadius:99,width:(cnt/max*100)+"%",boxShadow:"0 0 7px rgba(240,74,90,0.5)"}}/></div>
+          <span style={{fontSize:9.5,fontFamily:"var(--font-m)",color:"var(--red)",width:20,textAlign:"right",fontWeight:700}}>{cnt}×</span>
+        </div>);})}
+      </div>)}
+      {Object.keys(sC).length>0&&(<div style={{marginBottom:13}}>
+        <STitle>✓ {t.constitutionSupports} — Frequency</STitle>
+        {Object.entries(sC).sort((a,b)=>b[1]-a[1]).map(([art,cnt])=>{const max=Math.max(...Object.values(sC));return(<div key={art} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(15,212,124,0.03)",border:"1px solid rgba(15,212,124,0.1)",borderRadius:8}}>
+          <Tag color="var(--green)" sm>{art}</Tag>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:10,color:"var(--t1)",fontWeight:600}}>{CA[art]?.t||art}</div></div>
+          <div style={{width:75,height:4,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",flexShrink:0}}><div style={{height:"100%",background:"var(--green)",borderRadius:99,width:(cnt/max*100)+"%",boxShadow:"0 0 7px rgba(15,212,124,0.4)"}}/></div>
+          <span style={{fontSize:9.5,fontFamily:"var(--font-m)",color:"var(--green)",width:20,textAlign:"right",fontWeight:700}}>{cnt}×</span>
+        </div>);})}
+      </div>)}
+      {selStories.length>0?(<><STitle>Recent Stories ({selStories.length})</STitle>{selStories.slice(0,4).map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} compact/>)}</>):(<div style={{textAlign:"center",padding:"22px",color:"var(--t3)",fontSize:11}}>No stories yet — fetch news to populate this department</div>)}
+    </Card>)}
+  </div>);}
 
-// ── DASHBOARD ──────────────────────────────────────────────────
-function Dashboard({natScore,stScore,distScore,stories,natHistory,fetchState,fetchDistrict,t,setPage,setFetchScope}){
+
+// ── JOURNALIST CONSOLE ─────────────────────────────────────────
+function JournalistConsolePage({stories,t,onAI,fetching,onFetch}){
   const approved=stories.filter(s=>s.approved);
-  const pillarData=Object.entries(PILLARS).map(([k,p])=>{const rel=approved.filter(s=>s.pillar===k);const delta=rel.reduce((a,s)=>a+calcDemocracyWeight(s,"national",fetchState),0);return{full:p.label,color:p.color,score:Math.max(0,Math.min(100,Math.round(p.base+delta)))};});
-  const deptScores=Object.entries(DEPARTMENTS).slice(0,4).map(([k,d])=>({name:d.name,icon:d.icon,score:calcDeptScore(approved,k)}));
-  return(
-    <div className="fade-up">
-      <div style={{marginBottom:12}}><div style={{fontSize:9,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,marginBottom:4}}>Constitutional Awareness · Live 24/7</div><h1 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,4vw,21px)",fontWeight:800,color:"var(--t1)"}}>India Democracy Health Score</h1></div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
-        {[{scope:"national",score:natScore,label:"🌐 "+t.national},{scope:"state",score:stScore,label:"🏛 "+fetchState},{scope:"district",score:distScore,label:"📍 "+(fetchDistrict||t.district)}].map(item=>(
-          <div key={item.scope} onClick={()=>setFetchScope(item.scope)} style={{padding:"12px 8px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,cursor:"pointer",textAlign:"center"}}>
-            <div style={{fontSize:9,color:"var(--t3)",fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>{item.label}</div>
-            <ScoreRing score={item.score} size={72}/>
-            <div style={{fontSize:9,fontWeight:700,color:scoreColor(item.score),marginTop:5}}>{t[scoreLabelKey(item.score)]}</div>
+  // Evidence distribution
+  const evDist={};Object.keys(EVIDENCE_LEVELS).forEach(k=>{evDist[k]=approved.filter(s=>s.evidenceLevel===k).length;});
+  // Stories needing AI upgrade
+  const needsAI=approved.filter(s=>!s.aiDone);
+  // Story type distribution
+  const typeDist={};STORY_TYPES.forEach(k=>{typeDist[k]=approved.filter(s=>s.storyType===k).length;});
+  // Court active
+  const courtActive=approved.filter(s=>s.courtStatus&&s.courtStatus!=="none");
+  return(<div className="fade-up">
+    <div style={{marginBottom:16}}><div style={{fontSize:8.5,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.14em",fontWeight:700,marginBottom:4}}>Journalist Intelligence Console</div><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.journalist||"Journalist Console"}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Source analysis · Evidence chains · Confidence vectors · Story clustering</p></div>
+    {/* Evidence distribution */}
+    <Card style={{marginBottom:12}}>
+      <STitle>Evidence Level Distribution</STitle>
+      {Object.entries(EVIDENCE_LEVELS).map(([k,ev])=>{const cnt=evDist[k]||0;const max=Math.max(1,...Object.values(evDist));return(
+        <div key={k} style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
+          <span style={{fontSize:8.5,color:ev.color,width:100,flexShrink:0,fontWeight:700,fontFamily:"var(--font-m)"}}>{ev.label}</span>
+          <div style={{flex:1,height:5,background:"rgba(255,255,255,0.04)",borderRadius:99,overflow:"hidden"}}>
+            <div style={{height:"100%",background:ev.color,borderRadius:99,width:(cnt/max*100)+"%",boxShadow:`0 0 8px ${ev.color}55`}}/>
           </div>
-        ))}
+          <span style={{fontSize:9.5,fontFamily:"var(--font-m)",color:ev.color,width:18,textAlign:"right"}}>{cnt}</span>
+          <span style={{fontSize:8.5,color:"var(--t3)",width:30}}>{Math.round(ev.weight*100)}% wt</span>
+        </div>
+      );})}
+    </Card>
+    {/* Story type distribution */}
+    <Card style={{marginBottom:12}}>
+      <STitle>Story Type Distribution</STitle>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7}}>
+        {STORY_TYPES.map(k=>(<div key={k} style={{textAlign:"center",padding:"8px 6px",background:"var(--surface2)",borderRadius:8}}>
+          <div style={{fontFamily:"var(--font-m)",fontSize:16,fontWeight:800,color:"var(--t1)"}}>{typeDist[k]||0}</div>
+          <div style={{fontSize:8.5,color:"var(--t2)",marginTop:2,textTransform:"capitalize"}}>{t.storyTypes?.[k]||k}</div>
+        </div>))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:10}}>
-        <Metric label={t.storiesTracked} value={approved.length} color="var(--blue)"/>
-        <Metric label={t.critical} value={approved.filter(s=>s.severity==="critical"&&s.direction==="negative").length} color="var(--red)"/>
-        <Metric label={t.positive} value={approved.filter(s=>s.direction==="positive").length} color="var(--green)"/>
-        <Metric label="Score Δ" value={(natScore-BASE_SCORE>0?"+":"")+(natScore-BASE_SCORE)} color={natScore>=BASE_SCORE?"var(--green)":"var(--red)"}/>
+    </Card>
+    {/* AI upgrade queue */}
+    <Card style={{marginBottom:12}}>
+      <STitle action={<Btn onClick={()=>onAI()} variant="purple" style={{fontSize:9,padding:"3px 9px"}} disabled={!needsAI.length}>✦ AI Upgrade All ({needsAI.length})</Btn>}>AI Verification Queue</STitle>
+      {needsAI.length===0?(<div style={{textAlign:"center",padding:"14px",color:"var(--green)",fontSize:11}}>✓ All stories AI-verified</div>):(needsAI.slice(0,5).map(s=>(<div key={s.id} style={{padding:"8px 10px",borderRadius:8,background:"rgba(155,125,255,0.04)",border:"1px solid rgba(155,125,255,0.1)",marginBottom:5}}>
+        <div style={{fontSize:11,color:"var(--t1)",marginBottom:3}}>{s.headline.slice(0,80)}...</div>
+        <div style={{display:"flex",gap:5}}><EvidenceBadge level={s.evidenceLevel} t={t}/><ConfidenceBadge confidence={s.confidence} t={t}/></div>
+      </div>)))}
+    </Card>
+    {/* Court active cases */}
+    {courtActive.length>0&&(<Card style={{marginBottom:12}}>
+      <STitle>Court Active Stories ({courtActive.length})</STitle>
+      {courtActive.slice(0,5).map(s=>(<div key={s.id} style={{padding:"8px 10px",borderRadius:8,background:"rgba(245,166,35,0.04)",border:"1px solid rgba(245,166,35,0.1)",marginBottom:5}}>
+        <div style={{display:"flex",gap:5,marginBottom:4}}><CourtBadge status={s.courtStatus}/><EvidenceBadge level={s.evidenceLevel} t={t}/></div>
+        <div style={{fontSize:11,color:"var(--t1)"}}>{s.headline.slice(0,80)}...</div>
+      </div>))}
+    </Card>)}
+    {/* Dept story breakdown */}
+    <Card>
+      <STitle>Department Story Distribution</STitle>
+      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+        {Object.values(DEPT).map(dept=>{const cnt=approved.filter(s=>s.institution===dept.id).length;const viol=approved.filter(s=>s.institution===dept.id).reduce((a,s)=>a+(s.violations||[]).length,0);const supp=approved.filter(s=>s.institution===dept.id).reduce((a,s)=>a+(s.supports||[]).length,0);return(<div key={dept.id} style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:14,width:20,flexShrink:0}}>{dept.icon}</span>
+          <span style={{fontSize:10,color:"var(--t2)",flex:1,fontWeight:500}}>{dept.name}</span>
+          <span style={{fontFamily:"var(--font-m)",fontSize:10,fontWeight:700,color:"var(--t1)",width:18,textAlign:"right"}}>{cnt}</span>
+          {viol>0&&<span style={{fontSize:8.5,color:"var(--red)",fontWeight:700}}>⚠{viol}</span>}
+          {supp>0&&<span style={{fontSize:8.5,color:"var(--green)",fontWeight:700}}>✓{supp}</span>}
+        </div>);})}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:10}}>
-        {[{l:"Freedom House",v:"63/100"},{l:"V-Dem",v:"100/179"},{l:"RSF Press",v:"151/180"},{l:"EIU",v:"6.6/10"}].map(e=>(<div key={e.l} style={{padding:"8px 10px",background:"var(--surface2)",borderRadius:8,border:"1px solid var(--border)"}}><div style={{fontSize:8,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:2}}>{e.l}</div><div style={{fontFamily:"var(--font-m)",fontSize:12,fontWeight:700,color:"var(--t1)"}}>{e.v}</div></div>))}
-      </div>
-      <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-        <div style={{fontSize:9,fontWeight:700,color:"var(--t2)",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>{t.deptScore}</span><button onClick={()=>setPage("departments")} style={{fontSize:8,color:"var(--blue)",background:"transparent",border:"none",cursor:"pointer"}}>See All →</button></div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>{deptScores.map(d=>(<div key={d.name} onClick={()=>setPage("departments")} style={{textAlign:"center",cursor:"pointer"}}><div style={{fontSize:16,marginBottom:2}}>{d.icon}</div><div style={{fontFamily:"var(--font-m)",fontSize:13,fontWeight:700,color:scoreColor(d.score)}}>{d.score}</div><div style={{fontSize:8,color:"var(--t2)",marginTop:1}}>{d.name.split(" ")[0]}</div></div>))}</div>
-      </div>
-      <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-        <div style={{fontSize:9,fontWeight:700,color:"var(--t2)",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>Constitutional Pillars</div>
-        {pillarData.map(p=>(<div key={p.full} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:10,color:"var(--t2)",width:65,flexShrink:0}}>{p.full}</span><div style={{flex:1,height:5,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",borderRadius:99,background:p.color,width:p.score+"%",transition:"width 1.2s ease"}}/></div><span style={{fontFamily:"var(--font-m)",fontSize:10,fontWeight:700,color:p.color,width:24,textAlign:"right"}}>{p.score}</span></div>))}
-      </div>
-      {natHistory.length>1&&(<div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px"}}><div style={{fontSize:9,fontWeight:700,color:"var(--t2)",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:6}}>Score Trend</div><ResponsiveContainer width="100%" height={65}><AreaChart data={natHistory}><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={scoreColor(natScore)} stopOpacity={0.2}/><stop offset="95%" stopColor={scoreColor(natScore)} stopOpacity={0}/></linearGradient></defs><XAxis dataKey="label" tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false} width={18}/><Tooltip contentStyle={{background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:8,fontSize:10}}/><Area type="monotone" dataKey="score" stroke={scoreColor(natScore)} fill="url(#sg)" strokeWidth={2} dot={false}/></AreaChart></ResponsiveContainer></div>)}
-      {approved.length===0&&(<div style={{textAlign:"center",padding:"20px",background:"var(--surface)",borderRadius:12,border:"1px solid var(--border)",marginTop:10}}><div style={{fontSize:22,marginBottom:6}}>⚡</div><div style={{fontSize:12,color:"var(--t2)",marginBottom:10}}>{t.tapFetch}</div><button onClick={()=>setPage("feed")} style={{padding:"8px 18px",borderRadius:8,border:"none",background:"var(--blue)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>{t.fetchLive}</button></div>)}
-    </div>
-  );
-}
+    </Card>
+  </div>);}
 
-
-// ── FEED + REMAINING PAGES ──────────────────────────────────────
-function FeedPage({stories,fetching,onFetch,onAI,countdown,autoOn,t}){
-  const[filter,setFilter]=useState("all");
-  const sorted=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);
-  const filtered=filter==="all"?sorted:filter==="critical"?sorted.filter(s=>s.severity==="critical"):filter==="positive"?sorted.filter(s=>s.direction==="positive"):sorted.filter(s=>s.scope===filter);
-  return(
-    <div className="fade-up">
-      <div style={{marginBottom:12}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:3}}>⚡ {t.liveFeed}</h2><p style={{fontSize:11,color:"var(--t2)"}}>Every story scored · Violations & supports mapped · All 3 scopes</p></div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:10}}>
-        <Metric label="Total" value={stories.filter(s=>s.approved).length} color="var(--blue)"/>
-        <Metric label={t.national} value={stories.filter(s=>s.approved&&s.scope==="national").length} color="var(--blue)"/>
-        <Metric label={t.state} value={stories.filter(s=>s.approved&&s.scope==="state").length} color="var(--amber)"/>
-        <Metric label={t.district} value={stories.filter(s=>s.approved&&(s.scope==="local"||s.scope==="district")).length} color="var(--green)"/>
-      </div>
-      <div style={{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"}}>
-        {["all","national","state","local","critical","positive"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:6,border:"1px solid "+(filter===f?"var(--blue)":"var(--border)"),background:filter===f?"var(--blue-s)":"transparent",color:filter===f?"var(--blue)":"var(--t2)",fontSize:9,fontWeight:filter===f?700:400,cursor:"pointer",textTransform:"capitalize"}}>{f}</button>))}
-        <div style={{flex:1}}/>
-        <button onClick={onAI} style={{padding:"3px 10px",borderRadius:6,border:"1px solid var(--purple)",background:"var(--purple-s)",color:"var(--purple)",fontSize:9,fontWeight:700,cursor:"pointer"}}>✦ AI All</button>
-      </div>
-      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}><div style={{width:6,height:6,borderRadius:"50%",background:"var(--green)",boxShadow:"0 0 6px var(--green)",animation:"pulse 2s infinite"}}/><span style={{fontSize:11,fontWeight:600,color:"var(--green)"}}>Live · Scoring Active</span>{autoOn&&<span style={{fontSize:10,color:"var(--t3)"}}>Next: {countdown}s</span>}</div>
-      {filtered.length===0&&(<div style={{textAlign:"center",padding:"44px 20px"}}><div style={{fontSize:24,marginBottom:8}}>⚡</div><div style={{fontSize:13,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.noStories}</div><div style={{fontSize:11,color:"var(--t2)",marginBottom:14}}>{t.tapFetch}</div><button onClick={onFetch} style={{padding:"8px 20px",borderRadius:9,border:"none",background:"var(--blue)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>{t.fetchLive}</button></div>)}
-      {filtered.map(s=><StoryCard key={s.id} s={s} t={t}/>)}
-    </div>
-  );
-}
-
-const OCC_RIGHTS={"Journalist":{rights:["Art.19(1)(a)","Art.21","Art.22"],threats:["Arrest under UAPA/BNS-152","Criminal defamation","Physical attacks — 3 killed 2024-25"],actions:["Document arrest or detention immediately","Contact press bodies within 24 hours","Preserve all video evidence and notices","File writ petition if detained unlawfully"],helplines:["Press Club India: 011-23379161","NHRC: 14433"]},"Farmer":{rights:["Art.39","Art.41","Art.21"],threats:["Debt crisis 12,000+ suicides/yr","MSP non-statutory","Land acquisition"],actions:["Preserve land and compensation docs","Use RTI for acquisition records"],helplines:["Kisan Call: 1800-180-1551","NALSA: 15100"]},"Tribal/Adivasi":{rights:["Art.21","5th Sch","Art.29"],threats:["Mining displacement","PESA violations","Forest rights denial"],actions:["Collect Gram Sabha and FRA records","Document all displacement"],helplines:["NALSA: 15100","NHRC: 14433"]},"Dalit (SC)":{rights:["Art.17","Art.14","Art.15"],threats:["Atrocities 50,000+/yr","Manual scavenging","Caste discrimination"],actions:["Document atrocity incidents in writing","Use SC/ST Act channels"],helplines:["SC/ST Commission: 011-23381202","NHRC: 14433"]},"Muslim Minority":{rights:["Art.14","Art.25","Art.29"],threats:["CAA exclusion","Bulldozer demolitions","UAPA misuse"],actions:["Document demolition notices","Preserve all property records"],helplines:["Minority Commission: 011-23517473","NHRC: 14433"]},"Woman":{rights:["Art.14","Art.15","Art.21"],threats:["Gender-based violence","Workplace discrimination"],actions:["Preserve medical and police records","Use women helplines"],helplines:["Women Helpline: 181","NCW: 011-26942369"]},"General Citizen":{rights:["Art.14","Art.21","Art.32"],threats:["Administrative overreach","Arbitrary detention"],actions:["Document all notices and detentions","Use district legal aid"],helplines:["NHRC: 14433","NALSA: 15100"]}};
-
-function MyRightsPage({scope,setScope,t}){
-  const states=Object.keys(STATE_BASELINES).sort();
-  const occ=OCC_RIGHTS[scope.occupation]||OCC_RIGHTS["General Citizen"];
-  return(
-    <div className="fade-up">
-      <h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>🛡 {t.myRights}</h2>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-        <div><label style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>{t.state}</label><select value={scope.state} onChange={e=>setScope(p=>({...p,state:e.target.value}))} style={{width:"100%",padding:"8px 12px",borderRadius:9,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none"}}>{states.map(s=><option key={s} value={s}>{s}</option>)}</select></div>
-        <div><label style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>Profile</label><select value={scope.occupation} onChange={e=>setScope(p=>({...p,occupation:e.target.value}))} style={{width:"100%",padding:"8px 12px",borderRadius:9,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none"}}>{Object.keys(OCC_RIGHTS).map(o=><option key={o} value={o}>{o}</option>)}</select></div>
-      </div>
-      <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"14px 16px",marginBottom:10}}>
-        <div style={{fontSize:9,color:"var(--green)",fontWeight:700,textTransform:"uppercase",marginBottom:8}}>✓ {t.constitutionSupports}</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>{occ.rights.map(r=><Tag key={r} color={CA[r]?.c||"var(--blue)"}>{r} — {CA[r]?.t||r}</Tag>)}</div>
-        <div style={{fontSize:9,color:"var(--red)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>⚠ {t.constitutionViolations} Risk</div>
-        {occ.threats.map((th,i)=><div key={i} style={{fontSize:11,color:"var(--t2)",padding:"4px 0",borderBottom:"1px solid var(--border)"}}>• {th}</div>)}
-      </div>
-      <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"14px 16px",marginBottom:10}}>
-        <div style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:8}}>What To Do If Rights Are Violated</div>
-        {occ.actions.map((a,i)=>(<div key={i} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:"1px solid var(--border)"}}><span style={{color:"var(--blue)",fontWeight:700,fontSize:11,flexShrink:0}}>{i+1}.</span><span style={{fontSize:11,color:"var(--t2)"}}>{a}</span></div>))}
-      </div>
-      <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 16px"}}><div style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Emergency Helplines</div>{occ.helplines.map((h,i)=><div key={i} style={{fontSize:11,color:"var(--green)",fontFamily:"var(--font-m)",padding:"2px 0"}}>{h}</div>)}</div>
-    </div>
-  );
-}
-
-function PatternsPage({stories,t}){const approved=stories.filter(s=>s.approved);return(<div className="fade-up"><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.patterns}</h2><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:12}}>{Object.entries(PATTERN_CLASSES).map(([k,p])=>(<div key={k} style={{padding:"12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:11,textAlign:"center"}}><div style={{fontSize:18,marginBottom:4}}>{p.dot}</div><div style={{fontFamily:"var(--font-m)",fontSize:16,fontWeight:700,color:p.color}}>{approved.filter(s=>s.pattern===k).length}</div><div style={{fontSize:9,color:"var(--t2)",marginTop:2}}>{p.label}</div></div>))}</div>{approved.filter(s=>s.pattern==="systemic").map(s=><StoryCard key={s.id} s={s} t={t} compact/>)}</div>);}
-
-function TimelinePage({stories,natHistory,t}){
-  const approved=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);
-  return(<div className="fade-up"><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.timeline}</h2>{natHistory.length>1&&(<div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px",marginBottom:12}}><ResponsiveContainer width="100%" height={80}><LineChart data={natHistory}><XAxis dataKey="label" tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false} width={18}/><Tooltip contentStyle={{background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:8,fontSize:10}}/><Line type="monotone" dataKey="score" stroke="var(--blue)" strokeWidth={2} dot={{r:2,fill:"var(--blue)"}}/></LineChart></ResponsiveContainer></div>)}<div style={{position:"relative",paddingLeft:16}}><div style={{position:"absolute",left:4,top:0,bottom:0,width:1,background:"var(--border)"}}/>{approved.map(s=>(<div key={s.id} style={{position:"relative",paddingBottom:12}}><div style={{position:"absolute",left:-14,top:3,width:7,height:7,borderRadius:"50%",background:s.direction==="positive"?"var(--green)":s.severity==="critical"?"var(--red)":"var(--amber)",border:"2px solid var(--bg)"}}/><div style={{fontSize:9,color:"var(--t3)",marginBottom:2}}>{new Date(s.ts).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div><div style={{fontSize:12,fontWeight:600,color:"var(--t1)",marginBottom:3}}>{s.headline}</div><div style={{display:"flex",gap:4,flexWrap:"wrap"}}><Tag color={s.direction==="positive"?"var(--green)":s.severity==="critical"?"var(--red)":"var(--amber)"}>{s.direction==="positive"?"+":""}{s.aiScore||s.delta}</Tag>{s.state&&<Pill color="var(--blue)">{s.state}</Pill>}{(s.violations||[]).slice(0,2).map((v,i)=><Tag key={i} color={CA[v.a]?.c||"var(--red)"}>{v.a}</Tag>)}</div></div>))}</div></div>);
-}
-
-function ConstitutionPage(){const[search,setSearch]=useState("");const[sel,setSel]=useState(null);const filtered=Object.entries(CA).filter(([k,v])=>!search||k.toLowerCase().includes(search.toLowerCase())||v.t.toLowerCase().includes(search.toLowerCase()));return(<div className="fade-up"><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:10}}>⚖ Constitution Explorer</h2><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search articles..." style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",marginBottom:10}}/><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:6}}>{filtered.map(([k,v])=>(<button key={k} onClick={()=>setSel(k===sel?null:k)} style={{textAlign:"left",padding:"10px 12px",background:sel===k?"var(--surface2)":"var(--surface)",border:"1px solid "+(sel===k?"var(--border2)":"var(--border)"),borderRadius:9,cursor:"pointer"}}><Tag color={v.c}>{k}</Tag><div style={{fontSize:10,color:"var(--t1)",fontWeight:600,marginTop:4,lineHeight:1.4}}>{v.t}</div></button>))}</div></div>);}
-
-function ScorePage({natScore,stScore,distScore,stories,fetchState,fetchDistrict,t}){const approved=stories.filter(s=>s.approved);const pillarData=Object.entries(PILLARS).map(([k,p])=>{const rel=approved.filter(s=>s.pillar===k);const delta=rel.reduce((a,s)=>a+calcDemocracyWeight(s,"national",fetchState),0);return{subject:p.label,score:Math.max(0,Math.min(100,Math.round(p.base+delta))),color:p.color,base:p.base,delta:Math.round(delta)};});return(<div className="fade-up"><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.scoreAnalysis}</h2><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>{[["🌐 "+t.national,natScore],["🏛 "+fetchState,stScore],["📍 "+(fetchDistrict||t.district),distScore]].map(([l,v])=>(<div key={l} style={{padding:"12px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:11,textAlign:"center"}}><div style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",marginBottom:5}}>{l}</div><ScoreRing score={v} size={60}/><div style={{fontSize:9,fontWeight:700,color:scoreColor(v),marginTop:4}}>{t[scoreLabelKey(v)]}</div></div>))}</div>{pillarData.map(p=>(<div key={p.subject} style={{padding:"10px 14px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:9,marginBottom:6}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><span style={{fontSize:12,color:"var(--t1)",fontWeight:600}}>{p.subject}</span><div style={{display:"flex",gap:6,alignItems:"center"}}><span style={{fontSize:9,color:"var(--t2)"}}>base {p.base}</span><span style={{fontFamily:"var(--font-m)",fontSize:12,fontWeight:700,color:p.color}}>{p.score}</span><span style={{fontSize:10,color:p.delta>=0?"var(--green)":"var(--red)",fontWeight:600}}>{p.delta>=0?"+":""}{p.delta}</span></div></div><div style={{height:4,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",borderRadius:99,background:p.color,width:p.score+"%",transition:"width 1s ease"}}/></div></div>))}</div>);}
-
-function AnomaliesPage({stories,t}){const approved=stories.filter(s=>s.approved);return(<div className="fade-up"><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.anomalies}</h2><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7,marginBottom:12}}><Metric label={t.critical} value={approved.filter(s=>s.severity==="critical").length} color="var(--red)"/><Metric label="Systemic" value={approved.filter(s=>s.pattern==="systemic").length} color="var(--amber)"/><Metric label="Total" value={approved.length} color="var(--blue)"/></div>{approved.filter(s=>s.pattern==="systemic").map(s=><StoryCard key={s.id} s={s} t={t} compact/>)}</div>);}
-
+// ── REMAINING PAGES ────────────────────────────────────────────
 function StatesPage({stories,t}){
   const approved=stories.filter(s=>s.approved);
-  const stateScores=Object.entries(STATE_BASELINES).map(([st])=>({state:st,score:calcScopeScore(approved,"state",st)})).sort((a,b)=>b.score-a.score);
-  return(<div className="fade-up"><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.states}</h2><div style={{display:"flex",flexDirection:"column",gap:5}}>{stateScores.map((item,i)=>{const col=scoreColor(item.score);const stViol=approved.filter(s=>s.state===item.state).reduce((a,s)=>a+(s.violations||[]).length,0);const stSupp=approved.filter(s=>s.state===item.state).reduce((a,s)=>a+(s.supports||[]).length,0);return(<div key={item.state} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:9}}><span style={{fontFamily:"var(--font-m)",fontSize:10,color:"var(--t3)",width:20,flexShrink:0}}>{i+1}</span><span style={{flex:1,fontSize:12,fontWeight:600,color:"var(--t1)"}}>{item.state}</span>{stViol>0&&<span style={{fontSize:9,color:"var(--red)",background:"var(--red-s)",borderRadius:99,padding:"1px 5px",fontWeight:700}}>⚠{stViol}</span>}{stSupp>0&&<span style={{fontSize:9,color:"var(--green)",background:"var(--green-s)",borderRadius:99,padding:"1px 5px",fontWeight:700}}>✓{stSupp}</span>}<div style={{width:55,height:4,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",flexShrink:0}}><div style={{height:"100%",borderRadius:99,background:col,width:item.score+"%"}}/></div><span style={{fontFamily:"var(--font-m)",fontSize:11,fontWeight:700,color:col,width:22,textAlign:"right",flexShrink:0}}>{item.score}</span></div>);})}</div></div>);
-}
+  const stateScores=Object.entries(STATE_BASELINES).map(([st])=>({state:st,score:calcScope(approved,"state",st)})).sort((a,b)=>b.score-a.score);
+  return(<div className="fade-up">
+    <div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.states}</h2></div>
+    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+      {stateScores.map((item,i)=>{const col=sColor(item.score);const stViol=approved.filter(s=>s.state===item.state).reduce((a,s)=>a+(s.violations||[]).length,0);const stSupp=approved.filter(s=>s.state===item.state).reduce((a,s)=>a+(s.supports||[]).length,0);return(
+        <div key={item.state} style={{display:"flex",alignItems:"center",gap:9,padding:"10px 14px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10}}>
+          <span style={{fontFamily:"var(--font-m)",fontSize:9.5,color:"var(--t3)",width:22,flexShrink:0,fontWeight:600}}>{i+1}</span>
+          <span style={{flex:1,fontSize:11.5,fontWeight:600,color:"var(--t1)"}}>{item.state}</span>
+          {stViol>0&&<span style={{fontSize:8.5,color:"var(--red)",background:"var(--red-s)",border:"1px solid var(--red-b)",borderRadius:99,padding:"1px 5px",fontWeight:700}}>⚠{stViol}</span>}
+          {stSupp>0&&<span style={{fontSize:8.5,color:"var(--green)",background:"var(--green-s)",border:"1px solid var(--green-b)",borderRadius:99,padding:"1px 5px",fontWeight:700}}>✓{stSupp}</span>}
+          <div style={{width:60,height:4,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",flexShrink:0}}><div style={{height:"100%",borderRadius:99,background:col,width:item.score+"%",boxShadow:`0 0 5px ${col}77`}}/></div>
+          <span style={{fontFamily:"var(--font-m)",fontSize:11.5,fontWeight:800,color:col,width:24,textAlign:"right",flexShrink:0,letterSpacing:"-0.03em"}}>{item.score}</span>
+        </div>);})}
+    </div>
+  </div>);}
 
-function SubmitPage({onSubmit,toast,t}){const[form,setForm]=useState({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local"});const handle=()=>{if(!form.headline.trim()){toast("Please enter a headline","error");return;}onSubmit(form);setForm({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local"});toast("Report submitted for review","success");};return(<div className="fade-up" style={{maxWidth:540}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>+ {t.submit}</h2><div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:14,padding:"16px"}}>{[{k:"headline",label:"Headline *",type:"input",ph:"Brief description"},{k:"body",label:"Details",type:"textarea",ph:"Context..."}].map(f=>(<div key={f.k} style={{marginBottom:10}}><label style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>{f.label}</label>{f.type==="textarea"?<textarea value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} rows={3} style={{width:"100%",padding:"7px 12px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",resize:"vertical"}}/>:<input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={{width:"100%",padding:"7px 12px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none"}}/>}</div>))}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>{[{k:"scope",label:"Scope",opts:[["national","National"],["state","State"],["local","Local"]]},{k:"state",label:"State",opts:[["","All India"],...Object.keys(STATE_BASELINES).sort().map(s=>[s,s])]},{k:"source",label:"Source",opts:[["citizen_unverified","Citizen"],["single_source","Single"],["corroborated","Confirmed"],["verified","Verified"]]}].map(f=>(<div key={f.k}><label style={{fontSize:9,color:"var(--t3)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:3}}>{f.label}</label><select value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} style={{width:"100%",padding:"6px 8px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none"}}>{f.opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div><button onClick={handle} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"var(--blue)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer"}}>{t.submit}</button></div></div>);}
+const OCC={Journalist:{rights:["Art.19(1)(a)","Art.21","Art.22"],threats:["UAPA/BNS-152 arrest","Criminal defamation","Physical attacks — 3 killed 2024-25","IT Rules censorship"],actions:["Document arrest immediately — date, time, officer name","Contact press freedom bodies within 24 hours","Preserve all evidence including digital","File writ petition if detained unlawfully"],helplines:["Press Club India: 011-23379161","NHRC: 14433","CPJ India: cpj.org"]},"Farmer":{rights:["Art.39","Art.41","Art.21"],threats:["Debt crisis — 12,000+ suicides/year","MSP non-statutory","Land acquisition without consent","Bulldozer action on farm land"],actions:["Preserve all land title documents","Use RTI to access acquisition records","File objection within 30 days of notice"],helplines:["Kisan Call: 1800-180-1551","NALSA: 15100"]},"Tribal/Adivasi":{rights:["Art.21","5th Sch","Art.29","Forest Rights Act"],threats:["Mining displacement","PESA violations","Forest rights denial","Fake encounter allegations"],actions:["Gram Sabha resolution is legally required before eviction","Collect FRA title records","Document all displacement with witnesses"],helplines:["NALSA: 15100","NHRC: 14433"]},"Dalit (SC)":{rights:["Art.17","Art.14","Art.15","Art.46"],threats:["50,000+ atrocities per year","Manual scavenging","Caste discrimination in institutions"],actions:["File FIR under SC/ST Prevention of Atrocities Act","Document with photos and witness statements"],helplines:["SC/ST Commission: 011-23381202","NHRC: 14433"]},"Muslim Minority":{rights:["Art.14","Art.25","Art.29","Art.30"],threats:["Bulldozer demolitions","UAPA misuse","CAA citizenship exclusion","Anti-conversion laws"],actions:["Document all demolition notices with dates","Preserve all property ownership records","File writ if demolition occurs without notice"],helplines:["Minority Commission: 011-23517473","NHRC: 14433"]},Woman:{rights:["Art.14","Art.15","Art.21"],threats:["Gender-based violence","Workplace discrimination","Trafficking"],actions:["Preserve all medical and police records","Use Women's Commission complaint mechanism"],helplines:["Women Helpline: 181","NCW: 011-26942369"]},"General Citizen":{rights:["Art.14","Art.21","Art.32"],threats:["Administrative overreach","Arbitrary detention","Property violation"],actions:["Document all notices with timestamps","Request district legal aid"],helplines:["NHRC: 14433","NALSA: 15100"]}};
 
-function ReviewPage({stories,onReview,t}){const pending=stories.filter(s=>!s.approved&&!s.held);const held=stories.filter(s=>s.held);return(<div className="fade-up"><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.review}</h2>{pending.length===0&&held.length===0&&<div style={{textAlign:"center",padding:"36px 20px",color:"var(--t2)"}}>No items pending</div>}{pending.length>0&&<div style={{marginBottom:12}}><div style={{fontSize:11,fontWeight:700,color:"var(--amber)",marginBottom:8}}>⏳ Pending ({pending.length})</div>{pending.map(s=><StoryCard key={s.id} s={s} t={t} onReview={onReview}/>)}</div>}{held.length>0&&<div><div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:8}}>Held ({held.length})</div>{held.map(s=><StoryCard key={s.id} s={s} t={t} onReview={onReview}/>)}</div>}</div>);}
+function MyRightsPage({scope,setScope,t}){const states=Object.keys(STATE_BASELINES).sort();const occ=OCC[scope.occupation]||OCC["General Citizen"];return(<div className="fade-up"><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>🛡 {t.rights||"My Rights"}</h2></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}><div><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{t.state}</label><select value={scope.state} onChange={e=>setScope(p=>({...p,state:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}>{states.map(s=><option key={s} value={s}>{s}</option>)}</select></div><div><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>Profile</label><select value={scope.occupation} onChange={e=>setScope(p=>({...p,occupation:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}>{Object.keys(OCC).map(o=><option key={o} value={o}>{o}</option>)}</select></div></div><Card style={{marginBottom:10}}><div style={{fontSize:8.5,color:"var(--green)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:9}}>✓ {t.constitutionSupports}</div><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>{occ.rights.map(r=><Tag key={r} color={CA[r]?.c||"var(--blue)"}>{r} — {CA[r]?.t||r}</Tag>)}</div><div style={{fontSize:8.5,color:"var(--red)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:7}}>⚠ {t.constitutionViolations} Risk</div>{occ.threats.map((th,i)=><div key={i} style={{fontSize:11,color:"var(--t2)",padding:"5px 0",borderBottom:"1px solid var(--border)"}}>• {th}</div>)}</Card><Card style={{marginBottom:10}}><div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:9}}>If Rights Are Violated</div>{occ.actions.map((a,i)=>(<div key={i} style={{display:"flex",gap:9,padding:"8px 0",borderBottom:"1px solid var(--border)"}}><span style={{color:"var(--blue)",fontWeight:800,fontSize:10.5,flexShrink:0,fontFamily:"var(--font-m)"}}>{i+1}.</span><span style={{fontSize:11,color:"var(--t2)",lineHeight:1.6}}>{a}</span></div>))}</Card><Card><div style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:7}}>Emergency Helplines</div>{occ.helplines.map((h,i)=><div key={i} style={{fontSize:11.5,color:"var(--green)",fontFamily:"var(--font-m)",padding:"3px 0",fontWeight:600}}>{h}</div>)}</Card></div>);}
 
-function MethodPage({t}){return(<div className="fade-up" style={{maxWidth:640}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.methodology}</h2>{[{icon:"🌐",title:"Impact Radius — All 3 Scores Live",body:"National news → 100% national · 40% state · 20% local\nState news → 30% national · 100% state · 50% local\nLocal/District → 5% national · 15% state · 100% local\nAll 3 score rings update simultaneously from every story."},{icon:"⚖",title:"Constitutional Violations & Supports",body:"Every story maps to specific Indian Constitution articles. Violations (red ⚠) show where rights are denied. Supports (green ✓) show where rights are upheld. Shown per story, per department, per state."},{icon:"🏛",title:"8 Department Scores",body:"Parliament · Executive · Judiciary · Police · Election Commission · Media/Press · Armed Forces · Local Government. Each has own live democracy score based on stories involving that institution."},{icon:"📊",title:"Democracy Weight Formula",body:"weight = score_delta × source_confidence × recency_decay × pillar_weight × pattern_multiplier × impact_radius_factor"},{icon:"🤖",title:"Groq AI (Free, 14,400 req/day)",body:"Groq Llama 3.3 70B verifies constitutional violations and supports with article numbers, calculates National/State/Local impact %, refines democracy scores."},{icon:"📰",title:"Google News RSS (Free, No Key)",body:"Real-time India news from 1000s of sources. Filtered for constitutional relevance using 40+ keyword categories."}].map((item,i)=>(<div key={i} style={{padding:"12px 14px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:11,marginBottom:7}}><div style={{display:"flex",gap:8,alignItems:"flex-start"}}><span style={{fontSize:16,flexShrink:0}}>{item.icon}</span><div><div style={{fontSize:12,fontWeight:700,color:"var(--t1)",marginBottom:3}}>{item.title}</div><div style={{fontSize:11,color:"var(--t2)",lineHeight:1.7,whiteSpace:"pre-line"}}>{item.body}</div></div></div></div>))}</div>);}
+function SubmitPage({onSubmit,toast,t}){const[form,setForm]=useState({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});const handle=()=>{if(!form.headline.trim()){toast("Please enter a headline","error");return;}onSubmit(form);setForm({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});toast("Report submitted · Evidence level: "+form.evidenceLevel,"success");};return(<div className="fade-up" style={{maxWidth:580}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.submit||"Submit Report"}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Include evidence level — helps us weight your report accurately</p></div><Card><div style={{display:"flex",flexDirection:"column",gap:12}}>{[{k:"headline",label:"Headline *",type:"input",ph:"Brief description of the constitutional event"},{k:"body",label:"Details",type:"textarea",ph:"Evidence, source links, location, official notices..."}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{f.label}</label>{f.type==="textarea"?<textarea value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} rows={3} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",resize:"vertical",fontFamily:"var(--font-b)"}}/>:<input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}/>}</div>))}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>{[{k:"evidenceLevel",label:"Evidence Level",opts:Object.entries(EVIDENCE_LEVELS).map(([v,l])=>[v,l.label])},{k:"scope",label:"Scope",opts:[["national","National"],["state","State"],["local","Local"]]},{k:"storyType",label:"Story Type",opts:STORY_TYPES.map(s=>[s,s.charAt(0).toUpperCase()+s.slice(1)])},{k:"state",label:"State",opts:[["","All India"],...Object.keys(STATE_BASELINES).sort().map(s=>[s,s])]},{k:"source",label:"Source",opts:[["citizen_unverified","Citizen"],["single_source","Single"],["corroborated","Confirmed"],["verified","Official"]]},{k:"courtStatus",label:"Court Status",opts:Object.entries(COURT_STATUSES).map(([v,cs])=>[v,cs.label])}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",display:"block",marginBottom:4}}>{f.label}</label><select value={form[f.k]||""} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",fontFamily:"var(--font-b)"}}>{f.opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div><Btn onClick={handle} variant="primary" style={{padding:"10px 22px",fontSize:13,width:"fit-content"}}>{t.submit||"Submit Report"}</Btn></div></Card></div>);}
 
-function AboutPage({t}){return(<div className="fade-up" style={{maxWidth:520}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(15px,3vw,20px)",fontWeight:800,color:"var(--t1)",marginBottom:12}}>{t.about} DTN Mythos</h2><div style={{padding:"16px",background:"var(--surface)",border:"1px solid var(--border)",borderRadius:12,marginBottom:10}}><p style={{fontSize:13,color:"var(--t2)",lineHeight:1.9,marginBottom:10}}>DTN Mythos tracks India's constitutional health across National, State, and Local levels simultaneously. Every story scored · Every violation mapped · 10 Indian languages · All departments.</p><p style={{fontSize:13,color:"var(--t2)",lineHeight:1.9}}>We believe every Indian citizen deserves to know not just what the news is — but what it means for their constitutional rights, which government department is responsible, and at what geographic level it matters.</p></div><div style={{padding:"12px 14px",background:"var(--blue-s)",border:"1px solid rgba(79,142,247,0.2)",borderRadius:10}}><div style={{fontSize:9,color:"var(--blue)",fontWeight:700,marginBottom:3}}>LEGAL NOTICE</div><p style={{fontSize:11,color:"var(--t2)",lineHeight:1.7,margin:0}}>Independent civic tech. Analytical estimates only. Not legal advice. NALSA: 15100 · NHRC: 14433</p></div></div>);}
+function ReviewPage({stories,onReview,t,mode}){const pending=stories.filter(s=>!s.approved&&!s.held);const held=stories.filter(s=>s.held);return(<div className="fade-up"><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.review||"Review Queue"}</h2></div>{pending.length===0&&held.length===0&&<Card style={{textAlign:"center",padding:"40px",color:"var(--t2)"}}>No items pending</Card>}{pending.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:700,color:"var(--amber)",marginBottom:9}}>⏳ Pending ({pending.length})</div>{pending.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}</div>}{held.length>0&&<div><div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:9}}>Held ({held.length})</div>{held.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}</div>}</div>);}
+
+function MethodPage({t}){return(<div className="fade-up" style={{maxWidth:680}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.method||"Methodology"}</h2></div>{[{icon:"📊",c:"var(--blue)",title:"Advanced Scoring Formula",body:"story_effect = directional_score × evidence_weight × source_credibility × confidence × recency_decay × pillar_weight × pattern_multiplier × impact_radius_factor\n\nEvidence weights: Allegation 0.2× · Single Source 0.4× · Corroborated 0.65× · Official Doc 0.85× · Court Finding 0.92× · Final Adjudication 1.0×"},{icon:"🔍",c:"var(--amber)",title:"Evidence Classification System",body:"Every story is assigned an evidence level that directly controls its score weight. An allegation barely moves the score. A gazette notification or court order has near-full effect. This is the core safeguard that prevents misinformation from distorting scores."},{icon:"🌐",c:"var(--green)",title:"Impact Radius — 3 Scores Simultaneously",body:"National news: 100% national · 40% state · 20% local\nState news: 30% national · 100% state · 50% local\nLocal news: 5% national · 15% state · 100% local\nAll adjusted for evidence quality and confidence level"},{icon:"🏛",c:"var(--purple)",title:"16 Department Scores",body:"PMO · Home · Law · Finance · Education · Health · Women&Child · Minority · Rural · Urban · Environment · Defence · Police · EC · Media · Judiciary — each with base score, evidence-weighted story adjustments, and live violation/support tracking"},{icon:"⚖",c:"var(--cyan)",title:"Constitutional Mapping",body:"Every story maps to specific Indian Constitution Articles. 7 constitutional pillars tracked. Violations (red) and Supports (green) shown per story, per department, per state, per article."},{icon:"🤖",c:"var(--purple)",title:"AI Layer — Groq Llama 3.3 70B",body:"Free API (14,400 req/day). AI classifies evidence level, story type, department, exact constitutional violations with article numbers, government response if in text, citizen explanation in plain language, and poetic mythos."},{icon:"📰",c:"var(--blue)",title:"Data Source — Google News RSS",body:"Real-time RSS from 1000s of Indian newspapers, TV channels, digital media. Filtered by 40+ constitutional relevance keywords. 100% free, no API key required. Updates continuously."}].map((item,i)=>(<Card key={i} style={{marginBottom:8,padding:"14px 17px"}}><div style={{display:"flex",gap:11,alignItems:"flex-start"}}><div style={{width:34,height:34,borderRadius:9,background:item.c+"12",border:"1px solid "+item.c+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{item.icon}</div><div><div style={{fontSize:12.5,fontWeight:700,color:"var(--t1)",marginBottom:4}}>{item.title}</div><div style={{fontSize:10.5,color:"var(--t2)",lineHeight:1.75,whiteSpace:"pre-line"}}>{item.body}</div></div></div></Card>))}</div>);}
+
+function AboutPage({t}){return(<div className="fade-up" style={{maxWidth:560}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.about||"About"} DTN Mythos</h2></div><Card style={{marginBottom:10}}><div style={{fontFamily:"var(--font-h)",fontSize:14,fontWeight:700,marginBottom:10,background:"var(--grad)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Journalism + Constitutional Analysis + Democracy Score + Multilingual Civic Education</div><p style={{fontSize:12,color:"var(--t2)",lineHeight:1.85,marginBottom:10}}>DTN Mythos is a real-time constitutional intelligence platform. Every news story is scored for democracy impact using a transparent multi-factor formula, mapped to constitutional articles, classified by evidence level and story type, explained in plain language for citizens and technical detail for experts, and displayed in 10 Indian languages.</p><p style={{fontSize:12,color:"var(--t2)",lineHeight:1.85}}>Three layers: Public App (citizens) · Journalist Intelligence Console (editors/reporters) · Constitutional Analysis Engine (scoring, mapping, translation, audit).</p></Card><Card style={{background:"rgba(74,143,255,0.04)",border:"1px solid rgba(74,143,255,0.14)"}}><div style={{fontSize:8.5,color:"var(--blue)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:8}}>Legal Notice & Safeguards</div><p style={{fontSize:11,color:"var(--t2)",lineHeight:1.75,marginBottom:10}}>Independent civic analytics. Scores are analytical estimates — not legal verdicts or court orders. We always distinguish allegation from established fact. Government response and court status shown when available. Not affiliated with any political party or government body. No advertising. No data sold.</p><div style={{display:"flex",gap:14,flexWrap:"wrap"}}><span style={{fontSize:11,color:"var(--green)",fontFamily:"var(--font-m)",fontWeight:600}}>NALSA: 15100</span><span style={{fontSize:11,color:"var(--green)",fontFamily:"var(--font-m)",fontWeight:600}}>NHRC: 14433</span><span style={{fontSize:11,color:"var(--green)",fontFamily:"var(--font-m)",fontWeight:600}}>Women: 181</span></div></Card></div>);}
 
 
-// ── MAIN APP ──────────────────────────────────────────────────
-const MOBILE_NAV=[{id:"dashboard",icon:"◉",tk:"dashboard"},{id:"feed",icon:"⚡",tk:"liveFeed"},{id:"rights",icon:"🛡",tk:"myRights"},{id:"departments",icon:"🏛",tk:"departments"},{id:"states",icon:"◱",tk:"states"}];
+// ── MAIN APP EXPORT ────────────────────────────────────────────
+const MOB_NAV=[
+  {id:"dashboard",icon:"◉",tk:"dashboard"},
+  {id:"newsroom",icon:"⚡",tk:"newsroom"},
+  {id:"rights",icon:"🛡",tk:"rights"},
+  {id:"departments",icon:"🏛",tk:"departments"},
+  {id:"tracker",icon:"📜",tk:"tracker"},
+];
 
 export default function App(){
   const[lang,setLang]=useState(()=>localStorage.getItem("dtn_lang")||"en");
@@ -464,87 +953,190 @@ export default function App(){
   const[fetching,setFetching]=useState(false);
   const[autoOn,setAutoOn]=useState(false);
   const[rl,setRlState]=useState(false);
-  const[fetchScope,setFetchScope]=useState("national");
-  const[fetchState,setFetchState]=useState("Gujarat");
-  const[fetchDistrict,setFetchDistrict]=useState("");
+  const[fScope,setFScope]=useState("national");
+  const[fState,setFState]=useState("Gujarat");
+  const[fDist,setFDist]=useState("");
   const[countdown,setCountdown]=useState(120);
+  const[mode,setMode]=useState("normal");
   const{toasts,add:toast}=useToasts();
   const countRef=useRef(null);
 
   useEffect(()=>{localStorage.setItem("dtn_lang",lang);},[lang]);
 
-  const natScore=useMemo(()=>calcScopeScore(stories,"national",fetchState),[stories,fetchState]);
-  const stScore=useMemo(()=>calcScopeScore(stories,"state",fetchState),[stories,fetchState]);
-  const distScore=useMemo(()=>calcScopeScore(stories,"district",fetchState),[stories,fetchState]);
+  const natScore=useMemo(()=>calcScope(stories,"national",fState),[stories,fState]);
+  const stScore=useMemo(()=>calcScope(stories,"state",fState),[stories,fState]);
+  const distScore=useMemo(()=>calcScope(stories,"district",fState),[stories,fState]);
 
-  useEffect(()=>{const label=new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});setNatHistory(p=>{const last=p[p.length-1];if(last&&last.score===natScore)return p;return[...p,{label,score:natScore}].slice(-40);});},[natScore]);
+  useEffect(()=>{
+    const label=new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+    setNatHistory(p=>{const last=p[p.length-1];if(last&&last.score===natScore)return p;return[...p,{label,score:natScore}].slice(-50);});
+  },[natScore]);
+
   useEffect(()=>{try{localStorage.setItem(SK,JSON.stringify(stories));}catch{}},[stories]);
 
   const runUpgrades=useCallback(async(list)=>{
-    const todo=list.filter(s=>s.approved&&!s.aiDone&&!isRL()&&GROQ_API_KEY);
-    for(let i=0;i<todo.length;i++){if(isRL())break;const u=await aiUpgrade(todo[i]);setStories(p=>p.map(s=>s.id===u.id?u:s));if(i<todo.length-1)await new Promise(r=>setTimeout(r,5000));}
+    const todo=list.filter(s=>s.approved&&!s.aiDone&&!isRL()&&GROQ);
+    for(let i=0;i<todo.length;i++){
+      if(isRL())break;
+      const u=await aiUpgrade(todo[i]);
+      setStories(p=>p.map(s=>s.id===u.id?u:s));
+      if(i<todo.length-1)await new Promise(r=>setTimeout(r,5000));
+    }
   },[]);
 
   const doFetch=useCallback(async()=>{
-    if(fetching)return;setFetching(true);
+    if(fetching)return;
+    setFetching(true);
     try{
-      const items=await fetchNewsRSS(fetchScope,fetchState,fetchDistrict);
+      const items=await fetchRSS(fScope,fState,fDist);
       if(isRL()){setRlState(true);setTimeout(()=>setRlState(false),31000);toast("Rate limited — retry in 30s","error");return;}
-      if(!items.length){toast("No relevant stories found","info");return;}
-      const newStories=items.map((item,i)=>{
+      if(!items.length){toast("No constitutional stories found — try a different scope","info");return;}
+      const fresh=items.map((item,i)=>{
         const cls=classify(item.headline,item.body||"");
-        const id="F"+Date.now()+i;
-        return{id,ts:Date.now(),headline:item.headline,body:item.body||"",...cls,scope:cls.scope||fetchScope,state:cls.state||(fetchScope==="state"?fetchState:null),approved:true,held:false,aiDone:false};
+        return{
+          id:"F"+Date.now()+i,
+          ts:Date.now(),
+          headline:item.headline,
+          body:item.body||"",
+          ...cls,
+          scope:cls.scope||fScope,
+          state:cls.state||(fScope==="state"?fState:null),
+          approved:true,held:false,aiDone:false,
+        };
       });
-      setStories(p=>{const ids=new Set(p.map(s=>s.headline.slice(0,50)));const unique=newStories.filter(s=>!ids.has(s.headline.slice(0,50)));if(!unique.length){toast("No new stories","info");return p;}toast(unique.length+" new stories · 3 scores updated","success");return[...unique,...p].slice(0,200);});
-      setTimeout(()=>runUpgrades(newStories),2000);
+      setStories(p=>{
+        const ids=new Set(p.map(s=>s.headline.slice(0,55)));
+        const unique=fresh.filter(s=>!ids.has(s.headline.slice(0,55)));
+        if(!unique.length){toast("No new stories — all already tracked","info");return p;}
+        const evSummary=unique.reduce((a,s)=>{const k=s.evidenceLevel||"single_source";a[k]=(a[k]||0)+1;return a;},{});
+        const evStr=Object.entries(evSummary).map(([k,v])=>v+"× "+k.replace(/_/g," ")).join(" · ");
+        toast(`${unique.length} new stories · ${evStr}`,"success");
+        return[...unique,...p].slice(0,200);
+      });
+      setTimeout(()=>runUpgrades(fresh),2500);
     }finally{setFetching(false);}
-  },[fetching,fetchScope,fetchState,fetchDistrict,runUpgrades,toast]);
+  },[fetching,fScope,fState,fDist,runUpgrades,toast]);
 
-  useEffect(()=>{if(autoOn){setCountdown(120);countRef.current=setInterval(()=>setCountdown(c=>{if(c<=1){doFetch();return 120;}return c-1;}),1000);return()=>clearInterval(countRef.current);}else{clearInterval(countRef.current);setCountdown(120);}},[autoOn,doFetch]);
-  useEffect(()=>{if(user)setTimeout(()=>doFetch(),1500);},[user]);
+  useEffect(()=>{
+    if(autoOn){
+      setCountdown(120);
+      countRef.current=setInterval(()=>setCountdown(c=>{if(c<=1){doFetch();return 120;}return c-1;}),1000);
+      return()=>clearInterval(countRef.current);
+    }else{clearInterval(countRef.current);setCountdown(120);}
+  },[autoOn,doFetch]);
 
-  const handleSignIn=useCallback((u)=>{setUser(u);localStorage.setItem("dtn_user",JSON.stringify(u));},[]);
+  // Auto-fetch on sign-in
+  useEffect(()=>{if(user)setTimeout(()=>doFetch(),1200);},[user]);
+
+  const handleSignIn=useCallback(u=>{setUser(u);localStorage.setItem("dtn_user",JSON.stringify(u));},[]);
   const handleDisc=useCallback(()=>{setShowDisc(false);localStorage.setItem("dtn_disc","1");},[]);
-  const handleReview=useCallback((id,action)=>{setStories(p=>p.map(s=>s.id===id?{...s,approved:action==="approve",held:action==="hold"}:s));toast(action==="approve"?"Approved and scored":"Story "+action+"ed","success");},[toast]);
-  const handleSubmit=useCallback((form)=>{const cls=classify(form.headline,form.body);setStories(p=>[{id:"C"+Date.now(),ts:Date.now(),headline:form.headline,body:form.body,state:form.state||null,scope:form.scope,...cls,source:form.source,approved:false,held:false,aiDone:false},...p]);},[]);
+  const handleReview=useCallback((id,action)=>{
+    setStories(p=>p.map(s=>s.id===id?{...s,approved:action==="approve",held:action==="hold",rejected:action==="reject"}:s));
+    toast(action==="approve"?"✓ Approved and scored":"Story "+action+"ed","success");
+  },[toast]);
+  const handleSubmit=useCallback(form=>{
+    const cls=classify(form.headline,form.body);
+    setStories(p=>[{
+      id:"C"+Date.now(),ts:Date.now(),
+      headline:form.headline,body:form.body,
+      state:form.state||null,scope:form.scope,
+      ...cls,
+      evidenceLevel:form.evidenceLevel||cls.evidenceLevel,
+      storyType:form.storyType||cls.storyType,
+      courtStatus:form.courtStatus||"none",
+      source:form.source,
+      approved:false,held:false,aiDone:false,
+    },...p]);
+  },[]);
 
-  const pending=stories.filter(s=>!s.approved&&!s.held).length;
+  const pending=stories.filter(s=>!s.approved&&!s.held&&!s.rejected).length;
 
+  // ── AUTH FLOW ────────────────────────────────────────────────
   if(!user)return<SignInPage onSignIn={handleSignIn} lang={lang} setLang={setLang} t={t}/>;
   if(showDisc)return<DisclaimerPage onAccept={handleDisc} t={t} userName={user.name}/>;
 
+  // ── MAIN SHELL ───────────────────────────────────────────────
   return(
     <div className="shell">
-      <Sidebar page={page} setPage={setPage} pending={pending} t={t} user={user} lang={lang} setLang={setLang}/>
+      <Sidebar
+        page={page} setPage={setPage} pending={pending}
+        t={t} user={user} lang={lang} setLang={setLang}
+        mode={mode} setMode={setMode}
+      />
       <div className="main-area">
-        <Topbar natScore={natScore} stScore={stScore} distScore={distScore} fetching={fetching} onFetch={doFetch} autoOn={autoOn} setAutoOn={setAutoOn} rl={rl} fetchScope={fetchScope} setFetchScope={setFetchScope} fetchState={fetchState} setFetchState={setFetchState} fetchDistrict={fetchDistrict} setFetchDistrict={setFetchDistrict} t={t}/>
-        <LiveTicker stories={stories} countdown={countdown} autoOn={autoOn} natScore={natScore} stScore={stScore} distScore={distScore}/>
+        <Topbar
+          natScore={natScore} stScore={stScore} distScore={distScore}
+          fetching={fetching} onFetch={doFetch}
+          autoOn={autoOn} setAutoOn={setAutoOn} rl={rl}
+          fScope={fScope} setFScope={setFScope}
+          fState={fState} setFState={setFState}
+          fDist={fDist} setFDist={setFDist}
+          t={t} countdown={countdown} mode={mode}
+        />
+        <LiveTicker
+          stories={stories} natScore={natScore}
+          stScore={stScore} distScore={distScore}
+          countdown={countdown} autoOn={autoOn}
+        />
         <main className="page">
-          {page==="dashboard"&&<Dashboard natScore={natScore} stScore={stScore} distScore={distScore} stories={stories} natHistory={natHistory} fetchState={fetchState} fetchDistrict={fetchDistrict} t={t} setPage={setPage} setFetchScope={setFetchScope}/>}
-          {page==="feed"&&<FeedPage stories={stories} fetching={fetching} onFetch={doFetch} onAI={()=>runUpgrades(stories)} countdown={countdown} autoOn={autoOn} t={t}/>}
-          {page==="rights"&&<MyRightsPage scope={scope} setScope={setScope} t={t}/>}
-          {page==="patterns"&&<PatternsPage stories={stories} t={t}/>}
-          {page==="timeline"&&<TimelinePage stories={stories} natHistory={natHistory} t={t}/>}
-          {page==="constitution"&&<ConstitutionPage/>}
-          {page==="score"&&<ScorePage natScore={natScore} stScore={stScore} distScore={distScore} stories={stories} fetchState={fetchState} fetchDistrict={fetchDistrict} t={t}/>}
-          {page==="anomalies"&&<AnomaliesPage stories={stories} t={t}/>}
-          {page==="states"&&<StatesPage stories={stories} t={t}/>}
-          {page==="departments"&&<DepartmentsPage stories={stories} t={t}/>}
-          {page==="submit"&&<SubmitPage onSubmit={handleSubmit} toast={toast} t={t}/>}
-          {page==="review"&&<ReviewPage stories={stories} onReview={handleReview} t={t}/>}
+          {page==="dashboard"&&
+            <Dashboard
+              natScore={natScore} stScore={stScore} distScore={distScore}
+              stories={stories} natHistory={natHistory}
+              fState={fState} fDist={fDist}
+              t={t} mode={mode}
+              setPage={setPage} setFScope={setFScope}
+            />}
+          {page==="newsroom"&&
+            <NewsroomPage
+              stories={stories} fetching={fetching}
+              onFetch={doFetch} onAI={()=>runUpgrades(stories)}
+              autoOn={autoOn} countdown={countdown}
+              t={t} mode={mode} fState={fState}
+            />}
+          {page==="tracker"&&
+            <ConstitutionTrackerPage stories={stories} t={t} mode={mode}/>}
+          {page==="demoscore"&&
+            <DemoScorePage
+              natScore={natScore} stScore={stScore} distScore={distScore}
+              stories={stories} natHistory={natHistory}
+              fState={fState} fDist={fDist} t={t}
+            />}
+          {page==="departments"&&
+            <DepartmentsPage stories={stories} t={t} mode={mode}/>}
+          {page==="states"&&
+            <StatesPage stories={stories} t={t}/>}
+          {page==="rights"&&
+            <MyRightsPage scope={scope} setScope={setScope} t={t}/>}
+          {page==="journalist"&&
+            <JournalistConsolePage
+              stories={stories} t={t}
+              onAI={()=>runUpgrades(stories)}
+              fetching={fetching} onFetch={doFetch}
+            />}
+          {page==="submit"&&
+            <SubmitPage onSubmit={handleSubmit} toast={toast} t={t}/>}
+          {page==="review"&&
+            <ReviewPage stories={stories} onReview={handleReview} t={t} mode={mode}/>}
           {page==="method"&&<MethodPage t={t}/>}
           {page==="about"&&<AboutPage t={t}/>}
         </main>
       </div>
+
+      {/* Mobile bottom nav */}
       <nav className="mobile-nav">
-        {MOBILE_NAV.map(item=>(
-          <button key={item.id} className={"mobile-nav-btn"+(page===item.id?" active":"")} onClick={()=>setPage(item.id)}>
+        {MOB_NAV.map(item=>(
+          <button
+            key={item.id}
+            className={"mobile-nav-btn"+(page===item.id?" active":"")}
+            onClick={()=>setPage(item.id)}
+          >
             <span className="m-icon">{item.icon}</span>
-            <span style={{fontSize:8}}>{(t[item.tk]||item.tk).slice(0,6)}</span>
+            <span>{(t[item.tk]||item.tk).slice(0,6)}</span>
           </button>
         ))}
       </nav>
+
       <Toasts items={toasts}/>
     </div>
   );
