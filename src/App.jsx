@@ -3,7 +3,7 @@ import{AreaChart,Area,LineChart,Line,XAxis,YAxis,CartesianGrid,Tooltip,Responsiv
 
 // ── API KEYS — PASTE YOUR FREE KEYS HERE ─────────────────────
 // Groq: https://console.groq.com (FREE — 14,400 req/day)
-const GROQ_API_KEY="YOUR_GROQ_KEY_HERE";
+const GROQ_API_KEY=import.meta.env.VITE_GROQ_KEY||"";
 // ─────────────────────────────────────────────────────────────
 
 const PATTERN_CLASSES={isolated:{label:"Isolated",color:"#64748b",dot:"○",bg:"rgba(100,116,139,0.1)",mult:1.0},emerging:{label:"Emerging Pattern",color:"#f59e0b",dot:"◔",bg:"rgba(245,158,11,0.1)",mult:1.15},repeated:{label:"Repeated Pattern",color:"#f97316",dot:"◑",bg:"rgba(249,115,22,0.1)",mult:1.3},systemic:{label:"Systemic Pattern",color:"#ef4444",dot:"●",bg:"rgba(239,68,68,0.1)",mult:1.5}};
