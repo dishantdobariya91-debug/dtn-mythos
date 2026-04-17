@@ -199,25 +199,34 @@ async function fetchRSS(scope,state,district){
   else url=B+encodeURIComponent("India+civic+rights+"+R);
 
   try{
-    // Try own serverless proxy first
+    // Try own serverless proxy first (multi-source: Google News, Bing, TOI, Hindu, NDTV)
     let xmlText=await fetchViaOwnApi(scope,state,district);
-    // If that fails, fall back to public proxies
+    // If that fails, fall back to public CORS proxies
     if(!xmlText){console.warn("[fetchRSS] own /api/rss unavailable, trying public proxies...");xmlText=await fetchViaPublicProxy(url);}
     if(!xmlText){console.error("[fetchRSS] all proxies failed");return[];}
 
     const xml=new DOMParser().parseFromString(xmlText,"text/xml");
     const items=[...xml.querySelectorAll("item")];
     if(!items.length){console.warn("[fetchRSS] parsed XML had 0 items");return[];}
-    const kw=/rights|court|police|arrest|detain|demolish|protest|riot|murder|dalit|minority|muslim|tribal|election|verdict|bail|uapa|afspa|judge|constitution|freedom|violence|killed|ed |cbi|rti|corruption|atrocity|evict|journalist|press|encounter|custod/i;
-    const parsed=items.slice(0,12).map(item=>{
+    // Broader keyword list — catches more stories so "no results" is rare
+    const kw=/rights|court|police|arrest|detain|demolish|protest|riot|murder|dalit|minority|muslim|tribal|election|verdict|bail|uapa|afspa|judge|constitution|freedom|violence|killed|ed |cbi|rti|corruption|atrocity|evict|journalist|press|encounter|custod|law|bill|act|pass|amendment|government|parliament|modi|rahul|gandhi|bjp|congress|supreme|high court|minister|policy|scheme|raid|probe|investigation|inquiry/i;
+    const parsed=items.slice(0,18).map(item=>{
       const rT=item.querySelector("title")?.textContent||"";
       const headline=rT.replace(/ - [^-]*$/,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim();
       const rD=item.querySelector("description")?.textContent||"";
       const body=rD.replace(/<[^>]*>/g,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim().slice(0,500);
-      return{headline,body,state:sh};
+      // Capture article link for OG-image lookup and click-through
+      const rL=item.querySelector("link")?.textContent||"";
+      const link=rL.replace(/<!\[CDATA\[|\]\]>/g,"").trim();
+      // Try to extract embedded image from description HTML or enclosure tag
+      const imgMatch=rD.match(/<img[^>]+src=["']([^"']+)["']/i);
+      const encl=item.querySelector("enclosure[url]")?.getAttribute("url")||null;
+      const mediaContent=item.querySelector("content[url], thumbnail[url]")?.getAttribute("url")||null;
+      const image=imgMatch?.[1]||encl||mediaContent||null;
+      return{headline,body,state:sh,link,image};
     }).filter(i=>i.headline.length>10);
     const filtered=parsed.filter(i=>kw.test(i.headline+" "+i.body));
-    const out=(filtered.length>0?filtered:parsed).slice(0,7);
+    const out=(filtered.length>0?filtered:parsed).slice(0,10);
     console.log("[fetchRSS] parsed "+items.length+" items → "+out.length+" returned");
     return out;
   }catch(e){console.error("[fetchRSS] unexpected error:",e);return[];}
@@ -233,6 +242,76 @@ async function aiUpgrade(s){
   return{...s,aiScore:Number(j.score)||s.delta,institution:j.department||s.institution,evidenceLevel:j.evidenceLevel||s.evidenceLevel,storyType:j.storyType||s.storyType,confidence:j.confidence||s.confidence,courtStatus:j.courtStatus||s.courtStatus,nationalImpact:Number(j.national_impact)||null,stateImpact:Number(j.state_impact)||null,localImpact:Number(j.local_impact)||null,violations:j.violations?.length?j.violations:s.violations,supports:j.supports?.length?j.supports:s.supports,govResponse:j.govResponse||s.govResponse,aiAnalysis:j.analysis||null,mythos:j.mythos||null,citizenExplanation:j.citizenExplanation||s.citizenExplanation,aiDone:true};}catch{return s;}}
 
 function useToasts(){const[toasts,setToasts]=useState([]);const add=useCallback((msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4500);},[]);return{toasts,add};}
+
+// ── BROWSER NOTIFICATIONS ─────────────────────────────────────
+// Requests permission on user gesture, fires notifications with article images.
+// Works on Chrome, Firefox, Edge (desktop + Android). Safari/iOS requires PWA install.
+function useNotifications(){
+  const[perm,setPerm]=useState(typeof Notification!=="undefined"?Notification.permission:"unsupported");
+  const[enabled,setEnabled]=useState(()=>{
+    try{return localStorage.getItem("dtn_notif_on")==="1";}catch{return false;}
+  });
+
+  const supported=typeof window!=="undefined"&&"Notification"in window;
+
+  const request=useCallback(async()=>{
+    if(!supported){return "unsupported";}
+    try{
+      const result=await Notification.requestPermission();
+      setPerm(result);
+      if(result==="granted"){
+        setEnabled(true);
+        try{localStorage.setItem("dtn_notif_on","1");}catch{}
+        // Confirmation notification
+        new Notification("DTN Mythos alerts enabled",{
+          body:"You'll be notified of every new constitutional story.",
+          tag:"dtn-welcome",
+          silent:false,
+        });
+      }
+      return result;
+    }catch(e){console.warn("[notif] request failed:",e);return "error";}
+  },[supported]);
+
+  const disable=useCallback(()=>{
+    setEnabled(false);
+    try{localStorage.setItem("dtn_notif_on","0");}catch{}
+  },[]);
+
+  const notify=useCallback((opts)=>{
+    if(!supported||perm!=="granted"||!enabled)return;
+    try{
+      const n=new Notification(opts.title,{
+        body:opts.body||"",
+        icon:opts.icon||"/icon-192.png",
+        image:opts.image||undefined,
+        badge:opts.badge||"/icon-192.png",
+        tag:opts.tag||("dtn-"+Date.now()),
+        data:{url:opts.url},
+        requireInteraction:false,
+        silent:false,
+      });
+      n.onclick=()=>{
+        window.focus();
+        if(opts.url){try{window.open(opts.url,"_blank","noopener");}catch{}}
+        n.close();
+      };
+    }catch(e){console.warn("[notif] failed to display:",e);}
+  },[supported,perm,enabled]);
+
+  return{supported,perm,enabled,request,disable,notify};
+}
+
+// Fetch Open Graph image from an article URL via our /api/og-image endpoint
+async function fetchOgImage(articleUrl){
+  if(!articleUrl)return null;
+  try{
+    const res=await fetch("/api/og-image?url="+encodeURIComponent(articleUrl),{signal:AbortSignal.timeout(8000)});
+    if(!res.ok)return null;
+    const data=await res.json();
+    return data?.image||null;
+  }catch{return null;}
+}
 
 
 // ── DESIGN SYSTEM ──────────────────────────────────────────────
@@ -374,6 +453,7 @@ function StoryCard({s,t,mode,onReview,compact,onSelect}){
   // CITIZEN MODE — simplified view
   if(mode==="citizen"&&!compact){return(
     <div style={{background:bg,border:"1px solid "+border,borderRadius:14,padding:"16px 18px",marginBottom:10}}>
+      {s.image&&<img src={s.image} alt="" className="news-image" onError={e=>{e.target.style.display="none";}}/>}
       <div style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:10}}>
         <div style={{width:32,height:32,borderRadius:9,background:col+"18",border:"1px solid "+col+"25",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>{isPos?"✅":isCrit?"🚨":"⚠️"}</div>
         <div style={{flex:1}}>
@@ -395,6 +475,7 @@ function StoryCard({s,t,mode,onReview,compact,onSelect}){
   );}
   return(
     <div onClick={onSelect?()=>onSelect(s):undefined} style={{background:bg,border:"1px solid "+border,borderRadius:14,padding:compact?"11px 14px":"16px 18px",marginBottom:10,cursor:onSelect?"pointer":"default",transition:"border-color 0.2s"}}>
+      {s.image&&!compact&&<img src={s.image} alt="" className="news-image" onError={e=>{e.target.style.display="none";}}/>}
       {/* Header row */}
       <div style={{display:"flex",gap:6,alignItems:"flex-start",marginBottom:compact?0:9}}>
         <div style={{flex:1,minWidth:0}}>
@@ -555,9 +636,15 @@ function Sidebar({page,setPage,pending,t,user,lang,setLang,mode,setMode}){return
   </div>
 </aside>);}
 
-function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl,fScope,setFScope,fState,setFState,fDist,setFDist,t,countdown,mode}){
+function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl,fScope,setFScope,fState,setFState,fDist,setFDist,t,countdown,mode,notif}){
   const states=Object.keys(STATE_BASELINES).sort();
   const modeColor=mode==="citizen"?"var(--green)":mode==="expert"?"var(--purple)":"var(--blue)";
+  const alertsOn=notif?.enabled&&notif?.perm==="granted";
+  const alertsLabel=notif?.perm==="denied"?"🔕 Blocked":alertsOn?"🔔 Alerts on":"🔔 Enable alerts";
+  const handleAlerts=()=>{
+    if(!notif?.supported)return;
+    if(alertsOn)notif.disable();else notif.request();
+  };
   return(<div className="topbar">
     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
       {[["🌐",natScore],["🏛",stScore],["📍",distScore]].map(([icon,score],i)=>(
@@ -577,6 +664,10 @@ function Topbar({natScore,stScore,distScore,fetching,onFetch,autoOn,setAutoOn,rl
       {fScope==="district"&&<input value={fDist} onChange={e=>setFDist(e.target.value)} placeholder={t.district} style={{padding:"3px 8px",borderRadius:7,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:9.5,outline:"none",width:90,fontFamily:"var(--font-b)"}}/>}
     </div>
     {rl&&<span style={{fontSize:8.5,color:"var(--red)",background:"var(--red-s)",border:"1px solid var(--red-b)",borderRadius:99,padding:"2px 6px",flexShrink:0,fontWeight:700}}>⏸ RL</span>}
+    {notif?.supported&&<button onClick={handleAlerts} disabled={notif.perm==="denied"} className={"alerts-btn"+(alertsOn?" enabled":"")} style={{opacity:notif.perm==="denied"?0.5:1,cursor:notif.perm==="denied"?"not-allowed":"pointer",flexShrink:0}} title={notif.perm==="denied"?"Notifications blocked in browser settings — enable them in site settings":alertsOn?"Click to turn off alerts":"Get notified on every new story"}>
+      <span className="hide-xs">{alertsLabel}</span>
+      <span style={{fontSize:12}} className="only-xs">🔔</span>
+    </button>}
     <Btn onClick={onFetch} disabled={fetching||rl} style={{padding:"5px 11px",fontSize:10.5}} variant="ghost">
       <span style={fetching?{display:"inline-block",animation:"spin 1s linear infinite"}:{}}>{fetching?"⟳":"⚡"}</span>
       <span className="hide-xs">{t.fetch}</span>
@@ -1023,6 +1114,7 @@ export default function App(){
   const[countdown,setCountdown]=useState(120);
   const[mode,setMode]=useState("normal");
   const{toasts,add:toast}=useToasts();
+  const notif=useNotifications();
   const countRef=useRef(null);
 
   useEffect(()=>{localStorage.setItem("dtn_lang",lang);},[lang]);
@@ -1062,24 +1154,52 @@ export default function App(){
           ts:Date.now(),
           headline:item.headline,
           body:item.body||"",
+          link:item.link||"",
+          image:item.image||null,
           ...cls,
           scope:cls.scope||fScope,
           state:cls.state||(fScope==="state"?fState:null),
           approved:true,held:false,aiDone:false,
         };
       });
+      let unique=[];
       setStories(p=>{
         const ids=new Set(p.map(s=>s.headline.slice(0,55)));
-        const unique=fresh.filter(s=>!ids.has(s.headline.slice(0,55)));
+        unique=fresh.filter(s=>!ids.has(s.headline.slice(0,55)));
         if(!unique.length){toast("No new stories — all already tracked","info");return p;}
         const evSummary=unique.reduce((a,s)=>{const k=s.evidenceLevel||"single_source";a[k]=(a[k]||0)+1;return a;},{});
         const evStr=Object.entries(evSummary).map(([k,v])=>v+"× "+k.replace(/_/g," ")).join(" · ");
         toast(`${unique.length} new stories · ${evStr}`,"success");
         return[...unique,...p].slice(0,200);
       });
+
+      // Fire notifications + enrich missing images (runs after state update)
+      setTimeout(async()=>{
+        for(const s of unique){
+          // If RSS didn't include an image, try OG scrape (best-effort, capped)
+          let img=s.image;
+          if(!img&&s.link){
+            img=await fetchOgImage(s.link);
+            if(img){
+              setStories(p=>p.map(x=>x.id===s.id?{...x,image:img}:x));
+            }
+          }
+          // Fire notification — "all new stories" setting (user's choice)
+          notif.notify({
+            title:s.headline.slice(0,100),
+            body:(s.citizenExplanation||s.body||"").slice(0,140),
+            image:img||undefined,
+            tag:"dtn-"+s.id,
+            url:s.link||undefined,
+          });
+          // Tiny spacing so browsers don't collapse many notifications into one
+          await new Promise(r=>setTimeout(r,350));
+        }
+      },400);
+
       setTimeout(()=>runUpgrades(fresh),2500);
     }finally{setFetching(false);}
-  },[fetching,fScope,fState,fDist,runUpgrades,toast]);
+  },[fetching,fScope,fState,fDist,runUpgrades,toast,notif]);
 
   useEffect(()=>{
     if(autoOn){
@@ -1135,7 +1255,7 @@ export default function App(){
           fScope={fScope} setFScope={setFScope}
           fState={fState} setFState={setFState}
           fDist={fDist} setFDist={setFDist}
-          t={t} countdown={countdown} mode={mode}
+          t={t} countdown={countdown} mode={mode} notif={notif}
         />
         <LiveTicker
           stories={stories} natScore={natScore}
