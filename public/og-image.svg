@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5B93A"/>
+      <stop offset="100%" stop-color="#E24B4A"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0A0A0A"/>
+  <rect x="0" y="0" width="1200" height="60" fill="url(#bg)"/>
+  <text x="60" y="42" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#0A0A0A">DTN Mythos · Constitutional Intelligence</text>
+
+  <text x="60" y="200" font-family="Georgia, serif" font-size="88" font-weight="700" fill="#FFFFFF" letter-spacing="-2">DTN Mythos</text>
+  <text x="60" y="260" font-family="Georgia, serif" font-size="34" font-weight="400" fill="#F5B93A" font-style="italic">India Edition</text>
+
+  <text x="60" y="350" font-family="Georgia, serif" font-size="36" font-weight="400" fill="#FFFFFF">Real-time constitutional intelligence.</text>
+  <text x="60" y="398" font-family="Georgia, serif" font-size="36" font-weight="400" fill="#FFFFFF">Every news story, scored for democracy impact.</text>
+
+  <line x1="60" y1="450" x2="1140" y2="450" stroke="#333" stroke-width="1"/>
+
+  <text x="60" y="500" font-family="Inter, sans-serif" font-size="18" font-weight="600" fill="#F5B93A">16 DEPARTMENTS · 28 STATES · 10 LANGUAGES</text>
+
+  <text x="60" y="560" font-family="Inter, sans-serif" font-size="18" fill="#888">Constitution Tracker · Democracy Score · Evidence-classified newsroom</text>
+  <text x="60" y="590" font-family="Inter, sans-serif" font-size="16" fill="#666">dtn.today</text>
+</svg>

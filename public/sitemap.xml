@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+    <loc>https://dtn.today/</loc>
+    <lastmod>2026-04-18</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dtn.today/"/>
+    <xhtml:link rel="alternate" hreflang="hi" href="https://dtn.today/?lang=hi"/>
+    <xhtml:link rel="alternate" hreflang="gu" href="https://dtn.today/?lang=gu"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://dtn.today/?lang=ta"/>
+    <xhtml:link rel="alternate" hreflang="te" href="https://dtn.today/?lang=te"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://dtn.today/?lang=bn"/>
+    <xhtml:link rel="alternate" hreflang="mr" href="https://dtn.today/?lang=mr"/>
+    <xhtml:link rel="alternate" hreflang="kn" href="https://dtn.today/?lang=kn"/>
+    <xhtml:link rel="alternate" hreflang="ml" href="https://dtn.today/?lang=ml"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://dtn.today/"/>
+  </url>
+</urlset>

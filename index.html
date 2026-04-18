@@ -1,27 +1,225 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#08090B" />
-    <meta name="description" content="DTN Mythos — real-time constitutional intelligence platform for India. Every news story scored for democracy impact, mapped to the Constitution, explained in 10 languages." />
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 
-    <!-- PWA -->
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="DTN Mythos" />
+<!-- Core SEO -->
+<title>DTN Mythos — Constitutional Intelligence Platform for India | Real-time Democracy Score</title>
+<meta name="description" content="DTN Mythos is a real-time constitutional intelligence platform for India. Every news story is scored for democracy impact, mapped to the Indian Constitution articles, and available in 10 Indian languages. Track constitutional violations, court cases, and democratic health across 16 government departments and 28 states."/>
+<meta name="keywords" content="DTN Mythos, India democracy score, constitutional intelligence, India news tracker, democracy tracker India, constitution tracker, Indian Constitution articles, democracy score India, press freedom India, civil liberties India, constitutional violations, court tracker India, election commission India, supreme court India, high court india, police accountability india, minority rights india, tribal rights india"/>
+<meta name="author" content="DTN Mythos"/>
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
+<meta name="googlebot" content="index, follow"/>
+<link rel="canonical" href="https://dtn.today/"/>
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="DTN Mythos — Constitutional Intelligence" />
-    <meta property="og:description" content="Real-time constitutional journalism platform. Every news story scored for democracy impact." />
-    <meta property="og:type" content="website" />
+<!-- Language alternates for multilingual SEO -->
+<link rel="alternate" hreflang="en" href="https://dtn.today/"/>
+<link rel="alternate" hreflang="hi" href="https://dtn.today/?lang=hi"/>
+<link rel="alternate" hreflang="gu" href="https://dtn.today/?lang=gu"/>
+<link rel="alternate" hreflang="ta" href="https://dtn.today/?lang=ta"/>
+<link rel="alternate" hreflang="te" href="https://dtn.today/?lang=te"/>
+<link rel="alternate" hreflang="bn" href="https://dtn.today/?lang=bn"/>
+<link rel="alternate" hreflang="mr" href="https://dtn.today/?lang=mr"/>
+<link rel="alternate" hreflang="kn" href="https://dtn.today/?lang=kn"/>
+<link rel="alternate" hreflang="ml" href="https://dtn.today/?lang=ml"/>
+<link rel="alternate" hreflang="x-default" href="https://dtn.today/"/>
 
-    <title>DTN Mythos — Constitutional Intelligence Platform</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website"/>
+<meta property="og:locale" content="en_IN"/>
+<meta property="og:locale:alternate" content="hi_IN"/>
+<meta property="og:locale:alternate" content="gu_IN"/>
+<meta property="og:locale:alternate" content="ta_IN"/>
+<meta property="og:locale:alternate" content="te_IN"/>
+<meta property="og:locale:alternate" content="bn_IN"/>
+<meta property="og:locale:alternate" content="mr_IN"/>
+<meta property="og:site_name" content="DTN Mythos"/>
+<meta property="og:url" content="https://dtn.today/"/>
+<meta property="og:title" content="DTN Mythos — Constitutional Intelligence Platform for India"/>
+<meta property="og:description" content="Real-time constitutional intelligence for India. Every news story scored for democracy impact, mapped to the Indian Constitution, in 10 Indian languages."/>
+<meta property="og:image" content="https://dtn.today/og-image.svg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="DTN Mythos — Constitutional Intelligence Platform for India"/>
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:site" content="@dtnmythos"/>
+<meta name="twitter:title" content="DTN Mythos — Constitutional Intelligence for India"/>
+<meta name="twitter:description" content="Real-time constitutional intelligence. Every news story scored for democracy impact, mapped to the Indian Constitution."/>
+<meta name="twitter:image" content="https://dtn.today/og-image.svg"/>
+
+<!-- Theme & PWA -->
+<meta name="theme-color" content="#F5B93A"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="DTN Mythos"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="application-name" content="DTN Mythos"/>
+<meta name="format-detection" content="telephone=no"/>
+
+<!-- Icons & Manifest -->
+<link rel="manifest" href="/manifest.json"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+<link rel="mask-icon" href="/favicon.svg" color="#F5B93A"/>
+
+<!-- Geo tags (India) -->
+<meta name="geo.region" content="IN"/>
+<meta name="geo.placename" content="India"/>
+
+<!-- DNS prefetch for performance -->
+<link rel="dns-prefetch" href="//fonts.googleapis.com"/>
+<link rel="dns-prefetch" href="//fonts.gstatic.com"/>
+<link rel="dns-prefetch" href="//source.unsplash.com"/>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin/>
+
+<!-- JSON-LD: WebSite schema (for Google Site Links & knowledge graph) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://dtn.today/#website",
+  "url": "https://dtn.today/",
+  "name": "DTN Mythos",
+  "alternateName": "DTN Mythos Constitutional Intelligence",
+  "description": "Real-time constitutional intelligence platform for India. Democracy scoring, constitutional violation tracking, and news analysis across 16 government departments and 28 states in 10 Indian languages.",
+  "inLanguage": ["en-IN", "hi-IN", "gu-IN", "ta-IN", "te-IN", "bn-IN", "mr-IN", "kn-IN", "ml-IN"],
+  "publisher": {
+    "@type": "Organization",
+    "name": "DTN Mythos",
+    "url": "https://dtn.today",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://dtn.today/og-image.svg"
+    }
+  },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://dtn.today/?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+
+<!-- JSON-LD: NewsMediaOrganization -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "NewsMediaOrganization",
+  "@id": "https://dtn.today/#organization",
+  "name": "DTN Mythos",
+  "url": "https://dtn.today",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://dtn.today/og-image.svg",
+    "width": 1200,
+    "height": 630
+  },
+  "description": "Independent civic analytics platform tracking India's constitutional health through real-time news analysis, evidence classification, and democracy scoring across 16 government departments.",
+  "areaServed": {
+    "@type": "Country",
+    "name": "India"
+  },
+  "knowsAbout": [
+    "Indian Constitution",
+    "Democracy",
+    "Constitutional Law",
+    "Press Freedom",
+    "Civil Liberties",
+    "Election Commission of India",
+    "Supreme Court of India"
+  ]
+}
+</script>
+
+<!-- JSON-LD: WebApplication -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "DTN Mythos",
+  "url": "https://dtn.today",
+  "applicationCategory": "NewsApplication",
+  "operatingSystem": "Any",
+  "browserRequirements": "Requires JavaScript",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  },
+  "featureList": [
+    "Real-time democracy scoring",
+    "Constitutional violation tracking",
+    "10 Indian language support",
+    "16 government department scoring",
+    "Evidence-based news classification",
+    "Impact radius analysis"
+  ]
+}
+</script>
+
+<style>
+  /* Noscript fallback + initial paint */
+  html, body { margin: 0; padding: 0; background: #FFFFFF; }
+  .initial-load {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    background: #FFFFFF;
+    z-index: 9999;
+  }
+  .initial-load-strip {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #F5B93A;
+    padding: 10px 24px;
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #0A0A0A;
+  }
+  .initial-load-title { font-size: 32px; font-weight: 700; color: #0A0A0A; margin-bottom: 14px; letter-spacing: -0.02em; }
+  .initial-load-sub { font-size: 15px; color: #555; max-width: 520px; text-align: center; line-height: 1.6; padding: 0 20px; }
+  .initial-load-dot { width: 10px; height: 10px; border-radius: 50%; background: #E24B4A; animation: pulse 1.4s infinite; margin-top: 18px; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .initial-load-hidden { display: none; }
+</style>
+</head>
+<body>
+<!--
+  SEO fallback content. Visible to search engine crawlers that don't execute JS.
+  Hidden the moment React mounts. This is how Google reads your site.
+-->
+<noscript>
+  <div style="padding:40px 24px;font-family:Georgia,serif;max-width:760px;margin:0 auto;">
+    <h1 style="font-size:32px;margin-bottom:16px;">DTN Mythos — Constitutional Intelligence Platform for India</h1>
+    <p style="font-size:16px;color:#333;line-height:1.7;">
+      Real-time constitutional intelligence platform. Every news story is scored for democracy impact,
+      mapped to the Indian Constitution, and available in 10 Indian languages. This application requires
+      JavaScript to run. Please enable JavaScript in your browser.
+    </p>
+  </div>
+</noscript>
+
+<div id="root">
+  <!-- Crawler-visible content: replaced by React on mount -->
+  <div class="initial-load" id="initial-loader">
+    <div class="initial-load-strip">DTN Mythos · Constitutional Intelligence</div>
+    <h1 class="initial-load-title">DTN Mythos</h1>
+    <p class="initial-load-sub">
+      Real-time constitutional intelligence for India.
+      Every news story scored for democracy impact.
+      Mapped to the Indian Constitution.
+      10 Indian languages.
+    </p>
+    <div class="initial-load-dot"></div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.jsx"></script>
+</body>
 </html>

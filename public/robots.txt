@@ -1,0 +1,32 @@
+# DTN Mythos — robots.txt
+# Real-time constitutional intelligence platform for India
+# https://dtn.today
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Bots we explicitly welcome
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /api/
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+# Sitemap
+Sitemap: https://dtn.today/sitemap.xml

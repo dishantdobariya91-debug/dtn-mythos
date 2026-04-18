@@ -606,3 +606,203 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   MOBILE REFINEMENTS — responds to screenshots feedback
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Better masthead wrap on narrow screens (image 1 shows tight fit) */
+@media (max-width: 900px) {
+  .masthead { gap: 10px; padding: 12px 16px; }
+  .masthead-actions { gap: 6px; }
+  .logo-masthead { font-size: 22px; }
+  .logo-edition { font-size: 11px; }
+  .alerts-btn { padding: 6px 10px; font-size: 11.5px; }
+  .bb-btn { padding: 5px 10px; font-size: 11.5px; }
+}
+
+/* Tablet-to-phone transition (768-1024) — navbar should be less cramped */
+@media (max-width: 1024px) {
+  .navbar { padding: 0 16px; gap: 18px; }
+  .nav-scores { gap: 8px; }
+  .nav-score-chip { font-size: 11.5px; }
+  .nav-score-num { font-size: 12.5px; }
+  .page { padding: 22px 18px 80px; }
+}
+
+/* Phone (≤640) — stacked/compact masthead */
+@media (max-width: 640px) {
+  /* Masthead wraps to 2 rows: logo+lang; user+alerts+fetch */
+  .masthead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .masthead > .logo-masthead {
+    align-self: flex-start;
+  }
+  .masthead-actions {
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  .masthead-actions select {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  .masthead-signin {
+    font-size: 12px;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+  }
+  .alerts-btn { padding: 6px 10px; font-size: 11px; min-height: 32px; }
+  .bb-btn { padding: 6px 10px; font-size: 11.5px; min-height: 32px; }
+
+  /* Navbar — horizontal scroll, bigger touch targets */
+  .navbar {
+    padding: 0 14px;
+    gap: 14px;
+    min-height: 44px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-item {
+    font-size: 13.5px;
+    padding: 6px 2px;  /* Bigger tap area */
+    min-height: 32px;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
+  }
+  .nav-live { font-size: 12px; }
+  .nav-sep { display: none; }  /* remove separators on mobile for cleaner flow */
+  .nav-scores { display: none; }  /* scores go in the ticker instead */
+
+  /* Top strip — compact but readable */
+  .top-strip {
+    padding: 10px 14px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0));
+  }
+  .top-strip-title { font-size: 14px; }
+  .top-strip-date { display: none; }
+
+  /* Ticker — larger font for readability */
+  .ticker-bar {
+    padding: 9px 14px;
+    font-size: 12px;
+    min-height: 38px;
+    gap: 10px;
+  }
+  .ticker-text {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  /* Hero */
+  .hero-grid { gap: 24px; margin-bottom: 30px; }
+  .hero-story { grid-template-columns: 1fr; gap: 14px; }
+  .hero-headline { font-size: 23px; line-height: 1.2; }
+  .hero-summary { font-size: 13.5px; }
+  .hero-img-wrap { aspect-ratio: 16 / 10; }
+
+  /* Story grid & cards — one column, readable card */
+  .story-grid { grid-template-columns: 1fr; gap: 22px; }
+  .story-card-headline { font-size: 17px; }
+  .story-card-img { aspect-ratio: 16 / 10; }
+
+  /* Side panels — full width after hero */
+  .side-panel { gap: 16px; margin-top: 20px; }
+  .side-block { padding: 14px; }
+  .side-title { font-size: 15px; }
+  .score-ring-mini { width: 48px; height: 48px; font-size: 16px; }
+  .score-row { gap: 12px; padding: 9px 0; }
+
+  /* Filters — horizontal scroll on mobile */
+  .filter-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-right: 14px;
+    margin-right: -14px;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    padding: 7px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 32px;
+  }
+
+  /* Badges */
+  .badge-row { gap: 5px; }
+  .bb-badge { font-size: 10.5px; padding: 3px 7px; }
+
+  /* Page padding */
+  .page { padding: 18px 14px 80px; }
+  .grid-title { font-size: 20px; }
+  .grid-sub { font-size: 11.5px; }
+}
+
+/* Very small phones (≤400) — tighter still */
+@media (max-width: 400px) {
+  .logo-masthead { font-size: 19px; }
+  .hero-headline { font-size: 21px; }
+  .story-card-headline { font-size: 16px; }
+  .grid-title { font-size: 18px; }
+  .masthead-actions select { font-size: 11px; padding: 4px 6px; }
+}
+
+/* iPhone notch & home indicator safe areas */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .shell {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* Touch-friendly — ensure all buttons are 32px+ min */
+button, select, input {
+  min-height: 28px;
+}
+
+/* Remove tap highlight color on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Make language dropdown less cramped on mobile */
+.masthead-actions select {
+  max-width: 140px;
+  text-overflow: ellipsis;
+}
+
+/* Accessibility — ensure focus visible on mobile keyboards */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Navbar — smooth scroll on mobile (some browsers need this explicit) */
+.navbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.navbar::-webkit-scrollbar { display: none; }
+
+/* Initial loader (shown before React mounts, hidden after) */
+#initial-loader { display: flex; }
+.shell:not(:empty) ~ #initial-loader,
+body:has(.shell) #initial-loader { display: none !important; }
+
+/* Improved language dropdown readability on dark masthead */
+.masthead select option {
+  background: #1a1a1a;
+  color: #fff;
+}
