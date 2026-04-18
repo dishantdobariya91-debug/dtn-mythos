@@ -7,11 +7,7 @@
   "orientation": "portrait-primary",
   "background_color": "#03050C",
   "theme_color": "#7C5CFC",
-  "categories": [
-    "news",
-    "politics",
-    "education"
-  ],
+  "categories": ["news", "politics", "education"],
   "lang": "en-IN",
   "icons": [
     {

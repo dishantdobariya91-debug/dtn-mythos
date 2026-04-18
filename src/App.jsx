@@ -1,4 +1,4 @@
-import{useState,useEffect,useCallback,useRef,useMemo}from"react";
+import React,{useState,useEffect,useCallback,useRef,useMemo}from"react";
 import{AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,RadarChart,Radar,PolarGrid,PolarAngleAxis,BarChart,Bar,Cell}from"recharts";
 const GROQ=import.meta.env.VITE_GROQ_KEY||"";
 
@@ -89,9 +89,9 @@ function generateExplanation(s){
   return`This event ${action} ${pts} points because ${deptStr} action implicates ${s.violations?.length||s.supports?.length||1} constitutional provision(s). ${evStr} ${confStr}${courtStr}`;
 }
 
-function sColor(n){return n>=65?"#0FD47C":n>=50?"#F5A623":n>=35?"#f97316":"#F04A5A";}
+function sColor(n){return n>=65?"#3B6D11":n>=50?"#BA7517":n>=35?"#D85A30":"#E24B4A";}
 function sLabelK(n){return n>=65?"functioning":n>=50?"erosion":n>=35?"backsliding":"authoritarian";}
-function scoreBand(n){if(n>=80)return{label:"Strong Constitutional Support",color:"#0FD47C"};if(n>=65)return{label:"Mostly Stable",color:"#0FD47C"};if(n>=50)return{label:"Mixed Democratic Health",color:"#F5A623"};if(n>=35)return{label:"Significant Concerns",color:"#f97316"};return{label:"Severe Democratic Stress",color:"#F04A5A"};}
+function scoreBand(n){if(n>=80)return{label:"Strong Constitutional Support",color:"#27500A"};if(n>=65)return{label:"Mostly Stable",color:"#3B6D11"};if(n>=50)return{label:"Mixed Democratic Health",color:"#BA7517"};if(n>=35)return{label:"Significant Concerns",color:"#D85A30"};return{label:"Severe Democratic Stress",color:"#E24B4A"};}
 
 // ── ENHANCED CLASSIFIER ────────────────────────────────────────
 function classify(h,b){
@@ -321,14 +321,108 @@ function ScoreRing({score,size=96,label}){
   const r=(size-12)/2,circ=2*Math.PI*r,col=sColor(score),offset=circ-(score/100)*circ;
   return(<div style={{position:"relative",width:size,height:size,flexShrink:0}}>
     <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={7}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={7}/>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={7}
         strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-        style={{transition:"stroke-dashoffset 1.5s cubic-bezier(0.34,1.56,0.64,1)",filter:`drop-shadow(0 0 8px ${col}90)`}}/>
+        style={{transition:"stroke-dashoffset 1.5s cubic-bezier(0.34,1.56,0.64,1)"}}/>
     </svg>
     <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}>
       <span style={{fontFamily:"var(--font-m)",fontSize:size*0.22,fontWeight:700,color:col,lineHeight:1,letterSpacing:"-0.03em"}}>{score}</span>
       {label&&<span style={{fontSize:Math.max(7,size*0.088),color:"var(--t2)",textAlign:"center",lineHeight:1.2}}>{label}</span>}
+    </div>
+  </div>);}
+
+// ── BLOOMBERG HELPERS ──────────────────────────────────────────
+// Resolve the photo for a story with fallback chain:
+// 1. Image already on story (from RSS enclosure/media/img tag)
+// 2. OG-image scraped from link (tried in background in doFetch)
+// 3. Unsplash fallback via /api/fallback-image
+function getStoryImage(s){
+  if(s.image)return s.image;
+  const topic=s.storyType||"";
+  const dept=s.institution||"";
+  return"/api/fallback-image?topic="+encodeURIComponent(topic)+"&dept="+encodeURIComponent(dept)+"&id="+encodeURIComponent(s.id||"x")+"&w=800";
+}
+
+function storyLabel(s){
+  if(s.direction==="positive")return{label:"Support",cls:"support"};
+  if(s.severity==="critical"&&s.direction==="negative")return{label:"Critical",cls:"critical"};
+  if(s.direction==="negative")return{label:"Concern",cls:"concern"};
+  return{label:"Update",cls:"warning"};}
+
+function StoryCardBB({s,t,onSelect,hero}){
+  const img=getStoryImage(s);
+  const lab=storyLabel(s);
+  const d=s.institution?DEPT[s.institution]:null;
+  const dept=d?.name||(s.storyType?s.storyType[0].toUpperCase()+s.storyType.slice(1):"General");
+  const wt=Math.abs(s.aiScore||s.delta||0);
+  const scoreSign=s.direction==="positive"?"+":"-";
+  const scoreClass=s.direction==="positive"?"pos":"neg";
+  const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"];
+  const time=new Date(s.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+  const onClick=()=>{if(onSelect)onSelect(s);else if(s.link){try{window.open(s.link,"_blank","noopener");}catch{}}};
+
+  if(hero){
+    return(<div className="hero-story">
+      <div>
+        <div className="hero-img-wrap">
+          <img src={img} alt="" onError={e=>{e.target.src="/api/fallback-image?topic="+(s.storyType||"")+"&dept="+(s.institution||"")+"&id="+s.id+"&w=800";}}/>
+        </div>
+      </div>
+      <div>
+        <div className="hero-label">{lab.label} · {dept}</div>
+        <h1 className="hero-headline" onClick={onClick}>{s.headline}</h1>
+        {s.citizenExplanation&&<p className="hero-summary">{s.citizenExplanation.slice(0,220)}{s.citizenExplanation.length>220?"…":""}</p>}
+        <div className="badge-row">
+          <span className={"bb-badge "+lab.cls}>{lab.label} · {scoreSign}{wt} pts</span>
+          <span className="bb-badge dept">{d?.icon?d.icon+" ":""}{dept}</span>
+          {ev&&<span className="bb-badge warning">{ev.label} · {Math.round((ev.weight||0.4)*100)}%</span>}
+          {s.courtStatus&&s.courtStatus!=="none"&&<span className="bb-badge info">{COURT_STATUSES[s.courtStatus]?.label||s.courtStatus}</span>}
+          {s.aiDone&&<span className="bb-badge purple">✦ AI</span>}
+        </div>
+      </div>
+    </div>);
+  }
+
+  return(<button className="story-card" onClick={onClick} type="button">
+    <div className="story-card-img">
+      <img src={img} alt="" loading="lazy" onError={e=>{e.target.src="/api/fallback-image?topic="+(s.storyType||"")+"&dept="+(s.institution||"")+"&id="+s.id+"&w=800";}}/>
+    </div>
+    <div className={"story-card-label lbl-"+lab.cls}>{lab.label} · {dept}</div>
+    <h3 className="story-card-headline">{s.headline}</h3>
+    <div className="story-card-meta">
+      <span className={"story-card-score "+scoreClass}>{scoreSign}{wt} pts</span>
+      <span>·</span>
+      <span>{ev?.label||"Single Source"}</span>
+      <span>·</span>
+      <span>{time}</span>
+      {s.aiDone&&<><span>·</span><span style={{color:"var(--purple-t)"}}>✦ AI</span></>}
+    </div>
+  </button>);
+}
+
+function LatestItem({s,onClick}){
+  const time=new Date(s.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+  return(<button className="latest-item" onClick={()=>onClick&&onClick(s)} type="button">
+    <div className="latest-time">{time}</div>
+    <div className="latest-headline">{s.headline}</div>
+  </button>);
+}
+
+function ScoreRowMini({score,label,desc}){
+  const col=sColor(score);
+  const r=24,circ=2*Math.PI*r,offset=circ-(score/100)*circ;
+  return(<div className="score-row">
+    <div className="score-ring-mini">
+      <svg width={54} height={54} style={{position:"absolute",inset:0,transform:"rotate(-90deg)"}}>
+        <circle cx={27} cy={27} r={r} fill="none" stroke="var(--border)" strokeWidth={4}/>
+        <circle cx={27} cy={27} r={r} fill="none" stroke={col} strokeWidth={4} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" style={{transition:"stroke-dashoffset 1s ease-out"}}/>
+      </svg>
+      <span style={{color:col,position:"relative",fontFamily:"var(--font-b)"}}>{score}</span>
+    </div>
+    <div className="score-info">
+      <div className="score-label-sm">{label}</div>
+      <div className="score-desc-sm">{desc}</div>
     </div>
   </div>);}
 
@@ -724,139 +818,192 @@ function LiveTicker({stories,natScore,stScore,distScore,countdown,autoOn}){
 
 
 // ── DASHBOARD ──────────────────────────────────────────────────
-function Dashboard({natScore,stScore,distScore,stories,natHistory,fState,fDist,t,mode,setPage,setFScope}){
+function Dashboard({natScore,stScore,distScore,stories,natHistory,fState,fDist,t,mode,setPage,setFScope,latestFive}){
   const approved=stories.filter(s=>s.approved);
-  const pillarData=Object.entries(PILLARS).map(([k,p])=>{const rel=approved.filter(s=>s.pillar===k);const delta=rel.reduce((a,s)=>a+calcStoryEffect(s,"national",fState),0);return{full:p.label,color:p.color,score:Math.max(0,Math.min(100,Math.round(p.base+delta))),delta:Math.round(delta)};});
-  const topDepts=Object.entries(DEPT).slice(0,4).map(([k,d])=>({...d,score:calcDept(approved,k)}));
-  const critCount=approved.filter(s=>s.severity==="critical").length;const posCount=approved.filter(s=>s.direction==="positive").length;
-  const unresolved=approved.filter(s=>s.courtStatus==="pending").length;
+  const sorted=[...approved].sort((a,b)=>b.ts-a.ts);
+  const topStory=sorted[0];
+  const gridStories=sorted.slice(1,10);
   const band=scoreBand(natScore);
+  const stBand=scoreBand(stScore);
+  const distBand=scoreBand(distScore);
+  const critCount=approved.filter(s=>s.severity==="critical").length;
+  const posCount=approved.filter(s=>s.direction==="positive").length;
+
+  if(!approved.length){
+    return(<div className="fade-up" style={{textAlign:"center",padding:"60px 20px"}}>
+      <div style={{fontSize:48,marginBottom:16}}>⚡</div>
+      <h1 style={{fontFamily:"var(--font-h)",fontSize:28,fontWeight:700,marginBottom:10,letterSpacing:"-0.01em"}}>Constitutional Intelligence</h1>
+      <p style={{fontSize:14,color:"var(--t2)",marginBottom:22,maxWidth:480,margin:"0 auto 22px"}}>{t.tapFetch}</p>
+      <button onClick={()=>setPage("newsroom")} className="bb-btn primary" style={{padding:"10px 20px",fontSize:13}}>{t.fetchLive}</button>
+    </div>);
+  }
+
   return(<div className="fade-up">
-    <div style={{marginBottom:18}}><div style={{fontSize:8.5,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.14em",fontWeight:700,marginBottom:4}}>Constitutional Intelligence · Live 24/7</div><h1 style={{fontFamily:"var(--font-h)",fontSize:"clamp(17px,4vw,24px)",fontWeight:900,color:"var(--t1)",letterSpacing:"-0.02em"}}>{t.appName}</h1><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>{t.tagline}</p></div>
-    {/* 3 Scope Rings */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9,marginBottom:12}}>
-      {[{scope:"national",score:natScore,label:"🌐 "+t.national},{scope:"state",score:stScore,label:"🏛 "+fState},{scope:"district",score:distScore,label:"📍 "+(fDist||t.district)}].map(item=>(
-        <Card key={item.scope} onClick={()=>setFScope(item.scope)} glow={sColor(item.score)} style={{padding:"14px 11px",textAlign:"center"}}>
-          <div style={{fontSize:8.5,color:"var(--t3)",fontWeight:700,marginBottom:7,textTransform:"uppercase",letterSpacing:"0.09em"}}>{item.label}</div>
-          <div style={{display:"flex",justifyContent:"center",marginBottom:6}}><ScoreRing score={item.score} size={70}/></div>
-          <div style={{fontSize:9,fontWeight:700,color:sColor(item.score)}}>{t[sLabelK(item.score)]}</div>
-        </Card>
-      ))}
-    </div>
-    {/* Score band */}
-    <Card style={{marginBottom:11,padding:"11px 15px",border:"1px solid "+band.color+"30",background:band.color+"06"}}>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:8,height:8,borderRadius:"50%",background:band.color,boxShadow:"0 0 8px "+band.color,flexShrink:0}}/>
-        <span style={{fontSize:11,fontWeight:600,color:band.color}}>{band.label}</span>
-        <span style={{fontSize:10,color:"var(--t2)",flex:1}}>National Democracy Score: {natScore}/100</span>
-        <span style={{fontSize:9,color:"var(--t3)"}}>Calibrated: Freedom House · V-Dem · RSF · EIU</span>
+    {/* Hero section: top story + side panel */}
+    <div className="hero-grid">
+      <div>
+        {topStory&&<StoryCardBB s={topStory} t={t} hero/>}
+        {topStory&&sorted.length>1&&<div className="related">
+          <div className="related-title">Related Stories</div>
+          {sorted.slice(1,4).map(s=>(<button key={s.id} className="related-item" onClick={()=>setPage("newsroom")}>{s.headline}</button>))}
+        </div>}
       </div>
-    </Card>
-    {/* Stats */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:11}}>
-      <Metric label={t.storiesTracked} value={approved.length} color="var(--blue)"/>
-      <Metric label={t.critical} value={critCount} color="var(--red)"/>
-      <Metric label={t.positive} value={posCount} color="var(--green)"/>
-      <Metric label="Court Pending" value={unresolved} color="var(--amber)"/>
-    </div>
-    {/* Global benchmarks */}
-    <Card style={{marginBottom:11,padding:"12px 15px"}}>
-      <STitle>Global Democracy Indices · 2024-25</STitle>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-        {[{l:"Freedom House",v:"63/100",sub:"Partly Free",c:"var(--amber)"},{l:"V-Dem Rank",v:"100/179",sub:"Electoral Autocracy",c:"var(--red)"},{l:"RSF Press",v:"151/180",sub:"Difficult",c:"var(--red)"},{l:"EIU Index",v:"6.6/10",sub:"Flawed Democracy",c:"var(--amber)"}].map(e=>(<div key={e.l} style={{textAlign:"center"}}><div style={{fontFamily:"var(--font-m)",fontSize:14,fontWeight:800,color:e.c,letterSpacing:"-0.03em"}}>{e.v}</div><div style={{fontSize:8.5,color:"var(--t3)",marginTop:2,fontWeight:600}}>{e.l}</div><div style={{fontSize:8,color:"var(--t3)"}}>{e.sub}</div></div>))}
-      </div>
-    </Card>
-    {/* Dept mini */}
-    <Card style={{marginBottom:11}}>
-      <STitle action={<Btn onClick={()=>setPage("departments")} style={{fontSize:9,padding:"2px 8px"}} variant="ghost">All 16 →</Btn>}>Department Scores · Top 4</STitle>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-        {topDepts.map(d=>(<div key={d.name} onClick={()=>setPage("departments")} style={{textAlign:"center",cursor:"pointer",padding:"8px 4px",borderRadius:9,transition:"background 0.15s"}}>
-          <div style={{fontSize:18,marginBottom:3}}>{d.icon}</div>
-          <div style={{fontFamily:"var(--font-m)",fontSize:15,fontWeight:800,color:sColor(d.score),letterSpacing:"-0.03em"}}>{d.score}</div>
-          <div style={{height:3,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden",margin:"4px 0"}}><div style={{height:"100%",background:d.color,borderRadius:99,width:d.score+"%"}}/></div>
-          <div style={{fontSize:8.5,color:"var(--t2)",fontWeight:500}}>{d.name.split(" ")[0]}</div>
-        </div>))}
-      </div>
-    </Card>
-    {/* Pillars */}
-    <Card style={{marginBottom:11}}>
-      <STitle>Constitutional Pillars</STitle>
-      {pillarData.map(p=>(<div key={p.full} style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}>
-        <span style={{fontSize:9.5,color:"var(--t2)",width:90,flexShrink:0,fontWeight:500}}>{p.full}</span>
-        <div style={{flex:1,height:4,background:"rgba(255,255,255,0.04)",borderRadius:99,overflow:"hidden"}}>
-          <div style={{height:"100%",borderRadius:99,background:p.color,width:p.score+"%",transition:"width 1.4s ease",boxShadow:`0 0 7px ${p.color}55`}}/>
+
+      <aside className="side-panel">
+        <div className="side-block">
+          <h3 className="side-title">India Democracy Score</h3>
+          <ScoreRowMini score={natScore} label="National" desc={band.label}/>
+          <ScoreRowMini score={stScore} label={fState||"State"} desc={stBand.label}/>
+          <ScoreRowMini score={distScore} label={fDist||"District"} desc={distBand.label}/>
+          <div style={{fontSize:10.5,color:"var(--t3)",marginTop:10,paddingTop:10,borderTop:"1px solid var(--border)",lineHeight:1.5}}>
+            Calibrated: Freedom House · V-Dem · RSF · EIU
+          </div>
         </div>
-        <span style={{fontFamily:"var(--font-m)",fontSize:10,fontWeight:700,color:p.color,width:24,textAlign:"right",letterSpacing:"-0.02em"}}>{p.score}</span>
-        <span style={{fontSize:9,color:p.delta>=0?"var(--green)":"var(--red)",fontWeight:600,width:24,textAlign:"right"}}>{p.delta>=0?"+":""}{p.delta}</span>
-      </div>))}
-    </Card>
-    {natHistory.length>1&&(<Card style={{marginBottom:11}}>
-      <STitle>Score Trend</STitle>
-      <ResponsiveContainer width="100%" height={65}>
-        <AreaChart data={natHistory}><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={sColor(natScore)} stopOpacity={0.22}/><stop offset="95%" stopColor={sColor(natScore)} stopOpacity={0}/></linearGradient></defs>
-        <XAxis dataKey="label" tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fill:"var(--t3)",fontSize:7}} axisLine={false} tickLine={false} width={18}/>
-        <Tooltip contentStyle={{background:"var(--surface2)",border:"1px solid var(--border2)",borderRadius:9,fontSize:10}}/>
-        <Area type="monotone" dataKey="score" stroke={sColor(natScore)} fill="url(#sg)" strokeWidth={2} dot={false}/></AreaChart>
-      </ResponsiveContainer>
-    </Card>)}
-    {approved.length===0&&<Card style={{textAlign:"center",padding:"36px"}}><div style={{fontSize:36,marginBottom:10}}>⚡</div><div style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.tapFetch}</div><div style={{fontSize:11,color:"var(--t2)",marginBottom:14}}>Constitutional intelligence from 1000s of Indian news sources</div><Btn onClick={()=>setPage("newsroom")} variant="primary" style={{padding:"8px 20px",fontSize:13}}>{t.fetchLive}</Btn></Card>}
+
+        <div className="side-block">
+          <h3 className="side-title">Latest</h3>
+          {latestFive?.length>0?latestFive.map(s=>(<LatestItem key={s.id} s={s} onClick={()=>setPage("newsroom")}/>)):<div style={{fontSize:12,color:"var(--t3)",padding:"6px 0"}}>No stories yet</div>}
+        </div>
+
+        <div className="side-block">
+          <h3 className="side-title">Snapshot</h3>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div><div style={{fontFamily:"var(--font-m)",fontSize:22,fontWeight:700,color:"var(--t1)"}}>{approved.length}</div><div style={{fontSize:10,color:"var(--t2)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Tracked</div></div>
+            <div><div style={{fontFamily:"var(--font-m)",fontSize:22,fontWeight:700,color:"var(--red-t)"}}>{critCount}</div><div style={{fontSize:10,color:"var(--t2)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Critical</div></div>
+            <div><div style={{fontFamily:"var(--font-m)",fontSize:22,fontWeight:700,color:"var(--green-t)"}}>{posCount}</div><div style={{fontSize:10,color:"var(--t2)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Supports</div></div>
+            <div><div style={{fontFamily:"var(--font-m)",fontSize:22,fontWeight:700,color:"var(--amber-t)"}}>{approved.filter(s=>s.courtStatus==="pending").length}</div><div style={{fontSize:10,color:"var(--t2)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Court Pending</div></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    {/* Story grid */}
+    {gridStories.length>0&&<div className="grid-section">
+      <div className="grid-section-head">
+        <h2 className="grid-title">Constitutional Stories</h2>
+        <span className="grid-sub">{gridStories.length} stories · Updated {new Date(sorted[0].ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
+      </div>
+      <div className="story-grid">
+        {gridStories.map(s=>(<StoryCardBB key={s.id} s={s} t={t} onSelect={()=>setPage("newsroom")}/>))}
+      </div>
+    </div>}
   </div>);}
 
 // ── NEWSROOM (Main Intelligence Feed) ──────────────────────────
-function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fState}){
-  const[filter,setFilter]=useState("all");const[selStory,setSelStory]=useState(null);
+function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fState,natScore,stScore,distScore}){
+  const[filter,setFilter]=useState("all");
+  const[selStory,setSelStory]=useState(null);
   const sorted=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);
-  const filtered=filter==="all"?sorted:filter==="critical"?sorted.filter(s=>s.severity==="critical"):filter==="positive"?sorted.filter(s=>s.direction==="positive"):filter==="court"?sorted.filter(s=>s.courtStatus&&s.courtStatus!=="none"):filter==="unresolved"?sorted.filter(s=>s.courtStatus==="pending"):STORY_TYPES.includes(filter)?sorted.filter(s=>s.storyType===filter):sorted.filter(s=>s.scope===filter);
+  const filtered=filter==="all"?sorted
+    :filter==="critical"?sorted.filter(s=>s.severity==="critical")
+    :filter==="positive"?sorted.filter(s=>s.direction==="positive")
+    :filter==="court"?sorted.filter(s=>s.courtStatus&&s.courtStatus!=="none")
+    :filter==="unresolved"?sorted.filter(s=>s.courtStatus==="pending")
+    :STORY_TYPES.includes(filter)?sorted.filter(s=>s.storyType===filter)
+    :sorted.filter(s=>s.scope===filter);
+
+  const topStory=filtered[0];
+  const gridStories=filtered.slice(1);
+  const critCount=sorted.filter(s=>s.severity==="critical").length;
+  const posCount=sorted.filter(s=>s.direction==="positive").length;
+  const courtActive=sorted.filter(s=>s.courtStatus&&s.courtStatus!=="none").length;
+
   return(<div className="fade-up">
-    <div style={{marginBottom:16}}><div style={{fontSize:8.5,color:"var(--t3)",textTransform:"uppercase",letterSpacing:"0.14em",fontWeight:700,marginBottom:4}}>Constitutional Journalism Intelligence</div><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)",marginBottom:3}}>⚡ {t.newsroom}</h2><p style={{fontSize:11,color:"var(--t2)"}}>Every story scored · Evidence classified · Constitutional violations & supports · All 3 scopes live</p></div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:12}}>
-      <Metric label="Total" value={stories.filter(s=>s.approved).length} color="var(--blue)"/>
-      <Metric label={t.critical||"Critical"} value={stories.filter(s=>s.approved&&s.severity==="critical").length} color="var(--red)"/>
-      <Metric label="Court Active" value={stories.filter(s=>s.approved&&s.courtStatus&&s.courtStatus!=="none").length} color="var(--amber)"/>
-      <Metric label={t.positive||"Support"} value={stories.filter(s=>s.approved&&s.direction==="positive").length} color="var(--green)"/>
-    </div>
-    <div style={{display:"flex",gap:4,marginBottom:11,flexWrap:"wrap",alignItems:"center"}}>
-      <div style={{display:"flex",gap:3,flex:1,flexWrap:"wrap"}}>
-        {["all","national","state","local","critical","positive","court","unresolved"].map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 9px",borderRadius:6,border:"1px solid "+(filter===f?"rgba(74,143,255,0.4)":"var(--border)"),background:filter===f?"rgba(74,143,255,0.1)":"transparent",color:filter===f?"var(--blue)":"var(--t2)",fontSize:9,fontWeight:filter===f?700:500,cursor:"pointer",textTransform:"capitalize"}}>{f}</button>))}
-        {STORY_TYPES.slice(0,4).map(f=>(<button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 9px",borderRadius:6,border:"1px solid "+(filter===f?"rgba(245,166,35,0.4)":"var(--border)"),background:filter===f?"rgba(245,166,35,0.1)":"transparent",color:filter===f?"var(--amber)":"var(--t2)",fontSize:9,fontWeight:filter===f?700:500,cursor:"pointer",textTransform:"capitalize"}}>{f}</button>))}
-      </div>
-      <Btn onClick={onAI} variant="purple" style={{flexShrink:0,fontSize:9}}>✦ AI All</Btn>
-    </div>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,padding:"7px 13px",background:"rgba(15,212,124,0.04)",border:"1px solid rgba(15,212,124,0.11)",borderRadius:8}}>
-      <div className="live-dot" style={{width:6,height:6}}/>
-      <span style={{fontSize:10.5,fontWeight:600,color:"var(--green)"}}>Constitutional Intelligence Active</span>
-      {autoOn&&<span style={{fontSize:9.5,color:"var(--t2)",marginLeft:"auto"}}>Auto-fetch in {countdown}s</span>}
-    </div>
-    {filtered.length===0&&<Card style={{textAlign:"center",padding:"48px 20px"}}><div style={{fontSize:40,marginBottom:12}}>⚡</div><div style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",marginBottom:5}}>{t.noStories}</div><div style={{fontSize:11,color:"var(--t2)",marginBottom:14}}>{t.tapFetch}</div><Btn onClick={onFetch} variant="primary" style={{padding:"9px 22px",fontSize:12}}>{t.fetchLive}</Btn></Card>}
-    {filtered.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onSelect={setSelStory}/>)}
-    {/* Story detail modal */}
-    {selStory&&(<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"}} onClick={()=>setSelStory(null)}>
-      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:640,maxHeight:"88vh",overflowY:"auto",background:"var(--surface)",border:"1px solid var(--border2)",borderRadius:18,padding:"20px 22px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-          <div style={{flex:1}}>
-            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:7}}>
-              <EvidenceBadge level={selStory.evidenceLevel} t={t}/>
-              <ConfidenceBadge confidence={selStory.confidence} t={t}/>
-              <CourtBadge status={selStory.courtStatus}/>
-              {selStory.storyType&&<StoryTypeBadge type={selStory.storyType} t={t}/>}
-            </div>
-            <h2 style={{fontFamily:"var(--font-h)",fontSize:15,fontWeight:700,color:"var(--t1)",lineHeight:1.4,marginBottom:6}}>{selStory.headline}</h2>
-            <div style={{fontSize:9.5,color:"var(--t3)"}}>{new Date(selStory.ts).toLocaleString("en-IN")}</div>
-          </div>
-          <button onClick={()=>setSelStory(null)} style={{background:"transparent",border:"none",color:"var(--t2)",cursor:"pointer",fontSize:20,marginLeft:14,lineHeight:1}}>✕</button>
+    {/* Header with live indicator and AI button */}
+    <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:18,flexWrap:"wrap",gap:10}}>
+      <div>
+        <div style={{fontSize:11,color:"var(--red)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:6,display:"flex",alignItems:"center",gap:6,fontFamily:"var(--font-b)"}}>
+          <span className="live-dot"/>Live Newsroom
         </div>
-        {selStory.citizenExplanation&&mode!=="expert"&&(<div style={{padding:"12px 14px",background:"rgba(74,143,255,0.05)",border:"1px solid rgba(74,143,255,0.12)",borderRadius:9,marginBottom:12}}>
-          <div style={{fontSize:8.5,color:"var(--blue)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:5}}>🙋 {t.citizenWhy}</div>
-          <p style={{fontSize:12,color:"var(--t1)",lineHeight:1.75,margin:0}}>{selStory.citizenExplanation}</p>
+        <h1 style={{fontFamily:"var(--font-h)",fontSize:"clamp(24px,3vw,32px)",fontWeight:700,letterSpacing:"-0.015em",lineHeight:1.1}}>Constitutional Journalism</h1>
+        <p style={{fontSize:13,color:"var(--t2)",marginTop:6,maxWidth:560}}>Every story scored for democracy impact · Evidence classified · Mapped to Indian Constitution articles</p>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{fontSize:11.5,color:"var(--t2)",fontFamily:"var(--font-b)"}}>
+          <span className="num" style={{color:"var(--t1)",fontWeight:700}}>{sorted.length}</span> stories · <span className="num" style={{color:"var(--red-t)",fontWeight:700}}>{critCount}</span> critical · <span className="num" style={{color:"var(--green-t)",fontWeight:700}}>{posCount}</span> support
+        </div>
+        <button onClick={onAI} className="bb-btn" style={{background:"var(--purple-s)",color:"var(--purple-t)",borderColor:"var(--purple-b)"}}>✦ AI Enrich All</button>
+      </div>
+    </div>
+
+    {/* Filter chips */}
+    <div className="filter-row">
+      {[{k:"all",l:"All"},{k:"critical",l:"Critical"},{k:"positive",l:"Support"},{k:"national",l:"National"},{k:"state",l:"State"},{k:"local",l:"Local"},{k:"court",l:"Court Active"},{k:"unresolved",l:"Unresolved"}].map(f=>(
+        <button key={f.k} onClick={()=>setFilter(f.k)} className={"filter-chip"+(filter===f.k?" active":"")}>{f.l}</button>
+      ))}
+      {STORY_TYPES.slice(0,6).map(f=>(
+        <button key={f} onClick={()=>setFilter(f)} className={"filter-chip"+(filter===f?" active":"")}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>
+      ))}
+    </div>
+
+    {/* Empty state */}
+    {filtered.length===0&&<div style={{textAlign:"center",padding:"60px 20px"}}>
+      <div style={{fontSize:42,marginBottom:14}}>⚡</div>
+      <h3 style={{fontFamily:"var(--font-h)",fontSize:20,fontWeight:700,marginBottom:8}}>{t.noStories||"No stories yet"}</h3>
+      <p style={{fontSize:13,color:"var(--t2)",marginBottom:18}}>{t.tapFetch}</p>
+      <button onClick={onFetch} className="bb-btn primary" style={{padding:"9px 18px"}}>{t.fetchLive||"Fetch Live News"}</button>
+    </div>}
+
+    {/* Hero + side layout for top story */}
+    {topStory&&<div className="hero-grid">
+      <div>
+        <StoryCardBB s={topStory} t={t} hero onSelect={s=>setSelStory(s)}/>
+      </div>
+      <aside className="side-panel">
+        <div className="side-block">
+          <h3 className="side-title">Latest</h3>
+          {filtered.slice(1,8).map(s=>(<LatestItem key={s.id} s={s} onClick={setSelStory}/>))}
+        </div>
+        {autoOn&&<div className="side-block" style={{background:"var(--green-s)",borderLeft:"3px solid var(--green)"}}>
+          <div style={{fontSize:10.5,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--green-t)",marginBottom:4}}>Auto-fetch active</div>
+          <div style={{fontSize:12,color:"var(--t1)",fontFamily:"var(--font-b)"}}>Next update in <span className="num" style={{fontWeight:700}}>{countdown}s</span></div>
+        </div>}
+      </aside>
+    </div>}
+
+    {/* Story grid */}
+    {gridStories.length>0&&<div className="grid-section">
+      <div className="grid-section-head">
+        <h2 className="grid-title">{filter==="all"?"More Stories":filter.charAt(0).toUpperCase()+filter.slice(1)}</h2>
+        <span className="grid-sub">{gridStories.length} stories</span>
+      </div>
+      <div className="story-grid">
+        {gridStories.map(s=>(<StoryCardBB key={s.id} s={s} t={t} onSelect={setSelStory}/>))}
+      </div>
+    </div>}
+
+    {/* Story detail modal */}
+    {selStory&&(<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",overflow:"auto"}} onClick={()=>setSelStory(null)}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:720,maxHeight:"90vh",overflowY:"auto",background:"#fff",border:"1px solid var(--border)",borderRadius:2,padding:"24px"}}>
+        {selStory.image&&<img src={selStory.image} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover",borderRadius:2,marginBottom:16}} onError={e=>{e.target.style.display="none";}}/>}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:12}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="badge-row">
+              <span className={"bb-badge "+storyLabel(selStory).cls}>{storyLabel(selStory).label}</span>
+              {selStory.institution&&DEPT[selStory.institution]&&<span className="bb-badge dept">{DEPT[selStory.institution].icon} {DEPT[selStory.institution].name}</span>}
+              {EVIDENCE_LEVELS[selStory.evidenceLevel||"single_source"]&&<span className="bb-badge warning">{EVIDENCE_LEVELS[selStory.evidenceLevel||"single_source"].label}</span>}
+              {selStory.courtStatus&&selStory.courtStatus!=="none"&&<span className="bb-badge info">{COURT_STATUSES[selStory.courtStatus]?.label}</span>}
+              {selStory.aiDone&&<span className="bb-badge purple">✦ AI</span>}
+            </div>
+            <h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(19px,2vw,24px)",fontWeight:700,color:"var(--t1)",lineHeight:1.15,marginBottom:8,letterSpacing:"-0.01em"}}>{selStory.headline}</h2>
+            <div style={{fontSize:11.5,color:"var(--t3)",fontFamily:"var(--font-b)"}}>{new Date(selStory.ts).toLocaleString("en-IN")}</div>
+          </div>
+          <button onClick={()=>setSelStory(null)} style={{background:"transparent",border:"none",color:"var(--t2)",cursor:"pointer",fontSize:24,lineHeight:1,padding:4}}>✕</button>
+        </div>
+        {selStory.citizenExplanation&&(<div style={{padding:"14px 16px",background:"var(--bg-soft)",borderLeft:"3px solid var(--blue)",marginBottom:14}}>
+          <div style={{fontSize:10.5,color:"var(--blue-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>{t.citizenWhy||"Why it matters"}</div>
+          <p style={{fontSize:14,color:"var(--t1)",lineHeight:1.7,margin:0,fontFamily:"var(--font-h)"}}>{selStory.citizenExplanation}</p>
         </div>)}
-        <ImpactBar story={selStory} t={t}/>
-        <div style={{marginTop:12}}><ConstitutionPanel violations={selStory.violations} supports={selStory.supports} t={t}/></div>
-        {selStory.govResponse&&(<div style={{marginTop:12,padding:"10px 13px",background:"rgba(74,143,255,0.04)",border:"1px solid rgba(74,143,255,0.12)",borderRadius:8}}>
-          <div style={{fontSize:8.5,color:"var(--blue)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>🏢 {t.govResponse}</div>
-          <p style={{fontSize:11,color:"var(--t2)",margin:0,lineHeight:1.65}}>{selStory.govResponse}</p>
+        <div style={{marginBottom:14}}><ImpactBar story={selStory} t={t}/></div>
+        <div style={{marginBottom:14}}><ConstitutionPanel violations={selStory.violations} supports={selStory.supports} t={t}/></div>
+        {selStory.govResponse&&(<div style={{padding:"12px 14px",background:"var(--bg-soft)",marginBottom:14,borderLeft:"3px solid var(--amber)"}}>
+          <div style={{fontSize:10.5,color:"var(--amber-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{t.govResponse||"Government Response"}</div>
+          <p style={{fontSize:13,color:"var(--t1)",margin:0,lineHeight:1.65}}>{selStory.govResponse}</p>
         </div>)}
-        {mode==="expert"&&<ScoreExplanation story={selStory}/>}
-        {selStory.mythos&&<div style={{marginTop:12,padding:"12px 14px",background:"rgba(155,125,255,0.04)",borderRadius:9,borderLeft:"2px solid var(--purple)"}}><p style={{fontSize:12.5,color:"var(--t1)",fontStyle:"italic",lineHeight:1.9,margin:0}}>{selStory.mythos}</p></div>}
+        {selStory.mythos&&<div style={{padding:"14px 16px",background:"var(--purple-s)",borderLeft:"3px solid var(--purple)",marginBottom:14}}>
+          <p style={{fontSize:14,color:"var(--purple-t)",fontStyle:"italic",lineHeight:1.7,margin:0,fontFamily:"var(--font-h)"}}>{selStory.mythos}</p>
+        </div>}
+        {selStory.link&&<a href={selStory.link} target="_blank" rel="noopener noreferrer" className="bb-btn primary" style={{textDecoration:"none",padding:"9px 16px"}}>Read original article →</a>}
       </div>
     </div>)}
   </div>);}
@@ -1262,30 +1409,107 @@ export default function App(){
   if(!user)return<SignInPage onSignIn={handleSignIn} lang={lang} setLang={setLang} t={t}/>;
   if(showDisc)return<DisclaimerPage onAccept={handleDisc} t={t} userName={user.name}/>;
 
-  // ── MAIN SHELL ───────────────────────────────────────────────
+  // ── BLOOMBERG-STYLE NAV ITEMS ────────────────────────────────
+  const navItems=[
+    {id:"dashboard",label:t.dashboard||"Dashboard"},
+    {id:"newsroom",label:t.newsroom||"Live"},
+    {id:"tracker",label:t.tracker||"Constitution"},
+    {id:"departments",label:t.departments||"Departments"},
+    {id:"states",label:t.states||"States"},
+    {id:"rights",label:t.rights||"My Rights"},
+    {id:"demoscore",label:t.demoScore||"Democracy Score"},
+    {id:"method",label:t.method||"Methodology"},
+  ];
+  const today=new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+
+  const alertsOn=notif?.enabled&&notif?.perm==="granted";
+  const alertsLabel=notif?.perm==="denied"?"🔕 Blocked":alertsOn?"🔔 Alerts on":"🔔 Enable alerts";
+  const isIOS=typeof navigator!=="undefined"&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const isStandalone=typeof window!=="undefined"&&(window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true);
+  const showIOSInstall=isIOS&&!isStandalone&&!notif?.supported;
+  const[showIOSHelp,setShowIOSHelp]=useState(false);
+  const handleAlerts=()=>{
+    if(showIOSInstall){setShowIOSHelp(true);return;}
+    if(!notif?.supported)return;
+    if(alertsOn)notif.disable();else notif.request();
+  };
+
+  const latestFive=useMemo(()=>[...stories].filter(s=>s.approved).sort((a,b)=>b.ts-a.ts).slice(0,5),[stories]);
+  const topStory=latestFive[0];
+
+  // ── MAIN SHELL — Bloomberg stacked layout ────────────────────
   return(
     <div className="shell">
-      <Sidebar
-        page={page} setPage={setPage} pending={pending}
-        t={t} user={user} lang={lang} setLang={setLang}
-        mode={mode} setMode={setMode}
-      />
-      <div className="main-area">
-        <Topbar
-          natScore={natScore} stScore={stScore} distScore={distScore}
-          fetching={fetching} onFetch={doFetch}
-          autoOn={autoOn} setAutoOn={setAutoOn} rl={rl}
-          fScope={fScope} setFScope={setFScope}
-          fState={fState} setFState={setFState}
-          fDist={fDist} setFDist={setFDist}
-          t={t} countdown={countdown} mode={mode} notif={notif}
-        />
-        <LiveTicker
-          stories={stories} natScore={natScore}
-          stScore={stScore} distScore={distScore}
-          countdown={countdown} autoOn={autoOn}
-        />
-        <main className="page">
+      {/* Amber top strip */}
+      <div className="top-strip">
+        <div className="top-strip-title">DTN Mythos · Constitutional Intelligence</div>
+        <div className="top-strip-date hide-xs">{today}</div>
+      </div>
+
+      {/* Black masthead */}
+      <div className="masthead">
+        <div className="logo-masthead" onClick={()=>setPage("dashboard")}>
+          DTN Mythos<span className="logo-edition">India Edition</span>
+        </div>
+        <div className="masthead-actions">
+          <select value={lang} onChange={e=>setLang(e.target.value)} style={{background:"#1a1a1a",color:"#fff",border:"1px solid #333",fontSize:12,padding:"5px 8px",borderRadius:2,fontFamily:"var(--font-b)",cursor:"pointer"}}>
+            {Object.entries(LANG).map(([k,l])=>(<option key={k} value={k}>{l.flag} {l.name}</option>))}
+          </select>
+          <button className="masthead-signin" onClick={()=>{if(confirm("Sign out?")){localStorage.removeItem("dtn_user");setUser(null);}}}>
+            {user.name}
+          </button>
+          {(notif?.supported||showIOSInstall)&&<button className={"alerts-btn"+(alertsOn?" enabled":"")} onClick={handleAlerts} disabled={notif?.perm==="denied"}>
+            <span className="hide-xs">{showIOSInstall?"📱 Install for alerts":alertsLabel}</span>
+            <span className="only-xs">{showIOSInstall?"📱":"🔔"}</span>
+          </button>}
+          <button className="bb-btn primary" onClick={doFetch} disabled={fetching||rl}>
+            <span style={fetching?{display:"inline-block",animation:"spin 1s linear infinite"}:{}}>{fetching?"⟳":"⚡"}</span>
+            <span className="hide-xs">{t.fetch||"Fetch"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* White navbar */}
+      <nav className="navbar">
+        <span className="nav-live">Live</span>
+        {navItems.map((item,i)=>(
+          <React.Fragment key={item.id}>
+            <button className={"nav-item"+(page===item.id?" active":"")} onClick={()=>setPage(item.id)}>{item.label}</button>
+            {i<navItems.length-1&&<span className="nav-sep">·</span>}
+          </React.Fragment>
+        ))}
+        <div className="nav-scores">
+          <span className="nav-score-chip">National <span className="nav-score-num" style={{color:sColor(natScore)}}>{natScore}</span></span>
+          <span className="nav-score-chip">{fState||"State"} <span className="nav-score-num" style={{color:sColor(stScore)}}>{stScore}</span></span>
+          <span className="nav-score-chip">District <span className="nav-score-num" style={{color:sColor(distScore)}}>{distScore}</span></span>
+          <button className="bb-btn" onClick={()=>setAutoOn(a=>!a)} style={{background:autoOn?"var(--green-s)":"#fff",color:autoOn?"var(--green-t)":"var(--t1)",borderColor:autoOn?"var(--green-b)":"var(--border2)"}}>AUTO{autoOn?` ↻${countdown}s`:""}</button>
+        </div>
+      </nav>
+
+      {/* Ticker */}
+      {topStory&&<div className="ticker-bar">
+        <span className="ticker-live-pill">LIVE</span>
+        <span className="ticker-score">{topStory.direction==="positive"?"+":"-"}{Math.abs(topStory.aiScore||topStory.delta||0)}</span>
+        <span className="ticker-text">{topStory.headline} · {DEPT[topStory.institution]?.name||(topStory.storyType||"general")}</span>
+      </div>}
+
+      {/* iOS help modal */}
+      {showIOSHelp&&<div onClick={()=>setShowIOSHelp(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+        <div onClick={e=>e.stopPropagation()} style={{background:"#fff",border:"1px solid var(--border2)",borderRadius:2,padding:26,maxWidth:440,width:"100%"}}>
+          <div style={{fontFamily:"var(--font-h)",fontSize:19,fontWeight:700,color:"var(--t1)",marginBottom:14,display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>📱</span>Enable alerts on iPhone</div>
+          <p style={{fontSize:13,color:"var(--t2)",lineHeight:1.65,marginBottom:14}}>Apple requires installing this site as an app before notifications work. Takes 10 seconds:</p>
+          <ol style={{paddingLeft:20,marginBottom:18}}>
+            <li style={{fontSize:13,color:"var(--t1)",marginBottom:8,lineHeight:1.55,fontFamily:"var(--font-h)"}}>Tap the <b>Share</b> button <span style={{background:"var(--blue-s)",color:"var(--blue-t)",padding:"1px 7px",borderRadius:2,fontFamily:"var(--font-b)",fontWeight:600}}>⎋</span> at the bottom of Safari</li>
+            <li style={{fontSize:13,color:"var(--t1)",marginBottom:8,lineHeight:1.55,fontFamily:"var(--font-h)"}}>Scroll and tap <b>"Add to Home Screen"</b></li>
+            <li style={{fontSize:13,color:"var(--t1)",marginBottom:8,lineHeight:1.55,fontFamily:"var(--font-h)"}}>Tap <b>Add</b> in top right</li>
+            <li style={{fontSize:13,color:"var(--t1)",marginBottom:8,lineHeight:1.55,fontFamily:"var(--font-h)"}}>Open <b>DTN Mythos</b> from your home screen</li>
+            <li style={{fontSize:13,color:"var(--t1)",lineHeight:1.55,fontFamily:"var(--font-h)"}}>You'll now see <b>🔔 Enable alerts</b> in the masthead</li>
+          </ol>
+          <button onClick={()=>setShowIOSHelp(false)} className="bb-btn primary" style={{width:"100%",padding:"10px"}}>Got it</button>
+        </div>
+      </div>}
+
+      <main className="page">
           {page==="dashboard"&&
             <Dashboard
               natScore={natScore} stScore={stScore} distScore={distScore}
@@ -1293,6 +1517,7 @@ export default function App(){
               fState={fState} fDist={fDist}
               t={t} mode={mode}
               setPage={setPage} setFScope={setFScope}
+              latestFive={latestFive}
             />}
           {page==="newsroom"&&
             <NewsroomPage
@@ -1300,6 +1525,7 @@ export default function App(){
               onFetch={doFetch} onAI={()=>runUpgrades(stories)}
               autoOn={autoOn} countdown={countdown}
               t={t} mode={mode} fState={fState}
+              natScore={natScore} stScore={stScore} distScore={distScore}
             />}
           {page==="tracker"&&
             <ConstitutionTrackerPage stories={stories} t={t} mode={mode}/>}
@@ -1327,22 +1553,7 @@ export default function App(){
             <ReviewPage stories={stories} onReview={handleReview} t={t} mode={mode}/>}
           {page==="method"&&<MethodPage t={t}/>}
           {page==="about"&&<AboutPage t={t}/>}
-        </main>
-      </div>
-
-      {/* Mobile bottom nav */}
-      <nav className="mobile-nav">
-        {MOB_NAV.map(item=>(
-          <button
-            key={item.id}
-            className={"mobile-nav-btn"+(page===item.id?" active":"")}
-            onClick={()=>setPage(item.id)}
-          >
-            <span className="m-icon">{item.icon}</span>
-            <span>{(t[item.tk]||item.tk).slice(0,6)}</span>
-          </button>
-        ))}
-      </nav>
+      </main>
 
       <Toasts items={toasts}/>
     </div>
