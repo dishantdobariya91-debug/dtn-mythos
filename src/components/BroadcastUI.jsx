@@ -414,64 +414,81 @@ export function PodcastHub({ t }) {
   );
 }
 
-// ─── 9. PodcastCard ─────────────────────────────────────────────────
-export function PodcastCard({ podcast, onEmbedError }) {
-  const [open, setOpen] = useState(false);
-  const p = podcast;
+function PodcastCard({ podcast }) {
   return (
-    <article className="podcast-card">
-      <div className="podcast-card-head">
-        <div className="podcast-card-meta">
-          <h3 className="podcast-card-name">{p.name}</h3>
-          <div className="podcast-card-host">{p.host}</div>
-        </div>
-        <a
-          className="podcast-card-ext"
-          href={p.websiteUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={"Open " + p.name + " website in a new tab"}
-        >↗</a>
+    
+      href={podcast.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="podcast-card"
+      style={{
+        display: 'block',
+        padding: '28px',
+        borderRadius: '14px',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        textDecoration: 'none',
+        color: 'inherit',
+        transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
+        cursor: 'pointer',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.borderColor = podcast.color;
+        e.currentTarget.style.boxShadow = `0 12px 32px ${podcast.color}22`;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <h3 style={{ margin: 0, fontSize: '26px', fontWeight: 900, lineHeight: 1.15, fontFamily: 'var(--font-h)', color: 'var(--t1)' }}>
+          {podcast.name}
+        </h3>
+        <span style={{ fontSize: '20px', color: podcast.color, transform: 'translateY(2px)' }}>↗</span>
       </div>
-      <div className="podcast-card-topics">
-        {p.topics.map(tk => {
-          const meta = TOPIC_META[tk];
-          if (!meta) return null;
-          return (
-            <span
-              key={tk}
-              className="podcast-topic-tag"
-              style={{ background: meta.color + "18", color: meta.color, borderColor: meta.color + "33" }}
-            >{meta.label}</span>
-          );
-        })}
+      <div style={{ fontSize: '13px', color: 'var(--t3)', marginBottom: '14px', fontWeight: 600 }}>
+        {podcast.host}
       </div>
-      <p className="podcast-card-desc">{p.description}</p>
-      <button
-        type="button"
-        className="podcast-card-play"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-      >
-        {open ? "Hide player" : "▶ Play latest"}
-      </button>
-      {open && (
-        <div className="podcast-embed">
-          <iframe
-            src={p.embedUrl}
-            title={p.name + " — podcast player"}
-            loading="lazy"
-            allow="encrypted-media; fullscreen; clipboard-write"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            onError={onEmbedError}
-          />
-        </div>
-      )}
-    </article>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+        {podcast.topics.map(t => (
+          <span key={t} style={{
+            fontSize: '10.5px',
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            padding: '3px 9px',
+            borderRadius: '99px',
+            background: `${podcast.color}15`,
+            border: `1px solid ${podcast.color}35`,
+            color: podcast.color,
+          }}>{t}</span>
+        ))}
+      </div>
+      <p style={{ fontSize: '15.5px', lineHeight: 1.55, color: 'var(--t2)', margin: '0 0 18px 0' }}>
+        {podcast.description}
+      </p>
+      <div style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 18px',
+        borderRadius: '8px',
+        background: podcast.color,
+        color: '#fff',
+        fontSize: '13.5px',
+        fontWeight: 800,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+      }}>
+        <span>▶</span>
+        <span>Listen on {podcast.platform}</span>
+      </div>
+    </a>
   );
 }
-
 // ─── Beep toggle hook — for Sprint B ────────────────────────────────
 // Beep on new critical story. Must be user-enabled first (autoplay policy).
 export function useSoundAlert(stories) {

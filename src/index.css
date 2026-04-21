@@ -1316,3 +1316,152 @@ body:has(.shell) #initial-loader { display: none !important; }
   background: var(--support-green);
   color: #fff; border-color: var(--support-green);
 }
+
+/* ────────────────────────────────────────────────────────────
+   v12.0.2 — Broadcast typography scale-up
+   Overrides earlier sizes for true NYT/BBC-impact feel
+──────────────────────────────────────────────────────────── */
+
+/* Masthead — the big "DTN MYTHOS" at top */
+.broadcast-masthead,
+header [class*="masthead"],
+header h1 {
+  font-family: var(--font-h) !important;
+  font-size: clamp(44px, 7.5vw, 80px) !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 0.92 !important;
+}
+
+/* Page titles — "Constitutional Journalism", "Podcasts", etc */
+main h1,
+main h2:first-of-type,
+[class*="page-title"],
+[class*="pageTitle"] {
+  font-size: clamp(32px, 5.5vw, 56px) !important;
+  font-weight: 900 !important;
+  line-height: 1.02 !important;
+  letter-spacing: -0.022em !important;
+  font-family: var(--font-h) !important;
+}
+
+/* Subtitle line under page title */
+main h1 + p,
+main h2:first-of-type + p,
+[class*="subtitle"] {
+  font-size: clamp(15px, 2vw, 18px) !important;
+  line-height: 1.5 !important;
+}
+
+/* Section labels like "LIVE NEWSROOM", "LATEST" */
+[class*="section-label"],
+[class*="eyebrow"] {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.16em !important;
+}
+
+/* Story card headlines */
+article h3,
+[class*="story-card"] h3,
+[class*="storyCard"] h3,
+[class*="headline"] h3 {
+  font-size: clamp(22px, 3.2vw, 34px) !important;
+  font-weight: 900 !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.01em !important;
+  font-family: var(--font-h) !important;
+}
+
+/* Story body / "Why it matters" */
+article p,
+[class*="story-body"],
+[class*="why-matters"] p {
+  font-size: 17px !important;
+  line-height: 1.65 !important;
+}
+
+/* Latest sidebar items */
+[class*="latest-item"] a,
+[class*="latest-item"] div,
+aside [class*="item"] {
+  font-size: 15px !important;
+  line-height: 1.38 !important;
+  font-weight: 600 !important;
+}
+
+/* Ticker — make the scrolling text bigger */
+.kinetic-text,
+[class*="ticker-text"],
+[class*="ticker"] span {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Navigation tabs */
+nav button,
+nav a,
+[class*="nav-tab"] {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Score displays — National 38, Gujarat 34 */
+[class*="score"] [class*="value"],
+[class*="national"] span:last-child,
+[class*="gujarat"] span:last-child {
+  font-size: clamp(22px, 2.8vw, 30px) !important;
+  font-weight: 900 !important;
+  font-family: var(--font-h) !important;
+}
+
+/* Filter chips — All / Critical / Support / etc */
+[class*="filter-chip"],
+[class*="filterChip"] {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  padding: 10px 18px !important;
+}
+
+/* Badges — CONCERN · JUDICIARY */
+[class*="badge"] {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Podcast card titles */
+[class*="podcast-card"] h3,
+[class*="podcast"] h3 {
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+}
+
+/* Podcast card host/description */
+[class*="podcast-card"] p {
+  font-size: 15.5px !important;
+  line-height: 1.55 !important;
+}
+
+/* Mobile adjust — drop ceiling but keep readability */
+@media (max-width: 640px) {
+  .broadcast-masthead,
+  header [class*="masthead"],
+  header h1 {
+    font-size: 38px !important;
+  }
+  main h1,
+  main h2:first-of-type {
+    font-size: 28px !important;
+  }
+  article h3,
+  [class*="story-card"] h3 {
+    font-size: 22px !important;
+  }
+  [class*="podcast-card"] h3 {
+    font-size: 21px !important;
+  }
+}
