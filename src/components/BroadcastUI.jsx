@@ -34,10 +34,6 @@ const ICON = {
 };
 
 // ─── 1. BroadcastMasthead ───────────────────────────────────────────
-// Replaces the black masthead + nav + amber strip. Broadcast-era newspaper
-// feel: big Playfair wordmark, date line, amber underline, integrated
-// OnAirBadge. Wraps — not replaces — the existing masthead children so
-// language picker, sign-in, alerts, fetch button still work.
 export function BroadcastMasthead({ children, today, stories }) {
   return (
     <div className="bcast-masthead">
@@ -59,7 +55,6 @@ export function BroadcastMasthead({ children, today, stories }) {
 }
 
 // ─── 2. OnAirBadge ──────────────────────────────────────────────────
-// Pulsing red dot + "ON AIR" text when latest story arrived within 60s.
 export function OnAirBadge({ stories }) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const i = setInterval(() => setTick(t => t + 1), 5000); return () => clearInterval(i); }, []);
@@ -81,8 +76,6 @@ export function OnAirBadge({ stories }) {
 }
 
 // ─── 3. BreakingBanner ──────────────────────────────────────────────
-// Red bar that slides in when |aiScore| >= 3, confidence >= moderate,
-// and the story is < 90s old. Auto-dismisses after 20s.
 export function BreakingBanner({ stories, onOpen }) {
   const [dismissed, setDismissed] = useState(new Set());
   const [shownAt, setShownAt] = useState({});
@@ -129,7 +122,6 @@ export function BreakingBanner({ stories, onOpen }) {
 }
 
 // ─── 4. KineticTicker ───────────────────────────────────────────────
-// Letter-by-letter reveal ticker. Respects prefers-reduced-motion.
 export function KineticText({ text, speed = 40 }) {
   const [revealed, setRevealed] = useState(0);
   const prefersReduced = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -160,8 +152,6 @@ export function KineticTicker({ stories, natScore, sColor }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
     if (approved.length <= 1) return;
-    // Slower cycle than v11 ticker — kinetic reveal needs breathing room.
-    // Reveal ~40ms/char + 3s hold + cycle = ~6s per headline of typical length.
     const headlineLen = approved[idx]?.headline?.length || 60;
     const ms = headlineLen * 40 + 3000;
     const t = setTimeout(() => setIdx(i => (i + 1) % approved.length), ms);
@@ -191,7 +181,6 @@ export function KineticTicker({ stories, natScore, sColor }) {
 }
 
 // ─── 5. ScoreDisplay ────────────────────────────────────────────────
-// Big Playfair 72px score with direction arrow + delta.
 export function ScoreDisplay({ score, delta, label, sColor }) {
   const col = (sColor && sColor(score)) || "#BA7517";
   const d = typeof delta === "number" ? delta : 0;
@@ -212,8 +201,6 @@ export function ScoreDisplay({ score, delta, label, sColor }) {
 }
 
 // ─── 6. ListenButton ────────────────────────────────────────────────
-// SpeechSynthesis "Listen to this story" button.
-// Handles Chrome's async voice-load quirk.
 export function ListenButton({ text, compact = false }) {
   const [speaking, setSpeaking] = useState(false);
   const [voicesReady, setVoicesReady] = useState(false);
@@ -228,7 +215,6 @@ export function ListenButton({ text, compact = false }) {
   }, []);
 
   useEffect(() => () => {
-    // Cancel on unmount so nav-away stops playback.
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try { speechSynthesis.cancel(); } catch {}
     }
@@ -255,7 +241,6 @@ export function ListenButton({ text, compact = false }) {
     setSpeaking(true);
   }, [text, speaking]);
 
-  // Feature detection: hide entirely if unsupported.
   if (typeof window !== "undefined" && !("speechSynthesis" in window)) return null;
   if (!text) return null;
 
@@ -278,8 +263,6 @@ export function ListenButton({ text, compact = false }) {
 }
 
 // ─── 7. AnimatedIllustration ────────────────────────────────────────
-// Simple vector illustrations with CSS animations.
-// All animations gated by prefers-reduced-motion in index.css.
 export function AnimatedIllustration({ type = "scales", size = 180 }) {
   const props = { width: size, height: size * 0.55, viewBox: "0 0 600 330", xmlns: "http://www.w3.org/2000/svg" };
 
@@ -332,12 +315,10 @@ export function AnimatedIllustration({ type = "scales", size = 180 }) {
     );
   }
 
-  // Default: empty glyph
   return <svg {...props} aria-hidden="true" />;
 }
 
 // ─── 8. PodcastHub ──────────────────────────────────────────────────
-// Grid of podcast cards with topic filter pills.
 export function PodcastHub({ t }) {
   const [activeTopic, setActiveTopic] = useState("all");
   const [list, setList] = useState(PODCASTS);
@@ -489,8 +470,8 @@ function PodcastCard({ podcast }) {
     </a>
   );
 }
+
 // ─── Beep toggle hook — for Sprint B ────────────────────────────────
-// Beep on new critical story. Must be user-enabled first (autoplay policy).
 export function useSoundAlert(stories) {
   const [soundOn, setSoundOn] = useState(() => {
     try { return localStorage.getItem("dtn_sound") === "1"; } catch { return false; }
@@ -503,7 +484,6 @@ export function useSoundAlert(stories) {
       const next = !prev;
       try { localStorage.setItem("dtn_sound", next ? "1" : "0"); } catch {}
       if (next) {
-        // Prime AudioContext on user gesture so later beeps aren't blocked.
         try {
           const AC = window.AudioContext || window.webkitAudioContext;
           if (AC && !audioCtxRef.current) audioCtxRef.current = new AC();
@@ -524,7 +504,6 @@ export function useSoundAlert(stories) {
     if (lastBeepIdRef.current === newest.id) return;
     lastBeepIdRef.current = newest.id;
 
-    // Only beep for fresh + significant stories (not historical fills)
     if (Date.now() - newest.ts > 20_000) return;
     const score = Math.abs(newest.aiScore || newest.delta || 0);
     if (score < 3) return;
@@ -553,13 +532,12 @@ export function useSoundAlert(stories) {
 }
 
 // ─── Viewing counter — synthetic but deterministic per session ──────
-// "127 people reading now" ambient counter. Starts 80-140, wanders ±6 every 12s.
 export function ViewingCounter() {
   const [count, setCount] = useState(() => 80 + Math.floor(Math.random() * 60));
   useEffect(() => {
     const t = setInterval(() => {
       setCount(c => {
-        const step = Math.floor(Math.random() * 13) - 6; // -6..+6
+        const step = Math.floor(Math.random() * 13) - 6;
         const next = Math.max(50, Math.min(500, c + step));
         return next;
       });
