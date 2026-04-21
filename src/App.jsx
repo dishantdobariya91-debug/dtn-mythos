@@ -1,5 +1,6 @@
 import React,{useState,useEffect,useCallback,useRef,useMemo}from"react";
 import{AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,RadarChart,Radar,PolarGrid,PolarAngleAxis,BarChart,Bar,Cell}from"recharts";
+import{BroadcastMasthead,BreakingBanner,KineticTicker,ListenButton,AnimatedIllustration,PodcastHub,useSoundAlert,ViewingCounter}from"./components/BroadcastUI";
 const GROQ=import.meta.env.VITE_GROQ_KEY||"";
 
 // ── MULTI-LANGUAGE ────────────────────────────────────────────
@@ -199,6 +200,34 @@ function classify(h,b){
   const indiaAnchor=/\b(?:india|indian|delhi|new delhi|mumbai|bengaluru|bangalore|chennai|kolkata|hyderabad|ahmedabad|pune|lucknow|jaipur|bhopal|patna|chandigarh|guwahati|thiruvananthapuram|ranchi|raipur|dehradun|shimla|gandhinagar|kerala|tamil nadu|karnataka|maharashtra|gujarat|rajasthan|uttar pradesh|\bup\b|bihar|odisha|west bengal|punjab|haryana|telangana|andhra|assam|tripura|meghalaya|mizoram|manipur|nagaland|arunachal|sikkim|goa|jharkhand|chhattisgarh|himachal|uttarakhand|madhya pradesh|j&k|jammu|kashmir|ladakh|modi|rahul|gandhi|sonia|kharge|yogi|mamata|stalin|kejriwal|shah|sitharaman|jaishankar|naidu|nitish|siddaramaiah|fadnavis|adityanath|bjp|congress|\baap\b|tmc|dmk|aiadmk|shiv sena|ncp|rjd|jdu|cpi|cpm|lok sabha|rajya sabha|supreme court|high court|\bsc \b|\bhc \b|chief justice|cji|eci|election commission|rbi|sebi|cag|niti aayog|nhrc|nalsa|iaf|indian army|indian navy|coast guard|prime minister|cabinet|union minister|home minister|finance minister|law minister|external affairs|president of india|droupadi murmu|rashtrapati bhavan|raj bhavan|parliament|constitution|president ram|ambedkar|nehru|patel)\b/i;
   const isNotIndia=!indiaAnchor.test(txt);
 
+  // === v12 ADDITIONS — v11 classifier patterns ===
+
+  // Skip 7 — Weather / natural-phenomena forecasts without accountability angle
+  // Pure forecasts ("cyclone to hit coast", "imd predicts heavy rain") are not constitutional.
+  // BUT deaths, govt response failure, evacuation mismanagement IS constitutional.
+  const weather=/\b(?:weather forecast|monsoon (?:update|to hit|intensifies|arrives|withdraws)|cyclone (?:to hit|warning|alert|approaches|intensifies)|heavy rain (?:expected|predicted|likely)|imd (?:predicts|warns|forecast|issues)|heatwave (?:to intensify|warning|alert)|snow (?:forecast|expected|alert)|fog advisory|temperature (?:to|expected to) (?:rise|drop|soar))\b/i;
+  const hasWeatherAccountability=/\b(?:death|killed|dead|drowned|relief (?:delayed|denied|siphoned)|evacuation (?:failed|delayed|mismanaged)|ndrf (?:delayed|refused)|disaster (?:fund|mismanag)|compensation (?:denied|pending)|cag audit|accountab)\b/i;
+  const isWeather=weather.test(txt)&&!hasWeatherAccountability.test(txt);
+
+  // Skip 8 — Routine govt announcements / ribbon-cutting (no constitutional substance)
+  const announcement=/\b(?:launches? (?:scheme|yojana|portal|app|website|initiative)|inaugurates? (?:project|bridge|highway|building|memorial|statue|flyover)|announces? (?:grant|aid|package|fund disbursement)|flags? off|hands? over keys|unveils? memorial|lays? foundation stone|dedicates? to nation)\b/i;
+  const hasAnnouncementIssue=/\b(?:challenged|stayed|pil |protest|caa|nrc|uniform civil code|upa|surveillance|aadhaar mandat|privacy)\b/i;
+  const isAnnouncement=announcement.test(txt)&&!hasAnnouncementIssue.test(txt);
+
+  // Skip 9 — Science / discovery / research publications (not constitutional unless tied to policy)
+  const scienceDiscovery=/\b(?:new species (?:\w+\s+){0,4}(?:found|discovered|identified|named)|astronomers? (?:find|discover|spot|identify)|researchers? (?:find|identify|discover|map|publish)|scientists? (?:announce|discover|develop|find)|study finds|research paper|published in (?:nature|science|lancet|cell|pnas|bmj)|genome sequenc|fossil (?:found|discovered)|telescope (?:spots|captures))\b/i;
+  const isScienceDiscovery=scienceDiscovery.test(h_lower);
+
+  // Skip 10 — "Watch:" / "Viral:" short-form clips without reported-story substance
+  const isWatchClip=/^(?:watch|viral|seen this|video|clip)\s*[:|\u2013\u2014-]/i.test(h||"");
+
+  // Skip 11 — Generic crime news without state-level accountability angle
+  // Lone-perpetrator crime (robbery, road rage, dowry, etc.) is rarely constitutional on its own.
+  // BUT custodial death, encounter, caste atrocity, bulldozing, mob lynching, communal violence ARE.
+  const crimeNews=/\b(?:robbed|robbery|stabbed|chain snatch|road rage|burglary|car stolen|bike stolen|mobile theft|pickpocket|atm fraud|online fraud victim|dowry death|dowry harassment|rape accused|murder accused|killed (?:wife|husband|lover))\b/i;
+  const hasStateAngleCrime=/\b(?:custody death|custodial (?:death|torture|rape)|encounter (?:killing|death|fake)|police brutality|police fir(?:ing|ed)|lathi charge|caste atrocity|sc\/st atrocity|bulldoz|demolition drive|mob lynch|mob violence|communal violence|honor killing by khap|khap panchayat|minor (?:raped|killed) by (?:police|officer|constable)|tribal (?:killed|evict|displace)|dalit (?:killed|atrocity|assault)|muslim (?:killed|lynch|mob))\b/i;
+  const isGenericCrime=crimeNews.test(txt)&&!hasStateAngleCrime.test(txt);
+
   // If ANY skip reason matches → mark story as skipped and return early
   let skipReason=null;
   if(futureEvent)skipReason="Future event — nothing has happened to analyse yet";
@@ -207,6 +236,11 @@ function classify(h,b){
   else if(isJustInsult)skipReason="Political rhetoric without policy substance — protected Art.19 speech";
   else if(isRoutine)skipReason="Routine procedural news — accountability mechanism working normally";
   else if(isListicle)skipReason="Explainer/listicle content — no actual news event to analyse";
+  else if(isWeather)skipReason="Weather forecast without accountability angle — not constitutional";
+  else if(isAnnouncement)skipReason="Routine government announcement — no constitutional question raised";
+  else if(isScienceDiscovery)skipReason="Scientific discovery or research — not a constitutional event";
+  else if(isWatchClip)skipReason="Short-form video/clip content — no reported-story substance";
+  else if(isGenericCrime)skipReason="Generic crime without state-accountability angle — not constitutional";
   else if(isNotIndia)skipReason="Not related to Indian constitutional matters";
 
   if(skipReason){
@@ -229,16 +263,20 @@ function classify(h,b){
   else if(/home minister|home ministry|amit shah|central police/.test(txt))inst="home";
   else if(/parliament|lok sabha|rajya sabha|bill |amendment|speaker/.test(txt))inst="law";
   else if(/election commission|eci|ballot|voter|electoral/.test(txt))inst="ec";
-  else if(/police|arrested|detained|custody|encounter|cops|constable/.test(txt))inst="police";
+  // v12 reorder: media signals take precedence over generic police keywords
+  // so a "journalist shot by police" story correctly files as Media, not Police.
   else if(/journalist|reporter|media|press|editor|news channel/.test(txt))inst="media";
+  else if(/police|arrested|detained|custody|encounter|cops|constable/.test(txt))inst="police";
   else if(/army|military|afspa|armed force/.test(txt))inst="defence";
   else if(/panchayat|municipality|gram sabha|local body/.test(txt))inst="rural";
   else if(/education|school|university|teacher/.test(txt))inst="education";
   else if(/hospital|health|doctor|medicine|drug/.test(txt))inst="health";
   else if(/forest|environment|tribal|adivasi|displacement/.test(txt))inst="environment";
   else if(/minority|muslim|christian|church|mosque|religious/.test(txt))inst="minority";
-  else if(/finance|income tax|ed |cbi|money laundering|bank/.test(txt))inst="finance";
-  else if(/government|ministry|cm |chief minister|governor/.test(txt))inst="home";
+  // v12 FIX: "ed " used to match any word ending in "ed " (killED, raideD…) causing
+  // random stories to be labelled "Finance". Now require ED-in-context-of-agency-action.
+  else if(/\b(?:enforcement directorate|ed raid|ed arrest|ed probe|ed summon|ed attach|ed chargesheet|ed officer|ed action|ed case|pmla case|income tax (?:raid|notice|probe)|cbi (?:raid|arrest|probe|summon|chargesheet|case)|money laundering (?:case|charge|probe)|bank (?:fraud|scam|collapse))\b/.test(txt))inst="finance";
+  else if(/\b(?:government|union government|central government|state government|ministry of|\bcm |chief minister|governor of)\b/.test(txt))inst="home";
   // Scope
   if(/village|district|taluk|block/.test(txt))scope="local";
   else if(Object.keys(STATE_BASELINES).some(s=>txt.includes(s.toLowerCase())))scope="state";
@@ -796,15 +834,19 @@ function StoryCardBB({s,t,onSelect,hero}){
         </div>
       </div>
       <div>
-        <div className="hero-label">{lab.label} · {dept}</div>
+        <div className="hero-label">{lab.label}{d?" · "+d.name:""}</div>
         <h1 className="hero-headline" onClick={onClick}>{s.headline}</h1>
         {s.citizenExplanation&&<p className="hero-summary">{s.citizenExplanation.slice(0,220)}{s.citizenExplanation.length>220?"…":""}</p>}
         <div className="badge-row">
           <span className={"bb-badge "+lab.cls}>{lab.label} · {scoreSign}{wt} pts</span>
-          <span className="bb-badge dept">{d?.icon?d.icon+" ":""}{dept}</span>
+          {d&&<span className="bb-badge dept">{d.icon?d.icon+" ":""}{d.name}</span>}
           {ev&&<span className="bb-badge warning">{ev.label} · {Math.round((ev.weight||0.4)*100)}%</span>}
           {s.courtStatus&&s.courtStatus!=="none"&&<span className="bb-badge info">{COURT_STATUSES[s.courtStatus]?.label||s.courtStatus}</span>}
           {s.aiDone&&<span className="bb-badge purple">✦ AI</span>}
+        </div>
+        {/* v12: Listen button for the hero story */}
+        <div style={{marginTop:12}}>
+          <ListenButton text={(s.headline||"")+". "+(s.citizenExplanation||"")}/>
         </div>
       </div>
     </div>);
@@ -814,7 +856,7 @@ function StoryCardBB({s,t,onSelect,hero}){
     <div className="story-card-img">
       <img src={img} alt="" loading="lazy" onError={e=>{e.target.src="/api/fallback-image?topic="+(s.storyType||"")+"&dept="+(s.institution||"")+"&id="+s.id+"&w=800";}}/>
     </div>
-    <div className={"story-card-label lbl-"+lab.cls}>{lab.label} · {dept}</div>
+    <div className={"story-card-label lbl-"+lab.cls}>{lab.label}{d?" · "+d.name:""}</div>
     <h3 className="story-card-headline">{s.headline}</h3>
     <div className="story-card-meta">
       <span className={"story-card-score "+scoreClass}>{scoreSign}{wt} pts</span>
@@ -1787,6 +1829,8 @@ export default function App(){
   const{toasts,add:toast}=useToasts();
   const notif=useNotifications();
   const countRef=useRef(null);
+  // v12 Sprint B — sound alert hook (user must enable; sits in masthead)
+  const{soundOn,toggleSound}=useSoundAlert(stories);
 
   useEffect(()=>{
     localStorage.setItem("dtn_lang",lang);
@@ -1983,6 +2027,7 @@ export default function App(){
     {id:"departments",label:t.departments||"Departments"},
     {id:"states",label:t.states||"States"},
     {id:"rights",label:t.rights||"My Rights"},
+    {id:"podcasts",label:t.podcasts||"Podcasts"},
     {id:"demoscore",label:t.demoScore||"Democracy Score"},
     {id:"method",label:t.method||"Methodology"},
   ];
@@ -2006,34 +2051,30 @@ export default function App(){
   // ── MAIN SHELL — Bloomberg stacked layout ────────────────────
   return(
     <div className="shell">
-      {/* Amber top strip */}
-      <div className="top-strip">
-        <div className="top-strip-title">DTN Mythos · Constitutional Intelligence</div>
-        <div className="top-strip-date hide-xs">{today}</div>
-      </div>
+      {/* v12: Broadcast masthead — replaces v11 top-strip + black masthead */}
+      <BroadcastMasthead today={today} stories={stories}>
+        <select value={lang} onChange={e=>setLang(e.target.value)} style={{background:"#fff",color:"var(--ink-pure)",border:"1px solid var(--border2)",fontSize:12,padding:"5px 8px",borderRadius:3,fontFamily:"var(--font-b)",cursor:"pointer"}}>
+          {Object.entries(LANG).map(([k,l])=>(<option key={k} value={k}>{l.flag} {l.name}</option>))}
+        </select>
+        <button className="masthead-signin" onClick={()=>{if(confirm(t.signOutQ)){localStorage.removeItem("dtn_user");setUser(null);}}}>
+          {user.name}
+        </button>
+        {(notif?.supported||showIOSInstall)&&<button className={"alerts-btn"+(alertsOn?" enabled":"")} onClick={handleAlerts} disabled={notif?.perm==="denied"}>
+          <span className="hide-xs">{showIOSInstall?"📱 Install for alerts":alertsLabel}</span>
+          <span className="only-xs">{showIOSInstall?<Icon name="smartphone" size={14}/>:<Icon name="bell" size={14}/>}</span>
+        </button>}
+        <button className={"sound-toggle"+(soundOn?" on":"")} onClick={toggleSound} title={soundOn?"Sound alerts ON — click to mute":"Enable sound alerts"}>
+          {soundOn?"🔊":"🔇"}<span className="hide-xs">{soundOn?"Sound on":"Sound"}</span>
+        </button>
+        <ViewingCounter/>
+        <button className="bb-btn primary" onClick={doFetch} disabled={fetching||rl}>
+          <span style={fetching?{display:"inline-block",animation:"spin 1s linear infinite"}:{}}>{fetching?"⟳":"⚡"}</span>
+          <span className="hide-xs">{t.fetch||"Fetch"}</span>
+        </button>
+      </BroadcastMasthead>
 
-      {/* Black masthead */}
-      <div className="masthead">
-        <div className="logo-masthead" onClick={()=>setPage("dashboard")}>
-          DTN Mythos<span className="logo-edition">India Edition</span>
-        </div>
-        <div className="masthead-actions">
-          <select value={lang} onChange={e=>setLang(e.target.value)} style={{background:"#1a1a1a",color:"#fff",border:"1px solid #333",fontSize:12,padding:"5px 8px",borderRadius:2,fontFamily:"var(--font-b)",cursor:"pointer"}}>
-            {Object.entries(LANG).map(([k,l])=>(<option key={k} value={k}>{l.flag} {l.name}</option>))}
-          </select>
-          <button className="masthead-signin" onClick={()=>{if(confirm(t.signOutQ)){localStorage.removeItem("dtn_user");setUser(null);}}}>
-            {user.name}
-          </button>
-          {(notif?.supported||showIOSInstall)&&<button className={"alerts-btn"+(alertsOn?" enabled":"")} onClick={handleAlerts} disabled={notif?.perm==="denied"}>
-            <span className="hide-xs">{showIOSInstall?"📱 Install for alerts":alertsLabel}</span>
-            <span className="only-xs">{showIOSInstall?<Icon name="smartphone" size={14}/>:<Icon name="bell" size={14}/>}</span>
-          </button>}
-          <button className="bb-btn primary" onClick={doFetch} disabled={fetching||rl}>
-            <span style={fetching?{display:"inline-block",animation:"spin 1s linear infinite"}:{}}>{fetching?"⟳":"⚡"}</span>
-            <span className="hide-xs">{t.fetch||"Fetch"}</span>
-          </button>
-        </div>
-      </div>
+      {/* v12: Breaking banner — slides in on score-delta ≥3 stories <90s old */}
+      <BreakingBanner stories={stories} onOpen={()=>setPage("newsroom")}/>
 
       {/* White navbar */}
       <nav className="navbar">
@@ -2052,12 +2093,8 @@ export default function App(){
         </div>
       </nav>
 
-      {/* Ticker */}
-      {topStory&&<div className="ticker-bar">
-        <span className="ticker-live-pill">LIVE</span>
-        <span className="ticker-score">{topStory.direction==="positive"?"+":"-"}{Math.abs(topStory.aiScore||topStory.delta||0)}</span>
-        <span className="ticker-text">{topStory.headline} · {DEPT[topStory.institution]?.name||(topStory.storyType||"general")}</span>
-      </div>}
+      {/* v12: Kinetic letter-by-letter ticker (replaces v11 ticker-bar) */}
+      <KineticTicker stories={stories} natScore={natScore} sColor={sColor}/>
 
       {/* iOS help modal */}
       {showIOSHelp&&<div onClick={()=>setShowIOSHelp(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -2107,6 +2144,8 @@ export default function App(){
             <StatesPage stories={stories} t={t}/>}
           {page==="rights"&&
             <MyRightsPage scope={scope} setScope={setScope} t={t}/>}
+          {page==="podcasts"&&
+            <PodcastHub t={t}/>}
           {page==="journalist"&&
             <JournalistConsolePage
               stories={stories} t={t}
