@@ -109,7 +109,7 @@ const STORY_TYPES=["policy","law","court","policing","election","rights","corrup
 const CONFIDENCE_LEVELS={high:{label:"High",color:"#0FD47C"},moderate:{label:"Moderate",color:"#F5A623"},low:{label:"Low",color:"#F04A5A"},developing:{label:"Developing",color:"#94a3b8"}};
 const COURT_STATUSES={pending:{label:"Court Pending",color:"#F5A623"},stayed:{label:"Order Stayed",color:"#9B7DFF"},upheld:{label:"Upheld",color:"#0FD47C"},struck_down:{label:"Struck Down",color:"#F04A5A"},none:{label:"No Court Action",color:"#6B7FA0"}};
 
-const BASE=41,SK="dtn_v9";
+const BASE=41,SK="dtn_v10";
 const IMPACT={national:{national:1.0,state:0.4,local:0.2},state:{national:0.3,state:1.0,local:0.5},local:{national:0.1,state:0.2,local:1.0},district:{national:0.05,state:0.15,local:1.0}};
 const PAT={isolated:{label:"Isolated",color:"#64748b",dot:"○",bg:"rgba(100,116,139,0.08)",mult:1.0},emerging:{label:"Emerging",color:"#F5A623",dot:"◔",bg:"rgba(245,166,35,0.06)",mult:1.15},repeated:{label:"Repeated",color:"#f97316",dot:"◑",bg:"rgba(249,115,22,0.06)",mult:1.3},systemic:{label:"Systemic",color:"#F04A5A",dot:"●",bg:"rgba(240,74,90,0.06)",mult:1.5}};
 
@@ -153,6 +153,76 @@ function classify(h,b){
   const txt=((h||"")+" "+(b||"")).toLowerCase();
   let pillar="justice",dir="negative",delta=-2,violations=[],supports=[],pat="isolated",scope="national",inst=null;
   let evidenceLevel="single_source",storyType="policy",confidence="moderate",courtStatus="none",govResponse=null,citizenExplanation=null;
+
+  // === FIX 3 IN CLASSIFIER: SKIP OBVIOUSLY IRRELEVANT STORIES ===
+  // Returns a "skip" flag the caller uses to auto-hold instead of auto-approving.
+
+  // Skip 1 — Future events (nothing has happened yet to analyse)
+  // Match when the MAIN action of the headline is future-tense, not when a future date is merely mentioned procedurally.
+  // "PM Modi to address nation at 8:30pm" → SKIP (nothing happened)
+  // "Court seeks reply; next hearing May 16" → PASS (the seeking is the event)
+  const h_lower=(h||"").toLowerCase();
+  const futureEvent=
+    // Pattern A: headline subject + "to" + verb early in headline (first 10 words)
+    /^(?:[\w.']+\s){0,9}\w+\s+to\s+(?:address|speak|announce|meet|deliver|attend|launch|unveil|table|present|move|file|hear|decide|rule|deliberate|inaugurate|release|visit)\b/i.test(h||"")||
+    // Pattern B: headline subject + "will" + verb early
+    /^(?:[\w.']+\s){0,9}\w+\s+will\s+(?:address|speak|announce|meet|deliver|attend|launch|unveil|table|present|move|file|hear|decide|rule|deliberate|inaugurate|release|visit)\b/i.test(h||"")||
+    // Pattern C: specific "set to" / "expected to" / "likely to" phrasings (these are almost always future-only headlines)
+    /\b(?:set to|expected to|likely to|scheduled to)\s+(?:address|speak|announce|deliver|attend|launch|unveil|table|present|file|inaugurate)\b/i.test(h_lower)||
+    // Pattern D: explicit future-time phrasings with no event happening
+    /\b(?:tomorrow|later today|next week|next monday|next tuesday|next wednesday|next thursday|next friday|next saturday|next sunday)\s*[:,-]?\s*(?:pm|am)?\s*(?:modi|cabinet|parliament|sc|supreme court|president|governor)\b/i.test(h_lower)||
+    // Pattern E: "at X pm/am today" as the main hook (announcement of future speech)
+    /\b(?:to (?:address|speak|deliver))\b[^.]*\bat \d+[:.]?\d*\s*(?:pm|am|hrs)\b/i.test(h_lower);
+
+  // Skip 2 — Foreign stories without Indian constitutional angle
+  const foreignOnly=/\bbank of canada\b|\bfederal reserve\b|\beuropean central bank\b|\btrump\b|\bbiden\b|\bobama\b|\bputin\b|\bxi jinping\b|\bkim jong\b|\bmacron\b|\bscholz\b|\bnetanyahu\b|\bzelensky\b|\bbritish parliament\b|\bus congress\b|\bwhite house\b|\beuropean union\b|\bsilicon valley\b|\bwall street\b|\bdowning street\b|\bsan francisco\b|\bnew york times\b|\bwashington post\b|\bhollywood\b|\b(?:louisiana|texas|california|florida|alabama|alaska|arizona|arkansas|colorado|connecticut|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|ohio|oklahoma|oregon|pennsylvania|tennessee|utah|vermont|virginia|wisconsin|wyoming)\s*(?:,|shooting|state|governor|senator)\b|\bpalantir\b|\balex karp\b|\belon musk\b|\bmark zuckerberg\b|\bmeta platforms\b|\bgoogle llc\b|\bamazon\.com\b|\bapple inc\b|\bmicrosoft corp\b|\bopenai\b|\banthropic\b|\bnvidia\b|\bintel corp\b|\bharvard\b|\bstanford\b|\bmit \b|\byale\b|\bprinceton\b|\bcambridge university\b|\boxford university\b|\bmass shooting.*(?:us|united states|america)|\bukraine war\b|\brussia.ukraine\b|\bgaza\b|\bisrael.hamas\b|\bsyria war\b|\byemen war\b|\btaliban\b|\bafghanistan taliban\b|\bimran khan\b|\bshehbaz sharif\b|\bimf loan to\b|\bworld bank report\b|\bun human rights report on (?!india)\b|\bnato\b|\bg7 summit\b|\bg20.*(?!india)\b/i;
+
+  // Skip 3 — Pure noise (sports, entertainment, tech launches)
+  const pureNoise=/\b(?:cricket score|football score|ipl match|fifa|olympic|box office|bollywood|hollywood|ott release|trailer|film review|web series|album release|concert|fashion show|iphone|samsung|product launch|startup raises|company earnings|stock price|sensex|nifty|cryptocurrency|bitcoin|horoscope|recipe|weight loss|skincare|beauty tip)\b/i;
+
+  // Skip 4 — Pure campaign rhetoric without policy content (politicians insulting each other)
+  const campaignInsult=/\btargets? congress\b|\btargets? bjp\b|\bslams? congress\b|\bslams? bjp\b|\battacks? congress\b|\battacks? bjp\b|\bmocks\b|\btaunts\b|\bjibe at\b|\bdare(?:s|d)? (?:the )?(?:bjp|congress|opposition)\b|\bteach.*lesson\b|\bhave guts\b/i;
+  const hasPolicy=/\bbill\b|\bact passed\b|\blaw\b|\bpolicy\b|\border issued\b|\bverdict\b|\bruling\b|\banti.conversion\b|\buapa\b|\bafspa\b|\bnrc\b|\bcaa\b|\bdemolition\b|\bencounter\b|\bcustody\b|\barrest\b|\bdetain\b|\braid(?:s|ed|ing)?\b|\binquiry\b|\bsummon(?:s|ed)?\b|\bfir \b|\bchargesheet\b|\bconviction\b/i;
+  const isJustInsult=campaignInsult.test(txt)&&!hasPolicy.test(txt);
+
+  // Skip 5 — Routine operational / procedural news with no constitutional substance
+  const routineOp=/court of inquiry (?:ordered|initiated|launched)|hard landing|internal probe|routine audit|administrative transfer|officer suspended pending inquiry|show.cause notice issued/i;
+  const hasConstitutionalAngle=/\b(?:custody death|encounter|fake|lynch|demolish|bulldoz|arbitrary arrest|sedition|uapa|afspa|rights violat)/i;
+  const isRoutine=routineOp.test(txt)&&!hasConstitutionalAngle.test(txt);
+
+  // Skip 5b — Explainer / listicle / guide content (no actual news event)
+  // These are educational filler pieces newspapers publish — "X types of Y", "guide to Z", "all you need to know"
+  const listicle=/^\d+ (?:types? of|things|reasons?|ways?|tips?|facts?|benefits?)\b|^(?:a |the )?(?:detailed |complete |comprehensive |ultimate )?guide to\b|\ball you need to know\b|\beverything you should know\b|\bexplained?:?\s*(?:what|how|why|who)\b|\bwhat is\b|\bhow does\b|\btop \d+\b|\blist of\b.*\b(?:types|kinds|varieties)\b|\bdifference between\b|\bvs\.?\s+[A-Z]/i;
+  const isListicle=listicle.test(h||"");  // test headline specifically — body may have event keywords
+
+  // Skip 6 — Not obviously India-related
+  const indiaAnchor=/\b(?:india|indian|delhi|new delhi|mumbai|bengaluru|bangalore|chennai|kolkata|hyderabad|ahmedabad|pune|lucknow|jaipur|bhopal|patna|chandigarh|guwahati|thiruvananthapuram|ranchi|raipur|dehradun|shimla|gandhinagar|kerala|tamil nadu|karnataka|maharashtra|gujarat|rajasthan|uttar pradesh|\bup\b|bihar|odisha|west bengal|punjab|haryana|telangana|andhra|assam|tripura|meghalaya|mizoram|manipur|nagaland|arunachal|sikkim|goa|jharkhand|chhattisgarh|himachal|uttarakhand|madhya pradesh|j&k|jammu|kashmir|ladakh|modi|rahul|gandhi|sonia|kharge|yogi|mamata|stalin|kejriwal|shah|sitharaman|jaishankar|naidu|nitish|siddaramaiah|fadnavis|adityanath|bjp|congress|\baap\b|tmc|dmk|aiadmk|shiv sena|ncp|rjd|jdu|cpi|cpm|lok sabha|rajya sabha|supreme court|high court|\bsc \b|\bhc \b|chief justice|cji|eci|election commission|rbi|sebi|cag|niti aayog|nhrc|nalsa|iaf|indian army|indian navy|coast guard|prime minister|cabinet|union minister|home minister|finance minister|law minister|external affairs|president of india|droupadi murmu|rashtrapati bhavan|raj bhavan|parliament|constitution|president ram|ambedkar|nehru|patel)\b/i;
+  const isNotIndia=!indiaAnchor.test(txt);
+
+  // If ANY skip reason matches → mark story as skipped and return early
+  let skipReason=null;
+  if(futureEvent)skipReason="Future event — nothing has happened to analyse yet";
+  else if(foreignOnly.test(txt))skipReason="Foreign story without Indian constitutional angle";
+  else if(pureNoise.test(txt))skipReason="Sports/entertainment/tech — not constitutional";
+  else if(isJustInsult)skipReason="Political rhetoric without policy substance — protected Art.19 speech";
+  else if(isRoutine)skipReason="Routine procedural news — accountability mechanism working normally";
+  else if(isListicle)skipReason="Explainer/listicle content — no actual news event to analyse";
+  else if(isNotIndia)skipReason="Not related to Indian constitutional matters";
+
+  if(skipReason){
+    return{
+      pillar:"justice",direction:"neutral",delta:0,aiScore:0,
+      violations:[],supports:[],institution:null,pattern:"isolated",
+      scope:"national",state:null,source:"single_source",
+      aiDone:false,aiSkipped:true,skipReason,
+      severity:"low",evidenceLevel:"single_source",
+      storyType:"policy",confidence:"low",courtStatus:"none",
+      govResponse:null,
+      citizenExplanation:"This story was filtered out by the relevance engine. Reason: "+skipReason,
+      mythos:null,aiAnalysis:null,
+    };
+  }
+
   // Institution
   if(/supreme court|high court|sc |hc |judiciary|bench|verdict|judgment|bail|acquit/.test(txt))inst="judiciary";
   else if(/prime minister|pmo|cabinet/.test(txt))inst="pmo";
@@ -179,25 +249,219 @@ function classify(h,b){
   else if(/alleged|reportedly|sources say|unconfirmed/.test(txt))evidenceLevel="allegation";
   // Story type
   if(/court|judgment|verdict|bail|acquit/.test(txt))storyType="court";
+  else if(/delimitation|bill.*defeat|bill.*pass|parliament|amendment/.test(txt))storyType="law";
   else if(/election|ballot|voter/.test(txt))storyType="election";
   else if(/police|arrested|detained|encounter/.test(txt))storyType="policing";
   else if(/journalist|press|media/.test(txt))storyType="media";
   else if(/corruption|scam|ed |cbi|money laundering/.test(txt))storyType="corruption";
   else if(/dalit|caste|minority|muslim|christian|tribal/.test(txt))storyType="minority";
   else if(/welfare|hospital|school|ration|scheme/.test(txt))storyType="welfare";
-  // Constitutional classification
-  if(/journalist|press|media|reporter/.test(txt)){pillar="press_freedom";if(/kill|murder|dead/.test(txt)){delta=-5;evidenceLevel=evidenceLevel==="allegation"?"single_source":evidenceLevel;violations=[{a:"Art.21",h:"Journalist killed — right to life violated — press freedom suppressed through violence"},{a:"Art.19(1)(a)",h:"Press freedom attacked — killing journalist silences wider newsroom"}];citizenExplanation="A journalist was killed. This is one of the most serious constitutional violations — it removes the right to life and silences press freedom.";}else if(/arrest|detain|raid/.test(txt)){delta=-3;violations=[{a:"Art.19(1)(a)",h:"Journalist arrested — press freedom restricted"},{a:"Art.22",h:"Arbitrary detention — proper arrest safeguards bypassed"}];citizenExplanation="A journalist was arrested or their news office raided. This reduces press freedom and can silence reporting.";}else if(/free|release|acquit/.test(txt)){dir="positive";delta=2;supports=[{a:"Art.19(1)(a)",h:"Press freedom upheld — journalist released/case dropped"}];citizenExplanation="A journalist was freed or a press freedom case resolved positively.";}else{delta=-2;violations=[{a:"Art.19(1)(a)",h:"Press freedom restricted — journalist or outlet affected"}];citizenExplanation="A journalist or media outlet is facing restrictions that affect free press.";}}
-  else if(/uapa|psa|afspa|custody death|encounter|arbitrary arrest/.test(txt)){pillar="liberty";storyType="policing";if(/kill|dead|death/.test(txt)){delta=-5;evidenceLevel=evidenceLevel==="allegation"?"corroborated":evidenceLevel;violations=[{a:"Art.21",h:"Right to life violated — extra-judicial killing or custody death"},{a:"Art.22",h:"Death in custody — due process completely absent"}];citizenExplanation="Someone died in police custody or in an encounter. This is the severest violation — the state took a life without due process.";}else{delta=-3;violations=[{a:"Art.21",h:"Liberty arbitrarily denied by state"},{a:"Art.22",h:"Detained without proper legal grounds or procedure"}];citizenExplanation="Someone was detained under special laws without the normal legal process. Their right to liberty appears violated.";}}
-  else if(/election|voter|ballot|eci|delimitation|electoral bond/.test(txt)){pillar="electoral";if(/sc.*struck|court.*quash|upheld/.test(txt)){dir="positive";delta=3;evidenceLevel="court_finding";courtStatus="upheld";supports=[{a:"Art.324",h:"Election Commission independence upheld by court"},{a:"Art.326",h:"Universal adult suffrage protected"}];citizenExplanation="A court upheld election fairness. This is positive — it strengthens democratic rights.";}else if(/rig|fraud|manipulat/.test(txt)){delta=-5;violations=[{a:"Art.326",h:"Election fraud — universal suffrage undermined"},{a:"Art.324",h:"Election Commission independence compromised"}];citizenExplanation="Allegations of election rigging or fraud. If true, this would undermine every citizen's vote.";}else{delta=-2;violations=[{a:"Art.82",h:"Electoral process affected — representation at risk"}];citizenExplanation="An electoral process development may affect how fairly votes are counted or represented.";}}
-  else if(/nrc|caa |citizenship|stateless/.test(txt)){pillar="equality";delta=-4;storyType="minority";violations=[{a:"Art.14",h:"Unequal citizenship — equality before law denied to citizens"},{a:"Art.15",h:"Discrimination based on religion — constitutional bar crossed"}];citizenExplanation="A citizenship policy is being applied unequally based on religion. This may violate the constitutional guarantee of equal treatment.";}
-  else if(/bulldoz|demolish|evict/.test(txt)){pillar="equality";delta=-3;violations=[{a:"Art.300A",h:"Property demolished without legal authority or due process"},{a:"Art.21",h:"Home demolition destroys dignity and right to shelter"}];citizenExplanation="Homes were demolished — possibly without legal process. This violates both property rights and human dignity.";}
-  else if(/sc.*upheld|court.*protected|acquitted|bail.*granted|sc.*struck down law/.test(txt)){pillar="justice";dir="positive";delta=3;evidenceLevel="court_finding";courtStatus="upheld";supports=[{a:"Art.32",h:"Constitutional remedy granted — rights upheld by Supreme Court"},{a:"Art.141",h:"SC law of the land affirmed — protects all citizens"}];citizenExplanation="A court protected constitutional rights. This is a positive outcome — it sets precedent to protect others too.";}
-  else if(/dalit|caste|sc.st|untouchab|atrocity/.test(txt)){pillar="equality";delta=-3;storyType="minority";violations=[{a:"Art.17",h:"Caste-based discrimination — untouchability practiced despite constitutional ban"},{a:"Art.46",h:"State failed to protect constitutionally vulnerable sections"}];citizenExplanation="A caste-based discrimination or atrocity is reported. The Constitution bans this — the state is expected to prevent and punish such incidents.";}
-  else if(/tribal|adivasi|forest right|displacement/.test(txt)){pillar="environment";delta=-3;scope="state";inst=inst||"environment";violations=[{a:"5th Sch",h:"Tribal rights violated — constitutional schedule not enforced"},{a:"Art.21",h:"Forced displacement violates right to dignified life"}];citizenExplanation="Tribal or forest-dwelling communities are being displaced. The Constitution specifically protects their rights through the Fifth Schedule.";}
-  else if(/riot|communal|violence|mob attack/.test(txt)){pillar="liberty";delta=-4;violations=[{a:"Art.21",h:"Right to life threatened by communal violence"},{a:"Art.355",h:"State failed constitutional duty to protect citizens from internal disturbance"}];citizenExplanation="Communal violence or mob attacks occurred. The state has a constitutional duty to prevent such violence and protect all citizens.";}
-  else if(/anti.conversion|religious conversion|cow vigilant|lynching/.test(txt)){pillar="religion";delta=-3;inst=inst||"minority";violations=[{a:"Art.25",h:"Freedom of religion and conscience restricted by state or mob action"}];citizenExplanation="Religious freedom is being restricted — through conversion laws or mob violence. The Constitution guarantees freedom of religion.";}
-  else if(/welfare|ration|scheme.*cancel|hospital.*shut/.test(txt)){pillar="welfare";delta=-2;inst=inst||"health";violations=[{a:"Art.21",h:"Right to life includes right to basic welfare — access denied"},{a:"Art.47",h:"State duty to improve public health — not being met"}];citizenExplanation="A welfare scheme or hospital is being cut or closed. Citizens have a constitutional right to basic welfare.";}
-  else{dir="negative";delta=-1;violations=[{a:"Art.21",h:"Potential constitutional concern identified — further evidence needed"}];citizenExplanation="A story with potential constitutional implications — watch for further developments.";}
+
+  // === Rich constitutional classification with title + who + how (50-80 word explanations) ===
+
+  // DELIMITATION — federal balance, representation — nuanced handling
+  if(/delimitation/.test(txt)){
+    pillar="electoral";inst=inst||"law";
+    if(/defeat|opposition.*block|stall|pause|shelv/.test(txt)){
+      // Defeat of delimitation bill — protects south states from losing MPs
+      dir="positive";delta=3;
+      supports=[
+        {a:"Art.82",title:"Delimitation After Census",who:"Opposition MPs in Parliament",how:"The delimitation bill's defeat prevents an immediate redistribution of Lok Sabha seats based on 2021+ population data. Since southern states successfully controlled their population growth while northern states did not, an immediate redraw would have punished south India with fewer MPs. The defeat upholds the 42nd Amendment freeze intent — that family planning success should not reduce political voice."},
+        {a:"Art.1",title:"India as Union of States",who:"Parliament's opposition coalition",how:"The defeated bill would have fundamentally altered the federal balance by shifting parliamentary power from south and east to north India. Blocking it preserves the quasi-federal structure envisioned by the Constitution. It signals that demographic changes alone cannot override the cooperative federalism principle that keeps India as a genuine 'Union of States' rather than a majoritarian unitary system."},
+        {a:"Art.81",title:"Composition of Lok Sabha",who:"MPs who voted against the bill",how:"Article 81 governs how the 543 Lok Sabha seats are allocated among states. The defeated bill proposed to increase and redistribute these seats based on population alone. The defeat maintains the current balance where population-controlled states retain proportional representation, protecting the constitutional principle that Parliament must represent India's federal diversity, not just its population density."},
+        {a:"Art.14",title:"Equality Before Law",who:"Opposition legislators",how:"A straight population-based delimitation would have created unequal political weight — citizens in high-growth states would have had systematically more MPs per capita pull than those in low-growth states. Defeating the bill preserves a more balanced equality of democratic voice across regions. This is a substantive equality reading of Article 14, recognising that mechanical equality by population can mask federal inequality."},
+      ];
+      citizenExplanation="Parliament defeated a bill that would have redrawn Lok Sabha seats purely on population. South Indian states, which successfully controlled population growth, would have lost seats to northern states — punishing them for good governance. The defeat protects federal balance and equal political voice across regions.";
+    }else if(/pass|approv|enact/.test(txt)){
+      dir="negative";delta=-4;
+      violations=[
+        {a:"Art.1",title:"India as Union of States",who:"Parliament majority (ruling government)",how:"The passage of population-based delimitation fundamentally disrupts the federal compact. It rewards states with high population growth and punishes states that successfully implemented family planning — a constitutional perversity. The Union of States principle envisions a balance where no region dominates merely due to population, yet this bill concentrates parliamentary power in a few northern states, weakening quasi-federal governance."},
+        {a:"Art.14",title:"Equality Before Law",who:"Government that introduced the bill",how:"Population-only delimitation creates systemic inequality of political voice. Citizens in states like Kerala and Tamil Nadu — which invested in education, health, and family planning — now have fewer MPs per capita issue-representation than citizens in states that did not. This violates substantive equality: the same democratic action (voting, petitioning) produces unequal political outcome based on state of residence."},
+        {a:"Art.82",title:"Delimitation After Census",who:"Law Ministry drafters",how:"Article 82 allows delimitation after each census, but constitutional practice has frozen seat allocation since 1976 (42nd Amendment) precisely to protect family-planning states. Lifting the freeze without a compensating federal safeguard — such as upper-house weighting or a minimum-seat floor — breaches the constitutional spirit behind the freeze, even if the letter technically permits redistribution."},
+      ];
+      citizenExplanation="Parliament passed a bill redrawing Lok Sabha seats based only on population. South Indian states that controlled population growth lose seats to northern states — effectively penalising them for good family-planning outcomes. This weakens federal balance and creates unequal political voice across regions.";
+    }else{
+      dir="negative";delta=-2;
+      violations=[
+        {a:"Art.82",title:"Delimitation After Census",who:"Government proposing delimitation",how:"The delimitation process, if based purely on population, threatens to redistribute parliamentary seats away from states that successfully implemented population control — penalising good governance. Article 82 permits periodic delimitation but constitutional convention has paused it precisely to protect federal balance. Any new delimitation must weigh both population and federal representation principles to stay constitutionally sound."},
+        {a:"Art.1",title:"India as Union of States",who:"Government planning the redraw",how:"Delimitation directly affects the federal balance encoded in 'Union of States'. A mechanical population formula concentrates parliamentary power in high-growth northern states and reduces the voice of southern and north-eastern states. This development warrants close monitoring because any shift in seat allocation reshapes which regions control national legislation, taxation priorities, and policy direction."},
+      ];
+      citizenExplanation="A delimitation development is under discussion. How Lok Sabha seats get redistributed based on population directly affects whether southern states — which invested in population control — retain their fair share of MPs, or whether northern states get disproportionate representation.";
+    }
+  }
+  // PRESS FREEDOM
+  else if(/journalist|press|media|reporter/.test(txt)){
+    pillar="press_freedom";
+    if(/kill|murder|dead/.test(txt)){
+      delta=-5;evidenceLevel=evidenceLevel==="allegation"?"single_source":evidenceLevel;
+      violations=[
+        {a:"Art.21",title:"Right to Life and Personal Liberty",who:"State or non-state actor who caused the killing; State for failing Article 355 duty",how:"A journalist's right to life — the most fundamental guarantee of Article 21 — has been extinguished. The Supreme Court has held in Maneka Gandhi (1978) that Article 21 requires the state to proactively protect life, not merely refrain from taking it. When a reporter is killed for their work, the state's failure to provide security and investigate swiftly constitutes a deeper constitutional breach beyond the immediate crime."},
+        {a:"Art.19(1)(a)",title:"Freedom of Speech and Expression",who:"Perpetrators and any officials who intimidated the journalist beforehand",how:"Killing a journalist silences not only the victim but every other reporter working on similar stories — a chilling effect the Supreme Court has repeatedly recognised as a violation of Article 19(1)(a). Press freedom is a component of free speech, and violence against journalists is a direct assault on the public's right to receive information essential for democratic participation."},
+        {a:"Art.355",title:"Union Duty to Protect States",who:"Union and State governments",how:"Article 355 imposes a duty on both Union and State governments to protect states against internal disturbance. A journalist's killing reveals a failure of this protective duty — whether through inadequate police response, failure to act on prior threats, or indifference. The constitutional question is whether law enforcement treated the journalist's pre-killing complaints with the urgency the Constitution demands."},
+      ];
+      citizenExplanation="A journalist was killed. This is among the most serious constitutional violations — it destroys the right to life, silences press freedom through fear, and signals state failure to protect those who inform the public.";
+    }else if(/arrest|detain|raid/.test(txt)){
+      delta=-3;
+      violations=[
+        {a:"Art.19(1)(a)",title:"Freedom of Speech and Expression",who:"Police and the prosecuting agency",how:"Arresting a journalist for their reporting directly targets press freedom protected under Article 19(1)(a). The Supreme Court in Shreya Singhal (2015) and multiple subsequent rulings has held that speech cannot be criminalised unless it falls within the narrow Article 19(2) exceptions. Using broad laws like UAPA, sedition, or IT Act against journalists without evidence of incitement to violence or public disorder chills legitimate reporting across newsrooms nationwide."},
+        {a:"Art.22",title:"Protection Against Arbitrary Arrest",who:"Arresting police and magistrate",how:"Article 22 requires that any arrest be on grounds immediately communicated, with the right to counsel and production before a magistrate within 24 hours. Raids and arrests of journalists often bypass these safeguards — conducted without warrant, without informing the accused of specific charges, and with prolonged detention before magistrate review. This procedural violation compounds the free-speech violation."},
+        {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Investigating officer and sanctioning authority",how:"The Supreme Court has held that Article 21 includes the right to live with dignity and without arbitrary state coercion. Targeting journalists with raids, asset freezes, and prolonged pre-trial detention — especially under stringent bail-denying laws — punishes speech through process even before any conviction. This is the 'process as punishment' pattern the Court flagged in Arnab Goswami's bail order (2020)."},
+      ];
+      citizenExplanation="A journalist was arrested or their news office raided. Beyond the specific case, this chills the wider press — other reporters self-censor fearing similar treatment. The Constitution guarantees press freedom precisely so citizens can access independent information.";
+    }else if(/free|release|acquit/.test(txt)){
+      dir="positive";delta=2;
+      supports=[
+        {a:"Art.19(1)(a)",title:"Freedom of Speech and Expression",who:"The court or authority that granted relief",how:"The release or acquittal of a journalist strengthens Article 19(1)(a) by reaffirming that journalism is not a crime. Each such ruling builds precedent protecting future reporters facing similar cases. It signals to investigating agencies that courts will scrutinise prosecution of journalists for free-speech implications, raising the cost of frivolous or politically-motivated cases against the press."},
+        {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Court granting bail or quashing charges",how:"Release restores the journalist's personal liberty — the core of Article 21. In the bail jurisprudence developed from Gudikanti Narasimhulu (1978) through Satender Kumar Antil (2022), the Supreme Court has stressed that bail is the rule and jail the exception. A journalist's release operationalises this principle specifically in the press-freedom context, protecting not just the individual but the wider democratic function of journalism."},
+      ];
+      citizenExplanation="A journalist was freed or a press-freedom case resolved positively. Beyond helping the individual reporter, it sets a precedent that protects every other journalist doing similar work.";
+    }else{
+      delta=-2;
+      violations=[
+        {a:"Art.19(1)(a)",title:"Freedom of Speech and Expression",who:"State authority or regulator involved",how:"The incident restricts press freedom — a core component of Article 19(1)(a). The Constitution makes no separate provision for press freedom because the framers intended journalism to be protected within the broader free-speech guarantee. Any regulatory, financial, or operational pressure on news outlets that chills editorial independence engages Article 19(1)(a), even without outright censorship."},
+      ];
+      citizenExplanation="A journalist or media outlet is facing restrictions. Watch this — it affects how freely the press can report on issues that concern you.";
+    }
+  }
+  // CUSTODY / UAPA / AFSPA — liberty
+  else if(/uapa|psa|afspa|custody death|encounter|arbitrary arrest/.test(txt)){
+    pillar="liberty";storyType="policing";
+    if(/kill|dead|death/.test(txt)){
+      delta=-5;evidenceLevel=evidenceLevel==="allegation"?"corroborated":evidenceLevel;
+      violations=[
+        {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Police personnel involved and their supervising officers",how:"A custodial death or encounter killing extinguishes the victim's Article 21 right to life. In D.K. Basu v. State of West Bengal (1997), the Supreme Court laid down mandatory arrest procedures precisely to prevent such deaths. In PUCL v. State of Maharashtra (2014), the Court mandated independent investigation of every encounter. Violations of these guidelines are treated as direct Article 21 breaches, not merely procedural lapses."},
+        {a:"Art.22",title:"Protection Against Arbitrary Arrest and Detention",who:"Arresting officer and magistrate who failed to verify custody conditions",how:"Article 22 guarantees that anyone arrested be informed of grounds, allowed counsel, and produced before a magistrate within 24 hours — safeguards meant to prevent exactly the conditions that lead to custodial deaths. When someone dies in custody before proper magistrate review or without family notification, the state has bypassed every constitutional checkpoint designed to keep detainees alive and documented."},
+        {a:"Art.14",title:"Equality Before Law",who:"Policing authority that selected the victim for extraordinary treatment",how:"Encounter killings and custodial deaths disproportionately affect the poor, Dalits, Muslims, and tribal communities — reflecting a two-tier system where state violence operates differently on different social groups. Article 14's equality guarantee demands equal protection of laws, which is breached when some communities face routine extra-judicial violence while others would never be so treated."},
+      ];
+      citizenExplanation="Someone died in police custody or in an encounter. This is among the severest constitutional violations — the state took a life without the courts, without trial, without the process the Constitution demands before any punishment, let alone death.";
+    }else{
+      delta=-3;
+      violations=[
+        {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Investigating agency and sanctioning authority under UAPA/PSA",how:"UAPA, PSA, and AFSPA detentions often bypass the 'procedure established by law' that Article 21 requires — a phrase the Supreme Court in Maneka Gandhi (1978) held must be fair, just, and reasonable, not merely technically legal. Prolonged pre-trial detention, near-impossible bail under UAPA Section 43D(5), and the typical 3-7 year pendency functions as punishment before any finding of guilt."},
+        {a:"Art.22",title:"Protection Against Arbitrary Arrest",who:"Police and special tribunal",how:"While Article 22(3) permits preventive detention, the Constitution caps it tightly — with advisory board review within three months and specific protections against vague grounds. UAPA and PSA detentions routinely stretch these limits through chargesheet delays and continued remand extensions. The result is detention that formally complies with statute but violates the constitutional intent that preventive detention remain extraordinary, not routine."},
+        {a:"Art.32",title:"Right to Constitutional Remedies",who:"Judiciary slow to hear bail applications",how:"When bail hearings under UAPA routinely take months or years, Article 32's promise of a meaningful remedy becomes hollow. The Supreme Court in Union of India v. KA Najeeb (2021) held that prolonged pre-trial detention itself becomes a ground for constitutional bail, recognising that denial of timely review is itself a rights violation independent of the underlying case."},
+      ];
+      citizenExplanation="Someone was detained under special laws like UAPA, PSA, or AFSPA. Under these laws, the normal legal process — timely bail, quick trial, specific charges — gets suspended. This weakens personal liberty for everyone because the same laws could be used against any citizen.";
+    }
+  }
+  // ELECTIONS — rig, fraud, court
+  else if(/election|voter|ballot|eci|electoral bond/.test(txt)){
+    pillar="electoral";
+    if(/sc.*struck|court.*quash|upheld/.test(txt)){
+      dir="positive";delta=3;evidenceLevel="court_finding";courtStatus="upheld";
+      supports=[
+        {a:"Art.324",title:"Election Commission Independence",who:"Supreme Court of India",how:"The court's ruling reinforces Article 324, which establishes the Election Commission as an independent constitutional body with superintendence over elections. The Supreme Court in Anoop Baranwal (2023) strengthened this independence by requiring EC appointments through a collegium — a direct attempt to insulate the body from executive capture. Every judgment affirming this independence raises the cost of political interference in election management."},
+        {a:"Art.326",title:"Universal Adult Suffrage",who:"Supreme Court bench",how:"Article 326 guarantees every citizen aged 18+ the right to vote on equal terms. Court rulings protecting voter rolls, ballot secrecy, EVM integrity, or anti-defection provisions all operationalise this core democratic right. The judgment prevents executive or administrative measures that would effectively disenfranchise categories of voters through technical or procedural means."},
+      ];
+      citizenExplanation="A court upheld election fairness. This is positive because every such ruling protects your vote — it sets legal precedent that the same trick cannot be used to undermine elections next time.";
+    }else if(/rig|fraud|manipulat/.test(txt)){
+      delta=-5;
+      violations=[
+        {a:"Art.326",title:"Universal Adult Suffrage",who:"Those alleged to have manipulated voter rolls, EVMs, or polling",how:"Allegations of rigging strike at the heart of Article 326 — the promise that every adult citizen gets one equal vote. Whether through bogus voter addition, genuine voter deletion, booth capturing, or EVM tampering, rigging converts democratic elections into contests where the counting process rather than the electorate decides outcomes. Such allegations require swift, independent investigation to preserve faith in the ballot."},
+        {a:"Art.324",title:"Election Commission Independence",who:"Election Commission if slow to investigate; political actors who interfered",how:"If rigging occurred under the Election Commission's watch without swift investigation, it indicates either institutional failure or capture. Article 324 gives the EC broad powers — to countermand elections, disqualify candidates, freeze vote counts — precisely so it can respond decisively to fraud. Allegations that remain uninvestigated themselves become a constitutional concern, weakening the EC's claim to independent superintendence."},
+        {a:"Art.14",title:"Equality Before Law",who:"Authorities refusing to act equally on similar fraud complaints",how:"Electoral fraud allegations often produce selective investigation — strong action when one party's workers are accused, slow action when the ruling party's workers face similar allegations. This unequal application of electoral law directly violates Article 14's equality guarantee. The constitutional standard is not whether any one investigation happens, but whether all comparable cases receive comparable treatment."},
+      ];
+      citizenExplanation="There are allegations of election rigging or fraud. If proven, this would mean your vote doesn't actually count — that the real decisions happen in how votes are counted, added, or suppressed, not at the ballot box.";
+    }else{
+      delta=-2;
+      violations=[
+        {a:"Art.324",title:"Election Commission Independence",who:"Election Commission or executive influencing electoral process",how:"Electoral process developments warrant careful scrutiny because Article 324 places election integrity in the hands of an independent Commission. Any change in rules, appointments, funding, or procedure can shift the balance between the Commission and the executive. The question for constitutional evaluation is whether this change strengthens or weakens the Commission's ability to conduct free and fair elections."},
+        {a:"Art.326",title:"Universal Adult Suffrage",who:"Electoral authorities",how:"Article 326 guarantees universal adult suffrage on an equal basis. Changes to voter rolls, polling procedures, or vote counting directly affect whether every citizen's vote carries equal weight. Even administrative decisions can either expand or shrink the effective franchise, making careful attention to such developments essential for democratic health."},
+      ];
+      citizenExplanation="An electoral process development may affect how fairly votes are counted or represented. Worth watching for how it unfolds.";
+    }
+  }
+  // CITIZENSHIP — CAA, NRC
+  else if(/nrc|caa |citizenship|stateless/.test(txt)){
+    pillar="equality";delta=-4;storyType="minority";
+    violations=[
+      {a:"Art.14",title:"Equality Before Law",who:"Union Government and Parliament",how:"The Citizenship Amendment Act creates a religion-based classification by fast-tracking citizenship for Hindus, Sikhs, Buddhists, Jains, Parsis, and Christians from three neighbouring Muslim-majority countries — while excluding Muslims. The Supreme Court has held in Navtej Johar (2018) and elsewhere that classifications must have a rational nexus to the statute's object. Critics argue that excluding Muslim refugees (Ahmadiyya, Hazara, Rohingya) lacks such nexus and creates unequal access to citizenship based purely on religion."},
+      {a:"Art.15",title:"Prohibition of Discrimination on Grounds of Religion",who:"Legislators who passed the law",how:"Article 15 bars the state from discriminating against any citizen solely on grounds of religion. While CAA technically applies to non-citizens seeking naturalisation, combining it with a possible National Register of Citizens creates a two-tier exclusion where Muslims lacking documentation face statelessness while non-Muslims can regain status through CAA. The cumulative effect creates religious discrimination in citizenship access, raising serious Article 15 concerns."},
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Executive agencies implementing NRC",how:"Statelessness — loss of citizenship — strips a person of the ability to access services, travel, work, or even vote. The Supreme Court has recognised that Article 21 includes the right to dignified life, which presupposes recognition as a citizen. Detention camps for those excluded from NRC, prolonged legal limbo, and family separation during verification all engage Article 21's dignity guarantee, regardless of formal legal citizenship status."},
+    ];
+    citizenExplanation="A citizenship policy creates different paths for different religions. Combined with documentation-based exclusion, this may leave some Indian Muslims stateless while offering others a path back — creating unequal treatment based on religion, which the Constitution prohibits.";
+  }
+  // BULLDOZER — property/dignity
+  else if(/bulldoz|demolish|evict/.test(txt)){
+    pillar="equality";delta=-3;
+    violations=[
+      {a:"Art.300A",title:"Right to Property",who:"State authorities conducting the demolition (local municipal body, police, district administration)",how:"Article 300A states no person shall be deprived of property save by authority of law. Bulldozer demolitions typically skip the legal process — no advance notice, no hearing, no opportunity to contest ownership or permit status, no appeal window. The Supreme Court in Re: Manoj Tibrewal Akash (2024) held that arbitrary demolitions without due process violate Article 300A even if the underlying structure is technically unauthorised."},
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Executive officials ordering demolition",how:"Article 21 includes the right to shelter — a principle established in Olga Tellis v. Bombay Municipal Corporation (1985), where the Supreme Court held that eviction without alternative accommodation or due process violates the right to livelihood and life. Demolishing homes without proper notice, resettlement provision, or judicial review extinguishes constitutional protections meant to prevent the state from rendering people homeless arbitrarily."},
+      {a:"Art.14",title:"Equality Before Law",who:"Authority selecting specific properties for demolition",how:"Bulldozer action often correlates with the identity or political affiliation of the property owner — specifically targeting Muslim households or accused-but-not-convicted individuals. This selective demolition while ignoring identical violations elsewhere violates Article 14's equal protection guarantee. The Supreme Court in Re: Directions in the matter of demolition (2024) mandated advance notice, hearing, and documentation precisely to prevent discriminatory enforcement."},
+    ];
+    citizenExplanation="Homes were demolished — possibly without proper legal notice or hearing. The Constitution requires that nobody lose their property or home without a fair process, regardless of whether the structure was formally authorised. This protects everyone, not just the targeted individuals.";
+  }
+  // COURT UPHELD RIGHTS
+  else if(/sc.*upheld|court.*protected|acquitted|bail.*granted|sc.*struck down law/.test(txt)){
+    pillar="justice";dir="positive";delta=3;evidenceLevel="court_finding";courtStatus="upheld";
+    supports=[
+      {a:"Art.32",title:"Right to Constitutional Remedies",who:"Supreme Court of India",how:"Article 32 — which Dr. Ambedkar called the 'heart and soul' of the Constitution — guarantees every citizen the right to approach the Supreme Court for enforcement of fundamental rights. When the Court protects rights against executive or legislative overreach, it validates this remedy as a real and effective check, not merely a symbolic one. Each such ruling builds jurisprudence future petitioners can cite when their rights are threatened."},
+      {a:"Art.141",title:"Law Declared by Supreme Court is Binding",who:"Supreme Court bench delivering the ruling",how:"Under Article 141, Supreme Court rulings bind every court in India. A judgment protecting constitutional rights thus extends its protection nationwide — any similar case in any lower court must follow the precedent. This multiplier effect means a single ruling can protect thousands of similarly-situated individuals, making Supreme Court constitutional decisions uniquely important for democratic health."},
+      {a:"Art.50",title:"Separation of Powers",who:"Judiciary asserting independent review",how:"Article 50 directs the state to separate the judiciary from the executive. When courts strike down executive overreach or unconstitutional legislation, they operationalise this separation. Judicial independence requires not only institutional design but repeated willingness to rule against powerful parties — each such ruling reinforces the constitutional expectation that courts will check other branches rather than defer to them."},
+    ];
+    citizenExplanation="A court protected constitutional rights. This is a positive outcome with ripple effects — the ruling now becomes precedent that protects anyone else facing similar violations. Court wins are not just about the individual case; they strengthen constitutional protections for everyone.";
+  }
+  // CASTE / DALIT
+  else if(/dalit|caste|sc.st|untouchab|atrocity/.test(txt)){
+    pillar="equality";delta=-3;storyType="minority";
+    violations=[
+      {a:"Art.17",title:"Abolition of Untouchability",who:"Individuals practising the discrimination and state authorities failing to enforce anti-atrocity laws",how:"Article 17 abolishes untouchability 'in any form' — one of the few constitutional provisions that creates a direct individual prohibition, not merely a state duty. When caste discrimination occurs in temples, housing, education, or services, it directly violates Article 17. The Prevention of Atrocities Act operationalises this protection, and failure to register, investigate, or prosecute cases under it effectively nullifies the constitutional ban."},
+      {a:"Art.15",title:"Prohibition of Discrimination on Grounds of Caste",who:"Perpetrators and any state officials enabling discrimination",how:"Article 15 prohibits the state from discriminating on grounds including caste. While Article 15 restrains state action, Article 15(2) extends this to private actors regarding access to shops, public restaurants, hotels, and wells maintained for public use. Caste-based exclusion from these spaces directly violates the Constitution. The state's duty under Article 15(4) to make special provisions for backward classes means indifference to atrocities is itself a constitutional breach."},
+      {a:"Art.46",title:"Promotion of Educational and Economic Interests of Weaker Sections",who:"State failing in its directive principle duty",how:"Article 46 directs the state to promote the educational and economic interests of Scheduled Castes and Scheduled Tribes and protect them from social injustice and exploitation. While directive principles are not directly enforceable, they guide legislation and administration. Routine failure to prevent caste atrocities, provide timely relief, or prosecute cases indicates the state has abdicated this constitutional direction."},
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Perpetrators; state if it failed to protect",how:"Caste atrocities that result in death, injury, or sustained humiliation violate Article 21's guarantee of life and dignity. The Supreme Court in Francis Coralie Mullin (1981) held that the right to life includes the right to live with human dignity. Forced consumption of waste, parading naked, public humiliation, or killing over inter-caste marriage all violate this dignity component directly."},
+    ];
+    citizenExplanation="A caste-based discrimination or atrocity is reported. The Constitution bans untouchability and caste discrimination explicitly — Article 17 is one of the strongest provisions because it creates a direct ban. The state has a constitutional duty to prevent and punish such incidents.";
+  }
+  // TRIBAL / ADIVASI
+  else if(/tribal|adivasi|forest right|displacement/.test(txt)){
+    pillar="environment";delta=-3;scope="state";inst=inst||"environment";
+    violations=[
+      {a:"5th Sch",title:"Fifth Schedule — Tribal Areas and Scheduled Areas",who:"State government and mining/infrastructure authorities",how:"The Fifth Schedule gives Governors special powers to regulate laws in Scheduled Areas to protect tribal land and culture. Samatha v. State of Andhra Pradesh (1997) held that tribal land in Scheduled Areas cannot be leased to non-tribals or private companies — it must remain with Scheduled Tribe owners. Displacement for mining or development without tribal consent, rehabilitation, or PESA compliance directly violates these constitutional protections meant to prevent tribal dispossession."},
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Executive ordering displacement",how:"The Supreme Court in Narmada Bachao Andolan (2000) held that displacement without adequate rehabilitation violates Article 21's right to life with dignity. Tribal communities forced from ancestral lands lose not just shelter but cultural identity, traditional livelihoods, and community structures built over generations. Constitutional protection requires that rehabilitation match the life being lost, not merely the market value of the land."},
+      {a:"Art.29",title:"Protection of Cultural and Educational Rights of Minorities",who:"State authorities disregarding tribal cultural distinctiveness",how:"Article 29 protects the right of distinct cultural groups to conserve their language, script, and culture. Tribal communities hold cultural and spiritual relationships with specific lands, forests, and water bodies that cannot be replicated elsewhere. Displacement severs these cultural relationships, effectively extinguishing the 'distinct culture' Article 29 protects — a constitutional harm separate from the land loss itself."},
+    ];
+    citizenExplanation="Tribal or forest-dwelling communities face displacement. The Constitution specifically protects their land and culture through the Fifth Schedule — this isn't ordinary land, and they aren't ordinary rural communities. Ignoring these protections weakens a constitutional commitment as old as the Republic itself.";
+  }
+  // COMMUNAL VIOLENCE
+  else if(/riot|communal|violence|mob attack/.test(txt)){
+    pillar="liberty";delta=-4;
+    violations=[
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Rioters; state officials failing to prevent or stop violence",how:"Communal violence extinguishes Article 21 rights directly through death and injury. But the constitutional concern extends beyond immediate perpetrators: the Supreme Court in Nandini Sundar (2011) and earlier rulings has held that the state's failure to prevent foreseeable violence itself becomes a constitutional violation. Delayed police response, selective protection, or failure to arrest known instigators transforms non-action into constitutional complicity with violence."},
+      {a:"Art.355",title:"Union Duty to Protect States Against Internal Disturbance",who:"Union and State governments",how:"Article 355 imposes a duty on both Union and State governments to protect states against internal disturbance. Communal riots constitute exactly such disturbance. When intelligence warnings are ignored, when paramilitary reinforcement is delayed, or when politically-linked perpetrators escape prosecution, the governments fail their Article 355 duty. This is not optional — it is a direct constitutional command binding both levels of government."},
+      {a:"Art.15",title:"Prohibition of Discrimination",who:"Police or administration selectively enforcing law",how:"Communal violence is rarely symmetric — one community typically bears disproportionate harm. When police investigate only one side's violence, when FIRs favour one community, or when compensation and relief flow unequally, Article 15's ban on religious discrimination in state action is violated. The constitutional standard demands equal protection, not merely formal equality, requiring extra state effort where historical or power imbalances exist."},
+      {a:"Art.25",title:"Freedom of Religion",who:"Mob targeting religious symbols or worship; state if it failed protection",how:"Article 25 guarantees freedom to profess, practice, and propagate religion. Communal violence typically targets religious identity — places of worship, religious processions, homes and businesses of minority faiths. Even without any specific anti-religious law, mob violence that makes practising one's religion unsafe constitutes a direct violation of Article 25. State failure to protect religious practice is itself a violation of this fundamental right."},
+    ];
+    citizenExplanation="Communal violence or mob attacks occurred. The state has a constitutional duty to prevent such violence and protect all citizens equally. Beyond the immediate violence, constitutional harm extends to how police, courts, and administration respond — whether all victims get equal protection and justice.";
+  }
+  // RELIGIOUS FREEDOM — conversion, cow, lynching
+  else if(/anti.conversion|religious conversion|cow vigilant|lynching/.test(txt)){
+    pillar="religion";delta=-3;inst=inst||"minority";
+    violations=[
+      {a:"Art.25",title:"Freedom of Religion",who:"State passing anti-conversion law OR mob enforcing social restriction",how:"Article 25 guarantees every person the right to freely profess, practice, AND propagate religion — including the right to change one's religion. The Supreme Court in Rev. Stanislaus (1977) held that Article 25(1) does not protect forcible conversion but clearly protects voluntary conversion. Anti-conversion laws that require government permission for religious change, treat conversion as presumptively suspect, or criminalise facilitation typically overreach constitutional limits and chill voluntary faith choices."},
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Mob; police failing to intervene; state officials facilitating impunity",how:"Lynchings and cow-vigilante violence extinguish Article 21 directly. The Supreme Court in Tehseen Poonawalla (2018) mandated specific state actions — nodal officers, fast-track trials, compensation — to address mob lynching as a constitutional failure. Continued lynchings despite these directions constitute contempt of court in addition to underlying rights violations. When victims are disproportionately Muslim or Dalit, Article 14 and 15 violations compound the Article 21 breach."},
+      {a:"Art.14",title:"Equality Before Law",who:"Police enforcing law selectively by religious identity",how:"When cattle-transportation laws, conversion allegations, or dietary restrictions get enforced specifically against Muslims, Christians, or Dalits while others commit identical acts without consequence, Article 14's equal protection guarantee is violated. The constitutional command is not whether law exists, but whether it applies equally. Selective enforcement based on community identity constitutes discrimination through facially-neutral rules."},
+    ];
+    citizenExplanation="Religious freedom is being restricted — through anti-conversion laws, mob violence, or cow-vigilante action. The Constitution guarantees freedom of religion including the right to change religion, and demands equal protection regardless of your faith. These incidents test whether that guarantee is real.";
+  }
+  // WELFARE
+  else if(/welfare|ration|scheme.*cancel|hospital.*shut/.test(txt)){
+    pillar="welfare";delta=-2;inst=inst||"health";
+    violations=[
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"Government cancelling or defunding the welfare programme",how:"The Supreme Court has consistently expanded Article 21 beyond mere survival to encompass the right to live with dignity — including access to food, healthcare, shelter, and basic welfare. PUCL v. Union of India (2001) established food security as part of Article 21. Shutting hospitals, cancelling ration schemes, or cutting health budgets directly implicates this expanded reading, even if the programme was not originally created as a constitutional requirement."},
+      {a:"Art.47",title:"Duty of State to Raise Level of Nutrition and Public Health",who:"Health ministry or state government",how:"Article 47, a directive principle, obliges the state to raise the level of nutrition and public health as primary duties. While directive principles are not directly enforceable, the Supreme Court in Bandhua Mukti Morcha (1984) held that they inform the content of Article 21 rights. Cutting welfare programmes operates in the opposite constitutional direction — treating what the Constitution calls a 'primary duty' as an optional expense."},
+      {a:"Art.39",title:"Principles of Policy — Equal Right to Livelihood",who:"Policy-makers approving the cancellation",how:"Article 39 directs state policy toward ensuring citizens have adequate means of livelihood, equitable distribution of resources, and protection of children and elderly. Welfare cuts typically affect these exact populations disproportionately — the poor, elderly, and children who depend on public services because they cannot access private alternatives. The cut thus violates the constitutional direction not just in substance but in distributive effect."},
+    ];
+    citizenExplanation="A welfare scheme, hospital, or ration programme is being cut. Citizens have a constitutional right to basic welfare — the Supreme Court has held that Article 21 includes dignified access to health, food, and shelter. Cuts to these services thus engage constitutional rights, not merely policy preferences.";
+  }
+  // GENERIC FALLBACK
+  else{
+    dir="negative";delta=-1;
+    violations=[
+      {a:"Art.21",title:"Right to Life and Personal Liberty",who:"State actor or institution involved",how:"The incident raises potential constitutional concerns that require further evidence and analysis. Article 21 has been interpreted expansively by the Supreme Court to encompass dignity, privacy, shelter, health, education, and a wholesome environment — any of which may be implicated depending on how the story develops. Watch for additional reporting on specific actors, actions, and affected parties to refine the constitutional analysis."},
+    ];
+    citizenExplanation="A story with potential constitutional implications — watch for further developments. How the case unfolds will determine which specific rights are engaged and whether violations are substantiated.";
+  }
+
   if(delta<=-5)pat="systemic";else if(delta<=-4)pat="repeated";else if(delta<=-3)pat="emerging";else pat="isolated";
   // Confidence based on evidence
   confidence=evidenceLevel==="final_adjudication"?"high":evidenceLevel==="court_finding"?"high":evidenceLevel==="official_doc"?"high":evidenceLevel==="corroborated"?"moderate":evidenceLevel==="allegation"?"low":"moderate";
@@ -263,9 +527,18 @@ async function fetchRSS(scope,state,district){
     const xml=new DOMParser().parseFromString(xmlText,"text/xml");
     const items=[...xml.querySelectorAll("item")];
     if(!items.length){console.warn("[fetchRSS] parsed XML had 0 items");return[];}
-    // Broader keyword list — catches more stories so "no results" is rare
-    const kw=/rights|court|police|arrest|detain|demolish|protest|riot|murder|dalit|minority|muslim|tribal|election|verdict|bail|uapa|afspa|judge|constitution|freedom|violence|killed|ed |cbi|rti|corruption|atrocity|evict|journalist|press|encounter|custod|law|bill|act|pass|amendment|government|parliament|modi|rahul|gandhi|bjp|congress|supreme|high court|minister|policy|scheme|raid|probe|investigation|inquiry/i;
-    const parsed=items.slice(0,18).map(item=>{
+
+    // === FIX 3: TIGHTER RSS FILTERING ===
+    // Layer 1 — Constitutional-relevance keywords (MUST match at least one)
+    const relevanceKW=/rights|court|police|arrest|detain|demolish|protest|riot|dalit|minority|muslim|christian|tribal|adivasi|election|voter|ballot|verdict|bail|uapa|afspa|nsa|psa|judge|judiciary|constitution|parliament|lok sabha|rajya sabha|assembly|bill passed|bill defeated|act passed|amendment|supreme court|high court|chief justice|gazette|notification|ed |cbi|ncb|custody|encounter|lynch|communal|caste|reservation|quota|citizenship|caa|nrc|freedom of speech|press freedom|journalist|editor|media crackdown|rti denied|corruption|atrocity|evict|scheme cancel|hospital shut|school shut|welfare cut|farmer protest|strike|shutdown|sedition|hate speech|fir|arrest warrant|writ petition|pil |habeas corpus|governor|president|speaker|defection|scheduled|panchayat|municipality|mayor|collector|dm |district magistrate|inquiry|probe/i;
+
+    // Layer 2 — India-relevance (MUST have Indian anchor, prevents foreign-country noise)
+    const indiaAnchor=/india|indian|delhi|mumbai|bengaluru|bangalore|chennai|kolkata|hyderabad|ahmedabad|pune|lucknow|jaipur|bhopal|patna|chandigarh|kerala|tamil nadu|karnataka|maharashtra|gujarat|rajasthan|uttar pradesh|up |bihar|odisha|west bengal|punjab|haryana|telangana|andhra|assam|tripura|meghalaya|mizoram|manipur|nagaland|arunachal|sikkim|goa|jharkhand|chhattisgarh|himachal|uttarakhand|madhya pradesh|mp |j&k|jammu|kashmir|ladakh|modi|rahul|gandhi|sonia|kharge|yogi|mamata|stalin|kejriwal|shah|sitharaman|jaishankar|bjp|congress|aap |tmc|dmk|aiadmk|shiv sena|ncp|rjd|jdu|sp |bsp|cpi|cpm|naidu|nitish|eci|election commission of india|rbi|sebi|cag|prime minister|union minister|cabinet|niti aayog|lok sabha|rajya sabha|supreme court of india|icc |iaf |indian army|indian navy|coast guard|nhrc|nalsa|cji /i;
+
+    // Layer 3 — Explicit EXCLUDE list (prevents junk that matches above filters)
+    const blockKW=/cricket|football|ipl |fifa|olympic|box office|bollywood|actress|actor birthday|film release|trailer|ott release|stock market|sensex|nifty|crypto|bitcoin|horoscope|zodiac|weight loss|beauty tip|recipe|entertainment|celebrity|cinema|movie review|review:|song|album|concert|fashion week|iphone launch|samsung launch|product launch|startup raises|tech layoff|silicon valley|san francisco|new york times|washington post|bank of canada|federal reserve|european central|trump |biden |putin |xi jinping/i;
+
+    const parsed=items.slice(0,30).map(item=>{
       const rT=item.querySelector("title")?.textContent||"";
       const headline=rT.replace(/ - [^-]*$/,"").replace(/<!\[CDATA\[|\]\]>/g,"").trim();
       const rD=item.querySelector("description")?.textContent||"";
@@ -280,20 +553,117 @@ async function fetchRSS(scope,state,district){
       const image=imgMatch?.[1]||encl||mediaContent||null;
       return{headline,body,state:sh,link,image};
     }).filter(i=>i.headline.length>10);
-    const filtered=parsed.filter(i=>kw.test(i.headline+" "+i.body));
-    const out=(filtered.length>0?filtered:parsed).slice(0,10);
-    console.log("[fetchRSS] parsed "+items.length+" items → "+out.length+" returned");
+
+    // Apply all three filter layers
+    const filtered=parsed.filter(i=>{
+      const t=(i.headline+" "+i.body).toLowerCase();
+      if(blockKW.test(t)){console.log("[fetchRSS] blocked (noise):",i.headline.slice(0,60));return false;}
+      if(!relevanceKW.test(t)){console.log("[fetchRSS] skipped (not constitutional):",i.headline.slice(0,60));return false;}
+      if(!indiaAnchor.test(t)){console.log("[fetchRSS] skipped (not India):",i.headline.slice(0,60));return false;}
+      return true;
+    });
+
+    const out=filtered.slice(0,10);
+    console.log("[fetchRSS] parsed "+items.length+" → filtered "+filtered.length+" → returned "+out.length);
     return out;
   }catch(e){console.error("[fetchRSS] unexpected error:",e);return[];}
 }
 
 async function aiUpgrade(s){
   if(!GROQ||isRL())return s;
-  try{const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ},body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:600,temperature:0.15,messages:[{role:"system",content:`You are India's top constitutional law and journalism expert. Return ONLY valid JSON:
-{"score":-5to5,"pillar":"press_freedom|liberty|equality|electoral|separation|religion|justice|welfare|environment","department":"pmo|home|law|finance|education|health|wcd|minority|rural|urban|environment|defence|police|ec|media|judiciary","scope":"national|state|local","evidenceLevel":"allegation|single_source|corroborated|official_doc|court_finding|final_adjudication","storyType":"policy|law|court|policing|election|rights|corruption|welfare|speech|media|federalism|minority","confidence":"high|moderate|low|developing","courtStatus":"none|pending|stayed|upheld|struck_down","national_impact":0-100,"state_impact":0-100,"local_impact":0-100,"violations":[{"a":"Art.XX","h":"precise constitutional impact in 15 words"}],"supports":[{"a":"Art.XX","h":"precise constitutional support in 15 words"}],"govResponse":"brief govt response if in text or null","analysis":"constitutional analysis 140 chars max","mythos":"poetic civic insight 150 chars max","citizenExplanation":"plain language — what this means for ordinary Indians in 2 sentences"}`},{role:"user",content:"Scope:"+s.scope+" State:"+s.state+" EvidenceLevel:"+s.evidenceLevel+" News:"+s.headline+" Context:"+s.body?.slice(0,200)}]})});
+  try{const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ},body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:1800,temperature:0.15,messages:[{role:"system",content:`You are India's top constitutional law expert and investigative journalist. You will analyse ONLY what is stated in the provided headline and body text. You must NEVER invent, assume, or extrapolate events that aren't written in the text.
+
+=== HARD RULES — READ BEFORE ANALYSING ===
+
+RULE 1 — SKIP IRRELEVANT STORIES:
+If the headline is ANY of the following, return {"skip": true, "reason": "..."} and nothing else:
+  - About a non-Indian topic (foreign central banks, foreign politicians, international tech, Hollywood, foreign wars that don't involve Indian constitutional concern)
+  - Sports (cricket, football, Olympics, IPL) unless it involves a specific legal/policy action by Indian government
+  - Entertainment (Bollywood, OTT release, film review, celebrity)
+  - About a future event that hasn't happened yet ("PM to address at 8:30pm", "SC to hear next week") — cannot analyse what hasn't happened
+  - Routine operational news (airline cancellation, weather, traffic) unless it triggers a rights issue
+  - Market moves, stock prices, crypto, company earnings unless they involve SEBI/RBI constitutional action
+
+RULE 2 — GROUNDING REQUIREMENT:
+For EVERY violation/support you claim, the specific EVENT must be stated in the provided headline or body text. If you cannot point to the specific event in the text:
+  - Do NOT invent quotes
+  - Do NOT invent attributions (e.g. "X said Y" when the text doesn't say so)
+  - Do NOT invent bills being "defeated" or "passed" — check the verb tense in the source
+  - Do NOT hallucinate named officials making statements unless the text explicitly quotes them
+  - If the story is too vague to ground specific claims, return {"skip": true, "reason": "insufficient grounding"}
+
+RULE 3 — VERB TENSE MATTERS:
+  - "Modi targets Congress over opposition to bill" → the bill's status is NOT stated in this headline. Do not assume it was defeated or passed.
+  - "Court seeks reply" → the court is asking; no ruling yet. Do not claim rights were violated by the court.
+  - "SC to hear on May 16" → future event; nothing has happened. Skip or mark as "pending hearing, no constitutional finding yet".
+  - "Pact allows deployment" → the pact is signed but is it ratified? If text doesn't say, mark confidence as "developing".
+
+RULE 4 — POLITICAL RHETORIC IS NOT A VIOLATION:
+Campaign speeches, party spokespersons attacking opponents, and political rallies are PROTECTED speech under Art.19(1)(a). Unless the rhetoric crosses into incitement (a legal threshold), score as score:0 or slight positive for free speech. Do not treat every harsh political statement as a "concern".
+
+RULE 5 — INSTITUTIONAL ACCOUNTABILITY IS A POSITIVE:
+If a government institution is investigating itself (court of inquiry, internal probe, suspended officer pending inquiry), that is a SUPPORT for rule of law — not a violation. Score positive or neutral.
+
+=== ONLY IF THE STORY PASSES RULES 1-5, RETURN THIS JSON ===
+
+{
+"score":-5 to 5,
+"pillar":"press_freedom|liberty|equality|electoral|separation|religion|justice|welfare|environment",
+"department":"pmo|home|law|finance|education|health|wcd|minority|rural|urban|environment|defence|police|ec|media|judiciary",
+"scope":"national|state|local",
+"evidenceLevel":"allegation|single_source|corroborated|official_doc|court_finding|final_adjudication",
+"storyType":"policy|law|court|policing|election|rights|corruption|welfare|speech|media|federalism|minority",
+"confidence":"high|moderate|low|developing",
+"courtStatus":"none|pending|stayed|upheld|struck_down",
+"national_impact":0-100,
+"state_impact":0-100,
+"local_impact":0-100,
+"violations":[
+  {"a":"Art.XX","title":"article full name","who":"specific institution/official/body that caused the violation — grounded in source text","how":"60-80 word explanation referencing the specific act/order/event FROM THE SOURCE TEXT. Cite relevant precedents only if accurate."}
+],
+"supports":[
+  {"a":"Art.XX","title":"article full name","who":"institution/body that upheld the principle — grounded in source text","how":"60-80 word explanation referencing specific court order/vote/policy from the source text."}
+],
+"govResponse":"official government response ONLY if explicitly mentioned in source text, else null",
+"analysis":"140-char summary of net constitutional impact — stick to what the text supports",
+"mythos":"150-char poetic civic insight",
+"citizenExplanation":"2-3 sentences in plain language — what the ACTUAL events in the source text mean for ordinary Indians"
+}
+
+=== GROUNDING EXAMPLES ===
+
+BAD (hallucinated): Headline says "Modi targets Congress over women quota bill". Analysis writes: "Women's reservation bill was defeated, violating Art.15." → WRONG. The bill's status isn't stated. The story is campaign rhetoric.
+GOOD: Return {"skip": true, "reason": "story is political rhetoric; underlying bill status not stated in source"}
+
+BAD (hallucinated): Headline says "Bank of Canada raises alarm on AI". Analysis: "Constitutional concern about AI regulation in India." → WRONG. Foreign central bank, not Indian constitutional event.
+GOOD: Return {"skip": true, "reason": "foreign central bank; no Indian constitutional event"}
+
+BAD (hallucinated): Headline says "IAF orders court of inquiry into Sukhoi landing". Analysis: "Constitutional violation — right to life." → WRONG. Court of inquiry IS accountability working.
+GOOD: supports:[{"a":"Art.50","title":"Separation of Powers","who":"Indian Air Force internal-inquiry mechanism","how":"IAF self-investigation after a hard landing demonstrates institutional accountability..."}]; score:+1
+
+=== ARTICLE LIBRARY ===
+Indian Constitution articles you may cite: Art.1 (Union), Art.14 (Equality), Art.15-17 (No discrimination), Art.19 (Speech/Assembly), Art.21 (Life/Liberty), Art.21A (Education), Art.22 (Arrest), Art.25-28 (Religion), Art.29-30 (Minority), Art.32 (Remedies), Art.39-47 (DPSP), Art.50 (Separation), Art.81-82 (Lok Sabha/Delimitation), Art.170 (State Assembly), Art.226 (HC writs), Art.243 (Panchayat), Art.246 (Union/State list), Art.253 (Treaties), Art.265 (Tax), Art.300A (Property), Art.301 (Free trade), Art.324-329 (Elections), Art.350A (Mother tongue), Art.355 (State protection), Art.368 (Amendment), 5th Sch (Tribal), 6th Sch (NE), 10th Sch (Defection).
+
+REMEMBER: Better to skip a story than to hallucinate. Your output will be PUBLISHED to thousands of Indian citizens. Accuracy over coverage.`},{role:"user",content:"Scope:"+s.scope+" State:"+s.state+" EvidenceLevel:"+s.evidenceLevel+" Headline:"+s.headline+" Context:"+(s.body||"").slice(0,400)}]})});
   if(r.status===429){setRL(30000);return s;}if(!r.ok)return s;
   const d=await r.json();const txt=d.choices?.[0]?.message?.content||"";const clean=txt.replace(/```json|```/g,"").trim();const si=clean.indexOf("{"),ei=clean.lastIndexOf("}");if(si<0||ei<0)return s;
   const j=JSON.parse(clean.slice(si,ei+1));
+
+  // === FIX 2: HANDLE SKIP DECISION ===
+  if(j.skip===true){
+    console.log("[aiUpgrade] AI chose to skip story:",s.headline.slice(0,60),"—",j.reason||"no reason");
+    return{...s,aiDone:true,aiSkipped:true,skipReason:j.reason||"Story does not meet constitutional-relevance criteria",approved:false,held:true,violations:[],supports:[],aiScore:0,delta:0,severity:"low",citizenExplanation:"This story was filtered out: "+(j.reason||"not constitutional content")};
+  }
+
+  // === FIX 2: VALIDATE AI RESPONSE — reject if obviously hallucinated ===
+  // If article numbers don't match known patterns, flag it
+  const articlePattern=/^(Art\.[0-9]+[A-Z]?(?:\([0-9]+\)(?:\([a-z]\))?)?|5th Sch|6th Sch|10th Sch|AFSPA)$/;
+  const badArticles=[...(j.violations||[]),...(j.supports||[])].filter(v=>!articlePattern.test(v.a||""));
+  if(badArticles.length>0){
+    console.warn("[aiUpgrade] rejecting — malformed article numbers:",badArticles.map(b=>b.a));
+    return{...s,aiDone:true,aiSkipped:true,skipReason:"AI returned invalid article references",approved:false,held:true};
+  }
+
   return{...s,aiScore:Number(j.score)||s.delta,institution:j.department||s.institution,evidenceLevel:j.evidenceLevel||s.evidenceLevel,storyType:j.storyType||s.storyType,confidence:j.confidence||s.confidence,courtStatus:j.courtStatus||s.courtStatus,nationalImpact:Number(j.national_impact)||null,stateImpact:Number(j.state_impact)||null,localImpact:Number(j.local_impact)||null,violations:j.violations?.length?j.violations:s.violations,supports:j.supports?.length?j.supports:s.supports,govResponse:j.govResponse||s.govResponse,aiAnalysis:j.analysis||null,mythos:j.mythos||null,citizenExplanation:j.citizenExplanation||s.citizenExplanation,aiDone:true};}catch{return s;}}
 
 function useToasts(){const[toasts,setToasts]=useState([]);const add=useCallback((msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4500);},[]);return{toasts,add};}
@@ -556,35 +926,52 @@ function ImpactBar({story,t}){
 
 // ── CONSTITUTION PANEL ─────────────────────────────────────────
 function ConstitutionPanel({violations=[],supports=[],t}){
-  if(!violations.length&&!supports.length)return(<div style={{padding:"18px",textAlign:"center",color:"var(--t3)",fontSize:11}}>AI constitutional analysis pending...</div>);
+  if(!violations.length&&!supports.length)return(<div style={{padding:"18px",textAlign:"center",color:"var(--t3)",fontSize:11,fontStyle:"italic",background:"var(--bg-soft)",borderRadius:2}}>Constitutional analysis loading… click ✦ AI Enrich All to get detailed article-level analysis.</div>);
+
+  const renderArticle=(v,isSupport)=>{
+    const col=isSupport?"var(--green-t)":"var(--red-t)";
+    const bg=isSupport?"var(--green-s)":"var(--red-s)";
+    const border=isSupport?"var(--green-b)":"var(--red-b)";
+    const articleTitle=v.title||CA[v.a]?.t||v.a;
+    const who=v.who||null;
+    const how=v.how||v.h||v.reason||"";
+    return(
+      <div style={{padding:"12px 14px",background:bg,border:"1px solid "+border,borderRadius:2,marginBottom:8,borderLeft:"3px solid "+col}}>
+        {/* Article header */}
+        <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+          <span style={{fontFamily:"var(--font-m)",fontSize:11,fontWeight:800,color:col,background:"rgba(255,255,255,0.5)",padding:"2px 7px",borderRadius:2,letterSpacing:"0.02em"}}>{v.a}</span>
+          <span style={{fontFamily:"var(--font-h)",fontSize:14,fontWeight:700,color:"var(--t1)",lineHeight:1.3,letterSpacing:"-0.01em"}}>{articleTitle}</span>
+        </div>
+
+        {/* Who */}
+        {who&&(<div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:6,paddingBottom:6,borderBottom:"1px solid "+border}}>
+          <span style={{fontSize:9.5,color:col,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",flexShrink:0}}>BY</span>
+          <span style={{fontSize:12.5,color:"var(--t1)",fontWeight:600,fontFamily:"var(--font-b)"}}>{who}</span>
+        </div>)}
+
+        {/* How — full 50-80 word explanation */}
+        {how&&(<div>
+          <div style={{fontSize:9.5,color:col,fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>{isSupport?"HOW IT UPHOLDS":"HOW IT VIOLATES"}</div>
+          <p style={{fontSize:13,color:"var(--t1)",lineHeight:1.65,fontFamily:"var(--font-h)",margin:0}}>{how}</p>
+        </div>)}
+      </div>
+    );
+  };
+
   return(<div style={{marginTop:4}}>
-    {violations.length>0&&(<div style={{marginBottom:10}}>
-      <div style={{fontSize:8.5,color:"var(--red)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.14em",marginBottom:7,display:"flex",alignItems:"center",gap:5}}>
-        <span style={{width:5,height:5,borderRadius:"50%",background:"var(--red)",display:"inline-block"}}/>⚠ {t.constitutionViolations}
+    {violations.length>0&&(<div style={{marginBottom:16}}>
+      <div style={{fontSize:10,color:"var(--red-t)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:10,display:"flex",alignItems:"center",gap:6,paddingBottom:6,borderBottom:"2px solid var(--red-t)"}}>
+        <span style={{width:7,height:7,borderRadius:"50%",background:"var(--red-t)",display:"inline-block"}}/>
+        {t.constitutionViolations||"Constitutional Violations"} ({violations.length})
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:5}}>
-        {violations.map((v,i)=>(<div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 11px",background:"rgba(240,74,90,0.04)",border:"1px solid rgba(240,74,90,0.11)",borderRadius:8}}>
-          <Tag color={CA[v.a]?.c||"#F04A5A"} sm>{v.a}</Tag>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:10.5,fontWeight:600,color:"var(--t1)",marginBottom:2}}>{CA[v.a]?.t||v.a}</div>
-            <div style={{fontSize:9.5,color:"var(--t2)",lineHeight:1.55}}>{v.h||v.reason}</div>
-          </div>
-        </div>))}
-      </div>
+      {violations.map((v,i)=><div key={i}>{renderArticle(v,false)}</div>)}
     </div>)}
     {supports.length>0&&(<div>
-      <div style={{fontSize:8.5,color:"var(--green)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.14em",marginBottom:7,display:"flex",alignItems:"center",gap:5}}>
-        <span style={{width:5,height:5,borderRadius:"50%",background:"var(--green)",display:"inline-block"}}/>✓ {t.constitutionSupports}
+      <div style={{fontSize:10,color:"var(--green-t)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:10,display:"flex",alignItems:"center",gap:6,paddingBottom:6,borderBottom:"2px solid var(--green-t)"}}>
+        <span style={{width:7,height:7,borderRadius:"50%",background:"var(--green-t)",display:"inline-block"}}/>
+        {t.constitutionSupports||"Constitutional Supports"} ({supports.length})
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:5}}>
-        {supports.map((v,i)=>(<div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 11px",background:"rgba(15,212,124,0.04)",border:"1px solid rgba(15,212,124,0.11)",borderRadius:8}}>
-          <Tag color="var(--green)" sm>{v.a}</Tag>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:10.5,fontWeight:600,color:"var(--t1)",marginBottom:2}}>{CA[v.a]?.t||v.a}</div>
-            <div style={{fontSize:9.5,color:"var(--t2)",lineHeight:1.55}}>{v.h||v.reason}</div>
-          </div>
-        </div>))}
-      </div>
+      {supports.map((v,i)=><div key={i}>{renderArticle(v,true)}</div>)}
     </div>)}
   </div>);}
 
@@ -1306,7 +1693,57 @@ function MyRightsPage({scope,setScope,t}){const states=Object.keys(STATE_BASELIN
 
 function SubmitPage({onSubmit,toast,t}){const[form,setForm]=useState({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});const handle=()=>{if(!form.headline.trim()){toast("Please enter a headline","error");return;}onSubmit(form);setForm({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});toast("Report submitted · Evidence level: "+form.evidenceLevel,"success");};return(<div className="fade-up" style={{maxWidth:580}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.submit||"Submit Report"}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Include evidence level — helps us weight your report accurately</p></div><Card><div style={{display:"flex",flexDirection:"column",gap:12}}>{[{k:"headline",label:"Headline *",type:"input",ph:"Brief description of the constitutional event"},{k:"body",label:"Details",type:"textarea",ph:"Evidence, source links, location, official notices..."}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{f.label}</label>{f.type==="textarea"?<textarea value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} rows={3} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",resize:"vertical",fontFamily:"var(--font-b)"}}/>:<input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}/>}</div>))}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>{[{k:"evidenceLevel",label:"Evidence Level",opts:Object.entries(EVIDENCE_LEVELS).map(([v,l])=>[v,l.label])},{k:"scope",label:"Scope",opts:[["national","National"],["state","State"],["local","Local"]]},{k:"storyType",label:"Story Type",opts:STORY_TYPES.map(s=>[s,s.charAt(0).toUpperCase()+s.slice(1)])},{k:"state",label:"State",opts:[["","All India"],...Object.keys(STATE_BASELINES).sort().map(s=>[s,s])]},{k:"source",label:"Source",opts:[["citizen_unverified","Citizen"],["single_source","Single"],["corroborated","Confirmed"],["verified","Official"]]},{k:"courtStatus",label:"Court Status",opts:Object.entries(COURT_STATUSES).map(([v,cs])=>[v,cs.label])}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",display:"block",marginBottom:4}}>{f.label}</label><select value={form[f.k]||""} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",fontFamily:"var(--font-b)"}}>{f.opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div><Btn onClick={handle} variant="primary" style={{padding:"10px 22px",fontSize:13,width:"fit-content"}}>{t.submit||"Submit Report"}</Btn></div></Card></div>);}
 
-function ReviewPage({stories,onReview,t,mode}){const pending=stories.filter(s=>!s.approved&&!s.held);const held=stories.filter(s=>s.held);return(<div className="fade-up"><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.review||"Review Queue"}</h2></div>{pending.length===0&&held.length===0&&<Card style={{textAlign:"center",padding:"40px",color:"var(--t2)"}}>No items pending</Card>}{pending.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:11,fontWeight:700,color:"var(--amber)",marginBottom:9}}>⏳ Pending ({pending.length})</div>{pending.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}</div>}{held.length>0&&<div><div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:9}}>Held ({held.length})</div>{held.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}</div>}</div>);}
+function ReviewPage({stories,onReview,t,mode,onReclassify,onClearFiltered}){
+  const pending=stories.filter(s=>!s.approved&&!s.held);
+  const filtered=stories.filter(s=>s.held&&s.aiSkipped);
+  const manuallyHeld=stories.filter(s=>s.held&&!s.aiSkipped);
+
+  return(<div className="fade-up">
+    <div style={{marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+      <h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.review||"Review Queue"}</h2>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        {onReclassify&&<Btn variant="amber" onClick={onReclassify}>↻ Re-classify All</Btn>}
+        {filtered.length>0&&onClearFiltered&&<Btn variant="danger" onClick={onClearFiltered}>× Clear {filtered.length} filtered</Btn>}
+      </div>
+    </div>
+
+    {pending.length===0&&filtered.length===0&&manuallyHeld.length===0&&
+      <Card style={{textAlign:"center",padding:"40px",color:"var(--t2)"}}>
+        <div style={{fontSize:24,marginBottom:8}}>✓</div>
+        <div>No items pending review</div>
+        <div style={{fontSize:11,marginTop:6,color:"var(--t3)"}}>All fetched stories passed the constitutional-relevance filter</div>
+      </Card>}
+
+    {pending.length>0&&<div style={{marginBottom:14}}>
+      <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",marginBottom:9}}>⏳ Pending ({pending.length})</div>
+      {pending.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}
+    </div>}
+
+    {filtered.length>0&&<div style={{marginBottom:14}}>
+      <div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:9,display:"flex",alignItems:"center",gap:6}}>
+        <span style={{width:6,height:6,borderRadius:99,background:"var(--t3)"}}/>
+        Filtered out by relevance engine ({filtered.length})
+      </div>
+      <div style={{fontSize:10.5,color:"var(--t3)",marginBottom:10,lineHeight:1.5,padding:"8px 12px",background:"rgba(255,255,255,0.02)",borderRadius:8,border:"1px solid var(--border)"}}>
+        These stories were flagged as non-constitutional or non-Indian content. They do not affect scores and are not shown in the newsroom. You can approve individually if you disagree with the filter, or clear them all.
+      </div>
+      {filtered.map(s=>(
+        <div key={s.id} style={{marginBottom:10}}>
+          <div style={{fontSize:10,color:"var(--t3)",marginBottom:4,padding:"4px 10px",background:"rgba(245,166,35,0.06)",border:"1px solid rgba(245,166,35,0.15)",borderRadius:6,display:"inline-flex",alignItems:"center",gap:6}}>
+            <span style={{fontWeight:700,color:"var(--amber)"}}>FILTERED:</span>
+            <span>{s.skipReason||"Did not meet relevance criteria"}</span>
+          </div>
+          <StoryCard s={s} t={t} mode={mode} onReview={onReview} compact/>
+        </div>
+      ))}
+    </div>}
+
+    {manuallyHeld.length>0&&<div>
+      <div style={{fontSize:11,fontWeight:700,color:"var(--t2)",marginBottom:9}}>Manually held ({manuallyHeld.length})</div>
+      {manuallyHeld.map(s=><StoryCard key={s.id} s={s} t={t} mode={mode} onReview={onReview}/>)}
+    </div>}
+  </div>);
+}
 
 function MethodPage({t}){return(<div className="fade-up" style={{maxWidth:680}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.method||"Methodology"}</h2></div>{[{icon:"📊",c:"var(--blue)",title:"Advanced Scoring Formula",body:"story_effect = directional_score × evidence_weight × source_credibility × confidence × recency_decay × pillar_weight × pattern_multiplier × impact_radius_factor\n\nEvidence weights: Allegation 0.2× · Single Source 0.4× · Corroborated 0.65× · Official Doc 0.85× · Court Finding 0.92× · Final Adjudication 1.0×"},{icon:"🔍",c:"var(--amber)",title:"Evidence Classification System",body:"Every story is assigned an evidence level that directly controls its score weight. An allegation barely moves the score. A gazette notification or court order has near-full effect. This is the core safeguard that prevents misinformation from distorting scores."},{icon:"🌐",c:"var(--green)",title:"Impact Radius — 3 Scores Simultaneously",body:"National news: 100% national · 40% state · 20% local\nState news: 30% national · 100% state · 50% local\nLocal news: 5% national · 15% state · 100% local\nAll adjusted for evidence quality and confidence level"},{icon:"🏛",c:"var(--purple)",title:"16 Department Scores",body:"PMO · Home · Law · Finance · Education · Health · Women&Child · Minority · Rural · Urban · Environment · Defence · Police · EC · Media · Judiciary — each with base score, evidence-weighted story adjustments, and live violation/support tracking"},{icon:"⚖",c:"var(--cyan)",title:"Constitutional Mapping",body:"Every story maps to specific Indian Constitution Articles. 7 constitutional pillars tracked. Violations (red) and Supports (green) shown per story, per department, per state, per article."},{icon:"🤖",c:"var(--purple)",title:"AI Layer — Groq Llama 3.3 70B",body:"Free API (14,400 req/day). AI classifies evidence level, story type, department, exact constitutional violations with article numbers, government response if in text, citizen explanation in plain language, and poetic mythos."},{icon:"📰",c:"var(--blue)",title:"Data Source — Google News RSS",body:"Real-time RSS from 1000s of Indian newspapers, TV channels, digital media. Filtered by 40+ constitutional relevance keywords. 100% free, no API key required. Updates continuously."}].map((item,i)=>(<Card key={i} style={{marginBottom:8,padding:"14px 17px"}}><div style={{display:"flex",gap:11,alignItems:"flex-start"}}><div style={{width:34,height:34,borderRadius:9,background:item.c+"12",border:"1px solid "+item.c+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{item.icon}</div><div><div style={{fontSize:12.5,fontWeight:700,color:"var(--t1)",marginBottom:4}}>{item.title}</div><div style={{fontSize:10.5,color:"var(--t2)",lineHeight:1.75,whiteSpace:"pre-line"}}>{item.body}</div></div></div></Card>))}</div>);}
 
@@ -1328,7 +1765,15 @@ export default function App(){
   const[user,setUser]=useState(()=>{try{const d=localStorage.getItem("dtn_user");return d?JSON.parse(d):null;}catch{return null;}});
   const[showDisc,setShowDisc]=useState(()=>!localStorage.getItem("dtn_disc"));
   const[page,setPage]=useState("dashboard");
-  const[stories,setStories]=useState(()=>{try{const d=localStorage.getItem(SK);return d?JSON.parse(d):[];}catch{return[];}});
+  const[stories,setStories]=useState(()=>{
+    try{
+      // Auto-migrate: clear stale data from pre-fix storage keys (hallucinations lived there)
+      const OLD_KEYS=["dtn_v7","dtn_v8","dtn_v9"];
+      OLD_KEYS.forEach(k=>{try{localStorage.removeItem(k);}catch{}});
+      const d=localStorage.getItem(SK);
+      return d?JSON.parse(d):[];
+    }catch{return[];}
+  });
   const[scope,setScope]=useState({state:"Gujarat",occupation:"General Citizen"});
   const[natHistory,setNatHistory]=useState([]);
   const[fetching,setFetching]=useState(false);
@@ -1384,6 +1829,8 @@ export default function App(){
       if(!items.length){toast("No constitutional stories found — try a different scope","info");return;}
       const fresh=items.map((item,i)=>{
         const cls=classify(item.headline,item.body||"");
+        // === FIX 3: Skipped stories go to HELD queue, not newsroom ===
+        const isSkipped=cls.aiSkipped===true;
         return{
           id:"F"+Date.now()+i,
           ts:Date.now(),
@@ -1394,23 +1841,33 @@ export default function App(){
           ...cls,
           scope:cls.scope||fScope,
           state:cls.state||(fScope==="state"?fState:null),
-          approved:true,held:false,aiDone:false,
+          approved:!isSkipped,  // auto-approve only non-skipped
+          held:isSkipped,        // skipped → review queue
+          aiDone:false,
         };
       });
       let unique=[];
+      let skippedCount=0;
       setStories(p=>{
         const ids=new Set(p.map(s=>s.headline.slice(0,55)));
         unique=fresh.filter(s=>!ids.has(s.headline.slice(0,55)));
         if(!unique.length){toast("No new stories — all already tracked","info");return p;}
-        const evSummary=unique.reduce((a,s)=>{const k=s.evidenceLevel||"single_source";a[k]=(a[k]||0)+1;return a;},{});
+        skippedCount=unique.filter(s=>s.aiSkipped).length;
+        const approved=unique.filter(s=>!s.aiSkipped);
+        const evSummary=approved.reduce((a,s)=>{const k=s.evidenceLevel||"single_source";a[k]=(a[k]||0)+1;return a;},{});
         const evStr=Object.entries(evSummary).map(([k,v])=>v+"× "+k.replace(/_/g," ")).join(" · ");
-        toast(`${unique.length} new stories · ${evStr}`,"success");
+        const msg=skippedCount>0
+          ? `${approved.length} stories added · ${skippedCount} filtered out (not constitutional)`
+          : `${unique.length} new stories · ${evStr}`;
+        toast(msg,"success");
         return[...unique,...p].slice(0,200);
       });
 
       // Fire notifications + enrich missing images (runs after state update)
       setTimeout(async()=>{
         for(const s of unique){
+          // === FIX: don't notify or enrich skipped stories ===
+          if(s.aiSkipped)continue;
           // If RSS didn't include an image, try OG scrape (best-effort, capped)
           let img=s.image;
           if(!img&&s.link){
@@ -1432,7 +1889,8 @@ export default function App(){
         }
       },400);
 
-      setTimeout(()=>runUpgrades(fresh),2500);
+      // Only enrich APPROVED stories (saves Groq API quota)
+      setTimeout(()=>runUpgrades(fresh.filter(s=>!s.aiSkipped)),2500);
     }finally{setFetching(false);}
   },[fetching,fScope,fState,fDist,runUpgrades,toast,notif]);
 
@@ -1450,9 +1908,52 @@ export default function App(){
   const handleSignIn=useCallback(u=>{setUser(u);localStorage.setItem("dtn_user",JSON.stringify(u));},[]);
   const handleDisc=useCallback(()=>{setShowDisc(false);localStorage.setItem("dtn_disc","1");},[]);
   const handleReview=useCallback((id,action)=>{
-    setStories(p=>p.map(s=>s.id===id?{...s,approved:action==="approve",held:action==="hold",rejected:action==="reject"}:s));
+    setStories(p=>p.map(s=>s.id===id?{...s,approved:action==="approve",held:action==="hold",rejected:action==="reject",aiSkipped:action==="approve"?false:s.aiSkipped}:s));
     toast(action==="approve"?"✓ Approved and scored":"Story "+action+"ed","success");
   },[toast]);
+
+  // Re-classify all existing stories against the current (updated) classifier.
+  // Stories the old classifier approved but the new one would skip get moved to the Review Queue.
+  const handleReclassify=useCallback(()=>{
+    let reclassified=0,skipped=0;
+    setStories(p=>p.map(s=>{
+      // Preserve user-reviewed decisions (rejected stays rejected, user-held stays held)
+      if(s.rejected)return s;
+      const cls=classify(s.headline,s.body||"");
+      if(cls.aiSkipped){
+        skipped++;
+        return{
+          ...s,
+          ...cls,
+          // keep original image/link/ts but override classification + force to review queue
+          image:s.image,link:s.link,ts:s.ts,id:s.id,
+          approved:false,held:true,aiDone:false,
+        };
+      }
+      reclassified++;
+      return{
+        ...s,
+        ...cls,
+        image:s.image,link:s.link,ts:s.ts,id:s.id,
+        // if previously skipped but now passes, restore to approved
+        approved:true,held:false,aiSkipped:false,skipReason:null,
+        // reset aiDone so AI can re-enrich with the new prompt
+        aiDone:false,
+      };
+    }));
+    toast(`↻ Reclassified · ${reclassified} kept · ${skipped} moved to review`,"success");
+  },[toast]);
+
+  // Clear all filtered-out stories (the ones the classifier auto-held as irrelevant)
+  const handleClearFiltered=useCallback(()=>{
+    let removed=0;
+    setStories(p=>{
+      const kept=p.filter(s=>{if(s.held&&s.aiSkipped){removed++;return false;}return true;});
+      return kept;
+    });
+    toast(`× Cleared ${removed} filtered stories`,"success");
+  },[toast]);
+
   const handleSubmit=useCallback(form=>{
     const cls=classify(form.headline,form.body);
     setStories(p=>[{
@@ -1615,7 +2116,7 @@ export default function App(){
           {page==="submit"&&
             <SubmitPage onSubmit={handleSubmit} toast={toast} t={t}/>}
           {page==="review"&&
-            <ReviewPage stories={stories} onReview={handleReview} t={t} mode={mode}/>}
+            <ReviewPage stories={stories} onReview={handleReview} t={t} mode={mode} onReclassify={handleReclassify} onClearFiltered={handleClearFiltered}/>}
           {page==="method"&&<MethodPage t={t}/>}
           {page==="about"&&<AboutPage t={t}/>}
       </main>
