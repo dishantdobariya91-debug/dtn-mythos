@@ -3,7 +3,7 @@
 // + kinetic ticker, SpeechSynthesis, animated SVG illustrations.
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { PODCASTS, TOPIC_META, TOPIC_ORDER, PODCAST_FALLBACKS } from "./podcasts";
+import { PODCASTS, TOPIC_META, TOPIC_ORDER, PODCAST_FALLBACKS } from "../podcasts";
 
 // ─── Icons (inline SVG; no external deps) ──────────────────────────
 const ICON = {
