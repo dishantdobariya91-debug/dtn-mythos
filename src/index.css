@@ -1316,152 +1316,516 @@ body:has(.shell) #initial-loader { display: none !important; }
   background: var(--support-green);
   color: #fff; border-color: var(--support-green);
 }
+/* ────────────────────────────────────────────────────────────────
+   DTN Mythos v12.1 — Newspaper CSS
+   Append this to the END of src/index.css.
+   Provides:
+     - Screen preview of the daily broadsheet
+     - Print-optimized layout (hits when user saves as PDF)
+     - Uncertainty-band display for Democracy Score
+──────────────────────────────────────────────────────────────── */
 
-/* ────────────────────────────────────────────────────────────
-   v12.0.2 — Broadcast typography scale-up
-   Overrides earlier sizes for true NYT/BBC-impact feel
-──────────────────────────────────────────────────────────── */
-
-/* Masthead — the big "DTN MYTHOS" at top */
-.broadcast-masthead,
-header [class*="masthead"],
-header h1 {
-  font-family: var(--font-h) !important;
-  font-size: clamp(44px, 7.5vw, 80px) !important;
-  font-weight: 900 !important;
-  letter-spacing: -0.025em !important;
-  line-height: 0.92 !important;
+/* ─── Screen preview — centered paper on dark bg ───────────── */
+.newspaper-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
 }
 
-/* Page titles — "Constitutional Journalism", "Podcasts", etc */
-main h1,
-main h2:first-of-type,
-[class*="page-title"],
-[class*="pageTitle"] {
-  font-size: clamp(32px, 5.5vw, 56px) !important;
-  font-weight: 900 !important;
-  line-height: 1.02 !important;
-  letter-spacing: -0.022em !important;
-  font-family: var(--font-h) !important;
+.newspaper-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
-/* Subtitle line under page title */
-main h1 + p,
-main h2:first-of-type + p,
-[class*="subtitle"] {
-  font-size: clamp(15px, 2vw, 18px) !important;
-  line-height: 1.5 !important;
+.newspaper-pdf-btn {
+  font-family: var(--font-b);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 12px 22px;
+  border-radius: 8px;
+  background: var(--amber-signature, #F5B93A);
+  border: 2px solid #0A0A0A;
+  color: #0A0A0A;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
 }
 
-/* Section labels like "LIVE NEWSROOM", "LATEST" */
-[class*="section-label"],
-[class*="eyebrow"] {
-  font-size: 13px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.16em !important;
+.newspaper-pdf-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(245, 185, 58, 0.35);
 }
 
-/* Story card headlines */
-article h3,
-[class*="story-card"] h3,
-[class*="storyCard"] h3,
-[class*="headline"] h3 {
-  font-size: clamp(22px, 3.2vw, 34px) !important;
-  font-weight: 900 !important;
-  line-height: 1.12 !important;
-  letter-spacing: -0.01em !important;
-  font-family: var(--font-h) !important;
+.newspaper-pdf-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
-/* Story body / "Why it matters" */
-article p,
-[class*="story-body"],
-[class*="why-matters"] p {
-  font-size: 17px !important;
-  line-height: 1.65 !important;
+.newspaper-hint {
+  font-size: 13px;
+  color: var(--t2, #aaa);
+  line-height: 1.5;
+  flex: 1;
+  min-width: 250px;
 }
 
-/* Latest sidebar items */
-[class*="latest-item"] a,
-[class*="latest-item"] div,
-aside [class*="item"] {
-  font-size: 15px !important;
-  line-height: 1.38 !important;
-  font-weight: 600 !important;
+.newspaper-empty-note {
+  color: #D42B1F;
+  font-weight: 600;
 }
 
-/* Ticker — make the scrolling text bigger */
-.kinetic-text,
-[class*="ticker-text"],
-[class*="ticker"] span {
-  font-size: 22px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
+/* ─── The paper itself — newspaper look on screen AND print ── */
+.newspaper-paper {
+  background: #FAFAF7;
+  color: #0A0A0A;
+  padding: 48px 56px 64px;
+  font-family: "PT Serif", Georgia, "Times New Roman", serif;
+  line-height: 1.45;
+  box-shadow: 0 10px 60px rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
 }
 
-/* Navigation tabs */
-nav button,
-nav a,
-[class*="nav-tab"] {
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.01em !important;
+/* ─── Masthead ────────────────────────────────────────────── */
+.paper-masthead {
+  border-bottom: 4px double #0A0A0A;
+  padding-bottom: 18px;
+  margin-bottom: 24px;
+  text-align: center;
 }
 
-/* Score displays — National 38, Gujarat 34 */
-[class*="score"] [class*="value"],
-[class*="national"] span:last-child,
-[class*="gujarat"] span:last-child {
-  font-size: clamp(22px, 2.8vw, 30px) !important;
-  font-weight: 900 !important;
-  font-family: var(--font-h) !important;
+.paper-masthead-topline {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #0A0A0A;
+  font-family: "Inter", "Helvetica Neue", sans-serif;
 }
 
-/* Filter chips — All / Critical / Support / etc */
-[class*="filter-chip"],
-[class*="filterChip"] {
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  padding: 10px 18px !important;
+.paper-title {
+  font-family: "Playfair Display", "Times New Roman", serif;
+  font-size: 82px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin: 16px 0 8px 0;
 }
 
-/* Badges — CONCERN · JUDICIARY */
-[class*="badge"] {
-  font-size: 12px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.08em !important;
+.paper-tagline {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 14px;
 }
 
-/* Podcast card titles */
-[class*="podcast-card"] h3,
-[class*="podcast"] h3 {
-  font-size: 26px !important;
-  font-weight: 900 !important;
-  line-height: 1.15 !important;
+.paper-score-strip {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  font-family: "Inter", sans-serif;
+  color: #444;
+  padding-top: 8px;
+  border-top: 1px solid #bbb;
 }
 
-/* Podcast card host/description */
-[class*="podcast-card"] p {
-  font-size: 15.5px !important;
-  line-height: 1.55 !important;
+.paper-score-strip strong {
+  color: #B8232A;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-/* Mobile adjust — drop ceiling but keep readability */
-@media (max-width: 640px) {
-  .broadcast-masthead,
-  header [class*="masthead"],
-  header h1 {
-    font-size: 38px !important;
+/* ─── Lead story ──────────────────────────────────────────── */
+.paper-lead {
+  margin: 0 0 32px 0;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #0A0A0A;
+}
+
+.paper-lead-label {
+  margin-bottom: 12px;
+}
+
+.paper-lead-headline {
+  font-family: "Playfair Display", "Times New Roman", serif;
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0 0 10px 0;
+  color: #0A0A0A;
+}
+
+.paper-lead-byline {
+  margin-bottom: 14px;
+}
+
+.paper-lead-eyebrow {
+  font-size: 11px;
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.paper-lead-body {
+  font-size: 17px;
+  line-height: 1.65;
+  column-count: 2;
+  column-gap: 28px;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.paper-lead-body::first-letter {
+  font-family: "Playfair Display", serif;
+  font-size: 64px;
+  font-weight: 900;
+  float: left;
+  line-height: 0.9;
+  padding: 4px 10px 0 0;
+  color: #0A0A0A;
+}
+
+.paper-lead-articles {
+  margin-top: 18px;
+  padding: 12px 16px;
+  background: rgba(245, 185, 58, 0.1);
+  border-left: 3px solid var(--amber-signature, #F5B93A);
+  column-count: 1;
+}
+
+.paper-article-ref {
+  font-size: 13.5px;
+  padding: 4px 0;
+  font-family: "Inter", sans-serif;
+}
+
+.paper-article-ref.violation strong { color: #B8232A; }
+.paper-article-ref.support strong { color: #27500A; }
+
+/* ─── Front-page 2x2 grid ─────────────────────────────────── */
+.paper-front-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 32px;
+  margin-bottom: 36px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #0A0A0A;
+}
+
+.paper-front-story {
+  border-top: 1px solid #bbb;
+  padding-top: 14px;
+}
+
+.paper-front-label {
+  margin-bottom: 8px;
+}
+
+.paper-front-headline {
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.15;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.paper-front-meta {
+  font-size: 11px;
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.paper-front-body {
+  font-size: 14.5px;
+  line-height: 1.55;
+  margin: 0;
+  text-align: justify;
+}
+
+/* ─── Inside digest — dense 3-column ──────────────────────── */
+.paper-inside {
+  margin-top: 24px;
+}
+
+.paper-inside-hed {
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  border-top: 3px solid #0A0A0A;
+  border-bottom: 1px solid #0A0A0A;
+  padding: 10px 0;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.paper-inside-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.paper-inside-story {
+  border-left: 3px solid #ddd;
+  padding-left: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.paper-inside-label {
+  margin-bottom: 4px;
+}
+
+.paper-inside-headline {
+  font-family: "Playfair Display", serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.paper-inside-meta {
+  font-size: 10px;
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+/* ─── Label badges ────────────────────────────────────────── */
+.paper-label {
+  display: inline-block;
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border: 1.5px solid;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.paper-label.compact {
+  font-size: 8.5px;
+  padding: 2px 6px;
+  letter-spacing: 0.1em;
+}
+
+/* ─── Empty state ─────────────────────────────────────────── */
+.paper-empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: #555;
+}
+
+.paper-empty h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.paper-empty p {
+  font-size: 15px;
+  max-width: 440px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ─── Footer ──────────────────────────────────────────────── */
+.paper-footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 4px double #0A0A0A;
+  text-align: center;
+}
+
+.paper-footer-line {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.paper-footer-disclaimer {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.5;
+  font-style: italic;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* ─── PRINT — what fires when the user saves as PDF ─────────── */
+@media print {
+  /* Hide everything EXCEPT the newspaper */
+  body * {
+    visibility: hidden;
   }
-  main h1,
-  main h2:first-of-type {
-    font-size: 28px !important;
+  .newspaper-paper,
+  .newspaper-paper * {
+    visibility: visible;
   }
-  article h3,
-  [class*="story-card"] h3 {
-    font-size: 22px !important;
+  .newspaper-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 32px 28px;
+    box-shadow: none;
+    border-radius: 0;
   }
-  [class*="podcast-card"] h3 {
-    font-size: 21px !important;
+  .no-print {
+    display: none !important;
   }
+  /* Force backgrounds/colors to print (Chrome default strips them) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Paper size */
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  /* Prevent breaking mid-story */
+  .paper-lead, .paper-front-story, .paper-inside-story {
+    break-inside: avoid;
+  }
+  .paper-title {
+    font-size: 64px;
+  }
+  .paper-lead-headline {
+    font-size: 32px;
+  }
+  .paper-front-headline {
+    font-size: 18px;
+  }
+  .paper-inside-headline {
+    font-size: 13px;
+  }
+}
+
+/* ─── Mobile ────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .newspaper-paper {
+    padding: 28px 20px;
+  }
+  .paper-title {
+    font-size: 52px;
+  }
+  .paper-lead-headline {
+    font-size: 28px;
+  }
+  .paper-lead-body {
+    column-count: 1;
+    font-size: 15.5px;
+  }
+  .paper-front-grid {
+    grid-template-columns: 1fr;
+  }
+  .paper-inside-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .paper-masthead-topline {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 10px;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   v12.1 — Uncertainty band for Democracy Score
+──────────────────────────────────────────────────────────────── */
+
+.score-uncertainty {
+  font-size: 0.5em;
+  font-weight: 400;
+  color: var(--t3, #888);
+  letter-spacing: 0.04em;
+  margin-left: 6px;
+  font-family: "Inter", sans-serif;
+}
+
+.score-uncertainty::before {
+  content: "±";
+  margin-right: 2px;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   v12.1 — New label pills (support/potential_violation/neutral/uncertain)
+──────────────────────────────────────────────────────────────── */
+
+.label-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: "Inter", sans-serif;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1.5px solid;
+}
+
+.label-pill.label-support {
+  color: #27500A;
+  background: rgba(39, 80, 10, 0.08);
+  border-color: rgba(39, 80, 10, 0.35);
+}
+
+.label-pill.label-potential_violation {
+  color: #B8232A;
+  background: rgba(184, 35, 42, 0.08);
+  border-color: rgba(184, 35, 42, 0.35);
+}
+
+.label-pill.label-neutral {
+  color: #4A4A4A;
+  background: rgba(74, 74, 74, 0.06);
+  border-color: rgba(74, 74, 74, 0.25);
+}
+
+.label-pill.label-uncertain {
+  color: #8A7640;
+  background: rgba(138, 118, 64, 0.08);
+  border-color: rgba(138, 118, 64, 0.3);
+}
+
+/* Review-needed indicator */
+.review-needed-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8A7640;
+  background: rgba(138, 118, 64, 0.12);
+  border: 1px solid rgba(138, 118, 64, 0.3);
+  border-radius: 99px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }

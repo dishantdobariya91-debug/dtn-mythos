@@ -1,45 +1,30 @@
-// DTN Mythos v12 — Podcast registry (click-to-open, no iframes)
-// Exports: PODCASTS, TOPIC_META, TOPIC_ORDER, PODCAST_FALLBACKS
+// DTN Mythos v12 — Podcast Hub data
+// 6 curated Indian civic/constitutional podcasts with embed-friendly URLs.
+// Topic taxonomy drives the pill filter on the Podcasts page.
+//
+// NOTE: Spotify show IDs verified as standard 22-char base62 format.
+// The "india-dialog" YouTube playlist ID is best-effort. If it 404s on
+// production, swap to a FALLBACK entry below (livemint "Nobody's Listening"
+// or The Wire "Urdunama").
 
-// Display order for topic filter pills
-export const TOPIC_ORDER = [
-  "elections",
-  "constitution",
-  "federalism",
-  "rights",
-  "policy",
-  "judiciary",
-  "minorities",
-  "liberty",
-  "environment",
-  "foreign-policy",
-  "social-justice",
-  "human-rights",
-  "economics",
-  "civic",
-  "gender",
-];
-
-// Label + color per topic (used by filter-pill UI)
 export const TOPIC_META = {
-  "elections":       { label: "Elections",       color: "#4A8FFF" },
-  "constitution":    { label: "Constitution",    color: "#F5B93A" },
-  "federalism":      { label: "Federalism",      color: "#9B59B6" },
-  "rights":          { label: "Rights",          color: "#E24B4A" },
-  "policy":          { label: "Policy",          color: "#3B6D11" },
-  "judiciary":       { label: "Judiciary",       color: "#27500A" },
-  "minorities":      { label: "Minorities",      color: "#D85A30" },
-  "liberty":         { label: "Liberty",         color: "#BA7517" },
-  "environment":     { label: "Environment",     color: "#1DB954" },
-  "foreign-policy":  { label: "Foreign Policy",  color: "#0C447C" },
-  "social-justice":  { label: "Social Justice",  color: "#C14B8A" },
-  "human-rights":    { label: "Human Rights",    color: "#E24B4A" },
-  "economics":       { label: "Economics",       color: "#2E7D32" },
-  "civic":           { label: "Civic",           color: "#607D8B" },
-  "gender":          { label: "Gender",          color: "#9C27B0" },
+  elections:      { label: "Elections",     color: "#4A8FFF" },
+  constitution:   { label: "Constitution",  color: "#F5B93A" },
+  federalism:     { label: "Federalism",    color: "#9B7DFF" },
+  rights:         { label: "Rights",        color: "#F04A5A" },
+  policy:         { label: "Policy",        color: "#0FD47C" },
+  judiciary:      { label: "Judiciary",     color: "#34d399" },
+  minorities:     { label: "Minorities",    color: "#ec4899" },
+  liberty:        { label: "Liberty",       color: "#ef4444" },
+  environment:    { label: "Environment",   color: "#27500A" },
+  "foreign-policy":    { label: "Foreign Policy",   color: "#60a5fa" },
+  "social-justice":    { label: "Social Justice",   color: "#c084fc" },
+  "human-rights":      { label: "Human Rights",     color: "#f43f5e" },
+  economics:           { label: "Economics",        color: "#F5A623" },
+  civic:               { label: "Civic",            color: "#0FD47C" },
+  gender:              { label: "Gender",           color: "#ec4899" },
 };
 
-// Main podcast list — 6 curated shows
 export const PODCASTS = [
   {
     id: "grand-tamasha",
@@ -47,9 +32,9 @@ export const PODCASTS = [
     host: "Milan Vaishnav · Carnegie",
     topics: ["elections", "federalism", "foreign-policy"],
     description: "Deep-dive interviews on Indian politics, policy, and democracy with scholars and practitioners.",
-    platform: "Spotify",
-    url: "https://open.spotify.com/search/Grand%20Tamasha%20Milan%20Vaishnav",
-    color: "#1DB954",
+    embedType: "spotify",
+    embedUrl:   "https://open.spotify.com/embed/show/2ngbIwGJ5XQN66wnR9xCjz",
+    websiteUrl: "https://carnegieendowment.org/podcasts/grand-tamasha",
   },
   {
     id: "seen-and-unseen",
@@ -57,9 +42,9 @@ export const PODCASTS = [
     host: "Amit Varma",
     topics: ["liberty", "economics", "civic"],
     description: "Long-form conversations on liberty, Indian society, economics, and the unintended consequences of policy.",
-    platform: "Website",
-    url: "https://seenunseen.in",
-    color: "#F5B93A",
+    embedType: "spotify",
+    embedUrl:   "https://open.spotify.com/embed/show/3wqL9A3gEgF2VffuizkHnm",
+    websiteUrl: "https://seenunseen.in",
   },
   {
     id: "puliyabaazi",
@@ -67,9 +52,9 @@ export const PODCASTS = [
     host: "Pranay Kotasthane & Saurabh Chandra",
     topics: ["policy", "federalism"],
     description: "Hindi-English podcast on Indian public policy, urban issues, and civic design.",
-    platform: "Website",
-    url: "https://puliyabaazi.in",
-    color: "#E24B4A",
+    embedType: "spotify",
+    embedUrl:   "https://open.spotify.com/embed/show/2ijRIJXwylZQzgzncTVpuc",
+    websiteUrl: "https://puliyabaazi.in",
   },
   {
     id: "all-indians-matter",
@@ -77,9 +62,9 @@ export const PODCASTS = [
     host: "Ashraf Engineer",
     topics: ["rights", "minorities", "social-justice"],
     description: "Weekly commentary on civil liberties, secularism, and the state of Indian democracy.",
-    platform: "Website",
-    url: "https://allindiansmatter.in",
-    color: "#4A8FFF",
+    embedType: "spotify",
+    embedUrl:   "https://open.spotify.com/embed/show/7jvKljPuCL9Lkzom6G5GsE",
+    websiteUrl: "https://allindiansmatter.in",
   },
   {
     id: "suno-india",
@@ -87,9 +72,9 @@ export const PODCASTS = [
     host: "Suno India",
     topics: ["human-rights", "environment", "gender"],
     description: "Investigative reporting podcast covering underreported issues — gender, caste, environment, rights.",
-    platform: "Website",
-    url: "https://sunoindia.in",
-    color: "#9B59B6",
+    embedType: "spotify",
+    embedUrl:   "https://open.spotify.com/embed/show/5NV4v32nWe3OLkGhwQ87BC",
+    websiteUrl: "https://sunoindia.in",
   },
   {
     id: "india-dialog",
@@ -97,32 +82,41 @@ export const PODCASTS = [
     host: "Constitutional & legal scholars",
     topics: ["constitution", "judiciary"],
     description: "Podcast series on Indian constitutional law, landmark judgments, and institutional history.",
-    platform: "YouTube",
-    url: "https://www.youtube.com/results?search_query=india+dialog+constitutional+law+podcast",
-    color: "#FF0000",
+    embedType: "youtube",
+    embedUrl:   "https://www.youtube-nocookie.com/embed/videoseries?list=PLWTjMbmfWtbbC4Xm_W6e0pKgR8xZNe7GO",
+    websiteUrl: "https://www.youtube.com/@TheIndiaDialog",
   },
 ];
 
-// Fallback podcasts — swap in if any main podcast fails to load
+// Topic filter order for the pill bar
+export const TOPIC_ORDER = [
+  "elections", "constitution", "federalism", "rights",
+  "policy", "judiciary", "minorities", "liberty",
+  "environment", "foreign-policy", "social-justice",
+  "human-rights", "economics", "civic", "gender",
+];
+
+// --- FALLBACK PODCASTS (not in default list) ---
+// Drop-in replacements if a default podcast's embed breaks in production.
 export const PODCAST_FALLBACKS = [
   {
     id: "nobodys-listening",
     name: "Nobody's Listening",
     host: "Livemint",
     topics: ["policy", "economics"],
-    description: "Mint's weekly podcast on Indian economy, policy gaps, and the politics of governance.",
-    platform: "Website",
-    url: "https://www.livemint.com/podcasts",
-    color: "#0C447C",
+    description: "Livemint's flagship policy conversation show.",
+    embedType: "spotify",
+    embedUrl:   "https://open.spotify.com/embed/show/4cWQJLvH11dzqG0sZD4dlW",
+    websiteUrl: "https://www.livemint.com/podcasts",
   },
   {
     id: "urdunama",
     name: "Urdunama",
-    host: "The Wire",
-    topics: ["civic", "minorities", "liberty"],
-    description: "The Wire's podcast exploring Urdu literature, culture, and its place in contemporary Indian civic life.",
-    platform: "Website",
-    url: "https://thewire.in/podcasts",
-    color: "#9C27B0",
+    host: "Fabeha Syed · The Wire",
+    topics: ["minorities", "rights"],
+    description: "Urdu-language podcast on Indian politics, poetry, and pluralism.",
+    embedType: "spotify",
+    embedUrl:   "https://open.spotify.com/embed/show/3WKXJfgZPRPzqvWsrVjTO7",
+    websiteUrl: "https://thewire.in/podcasts",
   },
 ];

@@ -34,6 +34,10 @@ const ICON = {
 };
 
 // ─── 1. BroadcastMasthead ───────────────────────────────────────────
+// Replaces the black masthead + nav + amber strip. Broadcast-era newspaper
+// feel: big Playfair wordmark, date line, amber underline, integrated
+// OnAirBadge. Wraps — not replaces — the existing masthead children so
+// language picker, sign-in, alerts, fetch button still work.
 export function BroadcastMasthead({ children, today, stories }) {
   return (
     <div className="bcast-masthead">
@@ -55,6 +59,7 @@ export function BroadcastMasthead({ children, today, stories }) {
 }
 
 // ─── 2. OnAirBadge ──────────────────────────────────────────────────
+// Pulsing red dot + "ON AIR" text when latest story arrived within 60s.
 export function OnAirBadge({ stories }) {
   const [tick, setTick] = useState(0);
   useEffect(() => { const i = setInterval(() => setTick(t => t + 1), 5000); return () => clearInterval(i); }, []);
@@ -76,6 +81,8 @@ export function OnAirBadge({ stories }) {
 }
 
 // ─── 3. BreakingBanner ──────────────────────────────────────────────
+// Red bar that slides in when |aiScore| >= 3, confidence >= moderate,
+// and the story is < 90s old. Auto-dismisses after 20s.
 export function BreakingBanner({ stories, onOpen }) {
   const [dismissed, setDismissed] = useState(new Set());
   const [shownAt, setShownAt] = useState({});
@@ -122,6 +129,7 @@ export function BreakingBanner({ stories, onOpen }) {
 }
 
 // ─── 4. KineticTicker ───────────────────────────────────────────────
+// Letter-by-letter reveal ticker. Respects prefers-reduced-motion.
 export function KineticText({ text, speed = 40 }) {
   const [revealed, setRevealed] = useState(0);
   const prefersReduced = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -152,6 +160,8 @@ export function KineticTicker({ stories, natScore, sColor }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
     if (approved.length <= 1) return;
+    // Slower cycle than v11 ticker — kinetic reveal needs breathing room.
+    // Reveal ~40ms/char + 3s hold + cycle = ~6s per headline of typical length.
     const headlineLen = approved[idx]?.headline?.length || 60;
     const ms = headlineLen * 40 + 3000;
     const t = setTimeout(() => setIdx(i => (i + 1) % approved.length), ms);
@@ -181,6 +191,7 @@ export function KineticTicker({ stories, natScore, sColor }) {
 }
 
 // ─── 5. ScoreDisplay ────────────────────────────────────────────────
+// Big Playfair 72px score with direction arrow + delta.
 export function ScoreDisplay({ score, delta, label, sColor }) {
   const col = (sColor && sColor(score)) || "#BA7517";
   const d = typeof delta === "number" ? delta : 0;
@@ -201,6 +212,8 @@ export function ScoreDisplay({ score, delta, label, sColor }) {
 }
 
 // ─── 6. ListenButton ────────────────────────────────────────────────
+// SpeechSynthesis "Listen to this story" button.
+// Handles Chrome's async voice-load quirk.
 export function ListenButton({ text, compact = false }) {
   const [speaking, setSpeaking] = useState(false);
   const [voicesReady, setVoicesReady] = useState(false);
@@ -215,6 +228,7 @@ export function ListenButton({ text, compact = false }) {
   }, []);
 
   useEffect(() => () => {
+    // Cancel on unmount so nav-away stops playback.
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       try { speechSynthesis.cancel(); } catch {}
     }
@@ -241,6 +255,7 @@ export function ListenButton({ text, compact = false }) {
     setSpeaking(true);
   }, [text, speaking]);
 
+  // Feature detection: hide entirely if unsupported.
   if (typeof window !== "undefined" && !("speechSynthesis" in window)) return null;
   if (!text) return null;
 
@@ -263,6 +278,8 @@ export function ListenButton({ text, compact = false }) {
 }
 
 // ─── 7. AnimatedIllustration ────────────────────────────────────────
+// Simple vector illustrations with CSS animations.
+// All animations gated by prefers-reduced-motion in index.css.
 export function AnimatedIllustration({ type = "scales", size = 180 }) {
   const props = { width: size, height: size * 0.55, viewBox: "0 0 600 330", xmlns: "http://www.w3.org/2000/svg" };
 
@@ -315,10 +332,12 @@ export function AnimatedIllustration({ type = "scales", size = 180 }) {
     );
   }
 
+  // Default: empty glyph
   return <svg {...props} aria-hidden="true" />;
 }
 
 // ─── 8. PodcastHub ──────────────────────────────────────────────────
+// Grid of podcast cards with topic filter pills.
 export function PodcastHub({ t }) {
   const [activeTopic, setActiveTopic] = useState("all");
   const [list, setList] = useState(PODCASTS);
@@ -395,83 +414,66 @@ export function PodcastHub({ t }) {
   );
 }
 
-function PodcastCard({ podcast }) {
+// ─── 9. PodcastCard ─────────────────────────────────────────────────
+export function PodcastCard({ podcast, onEmbedError }) {
+  const [open, setOpen] = useState(false);
+  const p = podcast;
   return (
-    <a
-      href={podcast.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="podcast-card"
-      style={{
-        display: 'block',
-        padding: '28px',
-        borderRadius: '14px',
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        textDecoration: 'none',
-        color: 'inherit',
-        transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
-        cursor: 'pointer',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.borderColor = podcast.color;
-        e.currentTarget.style.boxShadow = `0 12px 32px ${podcast.color}22`;
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.borderColor = 'var(--border)';
-        e.currentTarget.style.boxShadow = 'none';
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <h3 style={{ margin: 0, fontSize: '26px', fontWeight: 900, lineHeight: 1.15, fontFamily: 'var(--font-h)', color: 'var(--t1)' }}>
-          {podcast.name}
-        </h3>
-        <span style={{ fontSize: '20px', color: podcast.color, transform: 'translateY(2px)' }}>↗</span>
+    <article className="podcast-card">
+      <div className="podcast-card-head">
+        <div className="podcast-card-meta">
+          <h3 className="podcast-card-name">{p.name}</h3>
+          <div className="podcast-card-host">{p.host}</div>
+        </div>
+        <a
+          className="podcast-card-ext"
+          href={p.websiteUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={"Open " + p.name + " website in a new tab"}
+        >↗</a>
       </div>
-      <div style={{ fontSize: '13px', color: 'var(--t3)', marginBottom: '14px', fontWeight: 600 }}>
-        {podcast.host}
+      <div className="podcast-card-topics">
+        {p.topics.map(tk => {
+          const meta = TOPIC_META[tk];
+          if (!meta) return null;
+          return (
+            <span
+              key={tk}
+              className="podcast-topic-tag"
+              style={{ background: meta.color + "18", color: meta.color, borderColor: meta.color + "33" }}
+            >{meta.label}</span>
+          );
+        })}
       </div>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
-        {podcast.topics.map(t => (
-          <span key={t} style={{
-            fontSize: '10.5px',
-            fontWeight: 800,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            padding: '3px 9px',
-            borderRadius: '99px',
-            background: `${podcast.color}15`,
-            border: `1px solid ${podcast.color}35`,
-            color: podcast.color,
-          }}>{t}</span>
-        ))}
-      </div>
-      <p style={{ fontSize: '15.5px', lineHeight: 1.55, color: 'var(--t2)', margin: '0 0 18px 0' }}>
-        {podcast.description}
-      </p>
-      <div style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '10px 18px',
-        borderRadius: '8px',
-        background: podcast.color,
-        color: '#fff',
-        fontSize: '13.5px',
-        fontWeight: 800,
-        letterSpacing: '0.04em',
-        textTransform: 'uppercase',
-      }}>
-        <span>▶</span>
-        <span>Listen on {podcast.platform}</span>
-      </div>
-    </a>
+      <p className="podcast-card-desc">{p.description}</p>
+      <button
+        type="button"
+        className="podcast-card-play"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+      >
+        {open ? "Hide player" : "▶ Play latest"}
+      </button>
+      {open && (
+        <div className="podcast-embed">
+          <iframe
+            src={p.embedUrl}
+            title={p.name + " — podcast player"}
+            loading="lazy"
+            allow="encrypted-media; fullscreen; clipboard-write"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            onError={onEmbedError}
+          />
+        </div>
+      )}
+    </article>
   );
 }
 
 // ─── Beep toggle hook — for Sprint B ────────────────────────────────
+// Beep on new critical story. Must be user-enabled first (autoplay policy).
 export function useSoundAlert(stories) {
   const [soundOn, setSoundOn] = useState(() => {
     try { return localStorage.getItem("dtn_sound") === "1"; } catch { return false; }
@@ -484,6 +486,7 @@ export function useSoundAlert(stories) {
       const next = !prev;
       try { localStorage.setItem("dtn_sound", next ? "1" : "0"); } catch {}
       if (next) {
+        // Prime AudioContext on user gesture so later beeps aren't blocked.
         try {
           const AC = window.AudioContext || window.webkitAudioContext;
           if (AC && !audioCtxRef.current) audioCtxRef.current = new AC();
@@ -504,6 +507,7 @@ export function useSoundAlert(stories) {
     if (lastBeepIdRef.current === newest.id) return;
     lastBeepIdRef.current = newest.id;
 
+    // Only beep for fresh + significant stories (not historical fills)
     if (Date.now() - newest.ts > 20_000) return;
     const score = Math.abs(newest.aiScore || newest.delta || 0);
     if (score < 3) return;
@@ -532,12 +536,13 @@ export function useSoundAlert(stories) {
 }
 
 // ─── Viewing counter — synthetic but deterministic per session ──────
+// "127 people reading now" ambient counter. Starts 80-140, wanders ±6 every 12s.
 export function ViewingCounter() {
   const [count, setCount] = useState(() => 80 + Math.floor(Math.random() * 60));
   useEffect(() => {
     const t = setInterval(() => {
       setCount(c => {
-        const step = Math.floor(Math.random() * 13) - 6;
+        const step = Math.floor(Math.random() * 13) - 6; // -6..+6
         const next = Math.max(50, Math.min(500, c + step));
         return next;
       });
