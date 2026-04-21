@@ -397,7 +397,7 @@ export function PodcastHub({ t }) {
 
 function PodcastCard({ podcast }) {
   return (
-    
+    <a
       href={podcast.url}
       target="_blank"
       rel="noopener noreferrer"
