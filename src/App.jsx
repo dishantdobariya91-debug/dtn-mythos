@@ -2,6 +2,7 @@ import React,{useState,useEffect,useCallback,useRef,useMemo}from"react";
 import{AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,RadarChart,Radar,PolarGrid,PolarAngleAxis,BarChart,Bar,Cell}from"recharts";
 import{BroadcastMasthead,BreakingBanner,KineticTicker,ListenButton,AnimatedIllustration,PodcastHub,useSoundAlert,ViewingCounter}from"./components/BroadcastUI";
 import{NewspaperView}from"./components/NewspaperView";
+import{SuggestPage}from"./components/SuggestPage";
 const GROQ=import.meta.env.VITE_GROQ_KEY||"";
 
 // ── MULTI-LANGUAGE ────────────────────────────────────────────
@@ -1576,9 +1577,12 @@ function MyRightsPage({scope,setScope,t}){const states=Object.keys(STATE_BASELIN
 function SubmitPage({onSubmit,toast,t}){const[form,setForm]=useState({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});const handle=()=>{if(!form.headline.trim()){toast("Please enter a headline","error");return;}onSubmit(form);setForm({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});toast("Report submitted · Evidence level: "+form.evidenceLevel,"success");};return(<div className="fade-up" style={{maxWidth:580}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.submit||"Submit Report"}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Include evidence level — helps us weight your report accurately</p></div><Card><div style={{display:"flex",flexDirection:"column",gap:12}}>{[{k:"headline",label:"Headline *",type:"input",ph:"Brief description of the constitutional event"},{k:"body",label:"Details",type:"textarea",ph:"Evidence, source links, location, official notices..."}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{f.label}</label>{f.type==="textarea"?<textarea value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} rows={3} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",resize:"vertical",fontFamily:"var(--font-b)"}}/>:<input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}/>}</div>))}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>{[{k:"evidenceLevel",label:"Evidence Level",opts:Object.entries(EVIDENCE_LEVELS).map(([v,l])=>[v,l.label])},{k:"scope",label:"Scope",opts:[["national","National"],["state","State"],["local","Local"]]},{k:"storyType",label:"Story Type",opts:STORY_TYPES.map(s=>[s,s.charAt(0).toUpperCase()+s.slice(1)])},{k:"state",label:"State",opts:[["","All India"],...Object.keys(STATE_BASELINES).sort().map(s=>[s,s])]},{k:"source",label:"Source",opts:[["citizen_unverified","Citizen"],["single_source","Single"],["corroborated","Confirmed"],["verified","Official"]]},{k:"courtStatus",label:"Court Status",opts:Object.entries(COURT_STATUSES).map(([v,cs])=>[v,cs.label])}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",display:"block",marginBottom:4}}>{f.label}</label><select value={form[f.k]||""} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",fontFamily:"var(--font-b)"}}>{f.opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div><Btn onClick={handle} variant="primary" style={{padding:"10px 22px",fontSize:13,width:"fit-content"}}>{t.submit||"Submit Report"}</Btn></div></Card></div>);}
 
 function ReviewPage({stories,onReview,t,mode,onReclassify,onClearFiltered}){
-  const pending=stories.filter(s=>!s.approved&&!s.held);
-  const filtered=stories.filter(s=>s.held&&s.aiSkipped);
-  const manuallyHeld=stories.filter(s=>s.held&&!s.aiSkipped);
+  // v12.2 — user-suggested stories shown first; exclude from other sections
+  const suggested=stories.filter(s=>s.suggestedBy==="user"&&!s.approved&&!s.rejected);
+  const suggestedIds=new Set(suggested.map(s=>s.id));
+  const pending=stories.filter(s=>!s.approved&&!s.held&&!suggestedIds.has(s.id));
+  const filtered=stories.filter(s=>s.held&&s.aiSkipped&&!suggestedIds.has(s.id));
+  const manuallyHeld=stories.filter(s=>s.held&&!s.aiSkipped&&!suggestedIds.has(s.id));
 
   // v12.1 — A/R/S keyboard shortcuts operate on first pending story
   useEffect(()=>{
@@ -1617,6 +1621,25 @@ function ReviewPage({stories,onReview,t,mode,onReclassify,onClearFiltered}){
         <div>No items pending review</div>
         <div style={{fontSize:11,marginTop:6,color:"var(--t3)"}}>All fetched stories passed the constitutional-relevance filter</div>
       </Card>}
+
+    {suggested.length>0&&<div style={{marginBottom:18}}>
+      <div style={{fontSize:11,fontWeight:700,color:"#9B7DFF",marginBottom:9,display:"flex",alignItems:"center",gap:6}}>
+        <span style={{width:6,height:6,borderRadius:99,background:"#9B7DFF"}}/>
+        User-Suggested ({suggested.length})
+      </div>
+      <div style={{fontSize:10.5,color:"var(--t3)",marginBottom:10,lineHeight:1.5,padding:"8px 12px",background:"rgba(124,92,252,0.04)",borderRadius:8,border:"1px solid rgba(124,92,252,0.15)"}}>
+        Stories submitted via the <strong>Suggest</strong> page. These came from real Indian news sources after a user-initiated search — approve to publish, or reject to dismiss.
+      </div>
+      {suggested.map(s=>(
+        <div key={s.id} style={{marginBottom:10,position:"relative"}}>
+          <div style={{fontSize:10,color:"#9B7DFF",marginBottom:4,padding:"4px 10px",background:"rgba(124,92,252,0.08)",border:"1px solid rgba(124,92,252,0.2)",borderRadius:6,display:"inline-flex",alignItems:"center",gap:6}}>
+            <span style={{fontWeight:700}}>SUGGESTED:</span>
+            <span>via "{s.suggestedQuery||"user search"}"</span>
+          </div>
+          <StoryCard s={s} t={t} mode={mode} onReview={onReview}/>
+        </div>
+      ))}
+    </div>}
 
     {pending.length>0&&<div style={{marginBottom:14}}>
       <div style={{fontSize:11,fontWeight:700,color:"var(--amber)",marginBottom:9}}>⏳ Pending ({pending.length})</div>
@@ -1911,6 +1934,7 @@ export default function App(){
     {id:"rights",label:t.rights||"My Rights"},
     {id:"podcasts",label:t.podcasts||"Podcasts"},
     {id:"paper",label:"Daily Paper"},
+    {id:"suggest",label:"Suggest"},
     {id:"review",label:t.review||"Review"},
     {id:"demoscore",label:t.demoScore||"Democracy Score"},
     {id:"method",label:t.method||"Methodology"},
@@ -2032,6 +2056,13 @@ export default function App(){
             <PodcastHub t={t}/>}
           {page==="paper"&&
             <NewspaperView stories={stories} natScore={natScore}/>}
+          {page==="suggest"&&
+            <SuggestPage
+              onAddStory={(story)=>setStories(p=>[pushHistory(story,"user","suggested","held"),...p])}
+              classify={classify}
+              toast={toast}
+              t={t}
+            />}
           {page==="journalist"&&
             <JournalistConsolePage
               stories={stories} t={t}

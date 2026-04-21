@@ -1,97 +1,66 @@
-// Vercel Serverless Function — multi-source news proxy
-// Direct-photo-rich sources go first (TOI, Hindu, NDTV) — Google News last.
-// This reorder alone should push photo coverage from ~50% to ~75-85%.
-// Runs at /api/rss?scope=national
+// DTN Mythos — /api/rss
+// Vercel serverless proxy for Google News RSS.
+// Handles scope=national|state|district (existing) and scope=search (new in v12.2).
+//
+// If you already have a live /api/rss.js in your repo, add the `if (scope === "search")`
+// branch. Otherwise drop this whole file in at api/rss.js — it handles all modes.
 
-export const config = { runtime: "edge" };
+const CONST_KEYWORDS = "rights+court+police+arrest+protest+constitution+demolition+election+-cricket+-IPL";
 
-const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+function buildUrl(scope, state, district, q) {
+  const base = "https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=";
 
-const KEYWORDS = "rights court police arrest protest constitution election";
-
-function buildSources(scope, state, district) {
-  let locationTerm = "India";
-  if (scope === "state" && state) locationTerm = state + " India";
-  else if (scope === "district" && district) locationTerm = district + " India";
-
-  const gQuery = encodeURIComponent(locationTerm + " " + KEYWORDS);
-  const gQueryBroad = encodeURIComponent(locationTerm + " news");
-
-  // Photo-rich sources first
-  return [
-    { name: "toi-top", url: "https://timesofindia.indiatimes.com/rssfeedstopstories.cms" },
-    { name: "toi-india", url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms" },
-    { name: "hindu-national", url: "https://www.thehindu.com/news/national/feeder/default.rss" },
-    { name: "ndtv-top", url: "https://feeds.feedburner.com/ndtvnews-top-stories" },
-    { name: "indianexpress", url: "https://indianexpress.com/section/india/feed/" },
-    { name: "scroll", url: "https://feeds.feedburner.com/ScrollinArticles.rss" },
-    // Google News as fallback — great coverage, worst photos
-    { name: "google-news", url: "https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=" + gQuery },
-    { name: "google-news-broad", url: "https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=" + gQueryBroad },
-    { name: "bing-news", url: "https://www.bing.com/news/search?q=" + gQuery + "&format=RSS&cc=IN&setlang=en-IN" },
-  ];
-}
-
-async function tryFetch(url) {
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": UA,
-      Accept: "application/rss+xml, application/xml, text/xml, */*;q=0.1",
-      "Accept-Language": "en-IN,en;q=0.9",
-    },
-    signal: AbortSignal.timeout(8000),
-  });
-  const text = await res.text();
-  const itemCount = (text.match(/<item[\s>]/g) || []).length;
-  return { status: res.status, ok: res.ok, text, itemCount, bytes: text.length };
-}
-
-export default async function handler(req) {
-  const { searchParams } = new URL(req.url);
-  const scope = searchParams.get("scope") || "national";
-  const state = searchParams.get("state") || "";
-  const district = searchParams.get("district") || "";
-  const debug = searchParams.get("debug") === "1";
-
-  const sources = buildSources(scope, state, district);
-  const attempts = [];
-
-  for (const src of sources) {
-    try {
-      const result = await tryFetch(src.url);
-      attempts.push({ source: src.name, status: result.status, bytes: result.bytes, items: result.itemCount });
-
-      if (result.ok && result.itemCount > 0) {
-        return new Response(result.text, {
-          status: 200,
-          headers: {
-            "Content-Type": "application/xml; charset=utf-8",
-            "Cache-Control": "s-maxage=60, stale-while-revalidate=120",
-            "Access-Control-Allow-Origin": "*",
-            "X-RSS-Source": src.name,
-            "X-RSS-Items": String(result.itemCount),
-          },
-        });
-      }
-    } catch (e) {
-      attempts.push({ source: src.name, error: String(e?.message || e) });
-    }
+  if (scope === "search" && q) {
+    // v12.2 — user-initiated keyword search
+    // Constrain to India-related context but let the user's query dominate
+    const safe = q.replace(/[^\w\s+-]/g, "").slice(0, 120).trim();
+    if (!safe) return null;
+    return base + encodeURIComponent(safe + " India");
   }
 
-  return new Response(
-    JSON.stringify(
-      {
-        error: "all_sources_failed",
-        message: "Every news source returned 0 items or an error.",
-        attempts: debug ? attempts : attempts.map((a) => ({ src: a.source, items: a.items || 0, err: a.error })),
-      },
-      null,
-      2
-    ),
-    {
-      status: 502,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  if (scope === "state" && state) {
+    return base + encodeURIComponent(state + " India " + CONST_KEYWORDS);
+  }
+
+  if (scope === "district" && district) {
+    return base + encodeURIComponent(district + " India " + CONST_KEYWORDS);
+  }
+
+  // Default: national
+  return base + encodeURIComponent("India democracy constitution rights court " + CONST_KEYWORDS);
+}
+
+export default async function handler(req, res) {
+  try {
+    const { scope = "national", state, district, q } = req.query || {};
+
+    const url = buildUrl(scope, state, district, q);
+    if (!url) {
+      res.status(400).json({ error: "Invalid search query" });
+      return;
     }
-  );
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; DTN-Mythos/12.2; +https://dtn.today)",
+        "Accept": "application/rss+xml, application/xml, text/xml",
+      },
+      // Vercel Node functions support fetch with no special config
+    });
+
+    if (!response.ok) {
+      res.status(502).json({ error: "Upstream returned " + response.status });
+      return;
+    }
+
+    const xml = await response.text();
+
+    // Cache for 60s — RSS doesn't update faster than that anyway
+    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=120");
+    res.setHeader("Content-Type", "application/rss+xml; charset=utf-8");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.status(200).send(xml);
+  } catch (e) {
+    res.status(500).json({ error: "Fetch failed: " + (e.message || "unknown") });
+  }
 }
