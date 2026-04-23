@@ -1,65 +1,105 @@
-// DTN Mythos — /api/rss
-// Vercel serverless proxy for Google News RSS.
-// Handles scope=national|state|district (existing) and scope=search (new in v12.2).
-//
-// If you already have a live /api/rss.js in your repo, add the `if (scope === "search")`
-// branch. Otherwise drop this whole file in at api/rss.js — it handles all modes.
+// DTN Mythos v12.3.1 — /api/rss
+// Broader, simpler queries + parallel fetch + merge-dedupe.
+// Previous narrow single-query approach returned empty feeds from Google News.
+// This version runs 3-4 parallel queries per scope and merges results.
 
-const CONST_KEYWORDS = "rights+court+police+arrest+protest+constitution+demolition+election+-cricket+-IPL";
+const QUERIES = {
+  national: [
+    "India Supreme Court constitution",
+    "India government policy parliament",
+    "India Election Commission voter",
+    "India police arrest custody rights",
+  ],
+  state: (name) => [
+    name + " India court order",
+    name + " India government policy",
+    name + " India police rights",
+  ],
+  district: (name) => [
+    name + " India police arrest",
+    name + " India court",
+  ],
+  search: (q) => [q + " India"],
+};
 
-function buildUrl(scope, state, district, q) {
-  const base = "https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=";
+function buildUrl(query) {
+  const safe = String(query || "").replace(/[^\w\s+-]/g, "").slice(0, 150).trim();
+  if (!safe) return null;
+  return "https://news.google.com/rss/search?hl=en-IN&gl=IN&ceid=IN:en&q=" +
+         encodeURIComponent(safe);
+}
 
-  if (scope === "search" && q) {
-    // v12.2 — user-initiated keyword search
-    // Constrain to India-related context but let the user's query dominate
-    const safe = q.replace(/[^\w\s+-]/g, "").slice(0, 120).trim();
-    if (!safe) return null;
-    return base + encodeURIComponent(safe + " India");
+async function fetchOne(url) {
+  try {
+    const r = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+      },
+    });
+    if (!r.ok) return null;
+    const text = await r.text();
+    if (!text || !text.includes("<item")) return null;
+    return text;
+  } catch (e) {
+    return null;
+  }
+}
+
+function mergeFeeds(feeds) {
+  const nonEmpty = feeds.filter(Boolean);
+  if (nonEmpty.length === 0) return null;
+  if (nonEmpty.length === 1) return nonEmpty[0];
+
+  const first = nonEmpty[0];
+  const items = [];
+  const itemRe = /<item[\s>][\s\S]*?<\/item>/gi;
+  for (const feed of nonEmpty) {
+    const m = feed.match(itemRe) || [];
+    items.push(...m);
+  }
+  // Dedupe by <link>
+  const seen = new Set();
+  const unique = [];
+  for (const it of items) {
+    const linkMatch = it.match(/<link[^>]*>([\s\S]*?)<\/link>/i);
+    const link = linkMatch ? linkMatch[1].trim() : Math.random().toString();
+    if (seen.has(link)) continue;
+    seen.add(link);
+    unique.push(it);
   }
 
-  if (scope === "state" && state) {
-    return base + encodeURIComponent(state + " India " + CONST_KEYWORDS);
-  }
-
-  if (scope === "district" && district) {
-    return base + encodeURIComponent(district + " India " + CONST_KEYWORDS);
-  }
-
-  // Default: national
-  return base + encodeURIComponent("India democracy constitution rights court " + CONST_KEYWORDS);
+  return first.replace(itemRe, "").replace(
+    /<\/channel>/i,
+    unique.join("\n") + "\n</channel>"
+  );
 }
 
 export default async function handler(req, res) {
   try {
     const { scope = "national", state, district, q } = req.query || {};
 
-    const url = buildUrl(scope, state, district, q);
-    if (!url) {
-      res.status(400).json({ error: "Invalid search query" });
-      return;
-    }
+    let queries = [];
+    if (scope === "search" && q) queries = QUERIES.search(q);
+    else if (scope === "state" && state) queries = QUERIES.state(state);
+    else if (scope === "district" && district) queries = QUERIES.district(district);
+    else queries = QUERIES.national;
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; DTN-Mythos/12.2; +https://dtn.today)",
-        "Accept": "application/rss+xml, application/xml, text/xml",
-      },
-      // Vercel Node functions support fetch with no special config
-    });
+    const urls = queries.map(buildUrl).filter(Boolean);
+    const feeds = await Promise.all(urls.map(fetchOne));
+    const merged = mergeFeeds(feeds);
 
-    if (!response.ok) {
-      res.status(502).json({ error: "Upstream returned " + response.status });
-      return;
-    }
-
-    const xml = await response.text();
-
-    // Cache for 60s — RSS doesn't update faster than that anyway
-    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=120");
-    res.setHeader("Content-Type", "application/rss+xml; charset=utf-8");
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).send(xml);
+    res.setHeader("Content-Type", "application/rss+xml; charset=utf-8");
+
+    if (!merged) {
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).send('<?xml version="1.0"?><rss version="2.0"><channel><title>DTN</title><description>No items available</description></channel></rss>');
+      return;
+    }
+
+    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=120");
+    res.status(200).send(merged);
   } catch (e) {
     res.status(500).json({ error: "Fetch failed: " + (e.message || "unknown") });
   }
