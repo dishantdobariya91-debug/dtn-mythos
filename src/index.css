@@ -2277,3 +2277,824 @@ body:has(.shell) #initial-loader { display: none !important; }
   border-radius: 0 6px 6px 0;
 }
 .suggest-disclaimer strong { color: var(--t2, #aaa); }
+
+/* ═══════════════════════════════════════════════════════════════
+   v12.3 — BIGGER typography + new sections
+   Goal: always render 5-6 A4 pages with dramatic newspaper feel
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Override prior sizes for bigger impact */
+.paper-title {
+  font-size: clamp(64px, 10vw, 110px) !important;
+  letter-spacing: -0.04em !important;
+  line-height: 0.95 !important;
+}
+.paper-lead-headline {
+  font-size: clamp(32px, 5vw, 60px) !important;
+  line-height: 1.02 !important;
+  font-weight: 900 !important;
+}
+.paper-lead-body {
+  font-size: 18.5px !important;
+  line-height: 1.7 !important;
+}
+.paper-lead-body::first-letter {
+  font-size: 88px !important;
+  padding: 6px 14px 0 0 !important;
+}
+.paper-front-headline {
+  font-size: 27px !important;
+  line-height: 1.12 !important;
+}
+.paper-section-title {
+  font-size: 38px !important;
+  letter-spacing: 0.03em !important;
+}
+.paper-policy-headline {
+  font-size: 23px !important;
+}
+.paper-tagline {
+  font-size: 15.5px !important;
+}
+
+/* ─── Editorial section ──────────────────────────────────────── */
+.paper-editorial-section {
+  padding: 24px 28px;
+  background: #FAF7F0;
+  border-radius: 4px;
+  margin-top: 24px;
+}
+.paper-editorial-body {
+  max-width: 820px;
+  margin: 0 auto;
+}
+.paper-editorial-lead {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  font-style: italic;
+  line-height: 1.45;
+  color: #0A0A0A;
+  text-align: center;
+  margin: 0 0 22px 0;
+  padding: 0 28px;
+}
+.paper-editorial-cols {
+  column-count: 2;
+  column-gap: 32px;
+  font-size: 15px;
+  line-height: 1.7;
+  text-align: justify;
+  hyphens: auto;
+}
+.paper-editorial-cols p {
+  margin-top: 0;
+  break-inside: avoid;
+}
+.paper-editorial-sig {
+  margin-top: 18px;
+  text-align: center;
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555;
+}
+
+/* ─── Court Watch ────────────────────────────────────────────── */
+.paper-courtwatch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 24px;
+}
+.paper-courtwatch-story {
+  border-left: 4px solid #B8232A;
+  padding: 10px 14px 10px 16px;
+  background: rgba(184, 35, 42, 0.03);
+}
+.paper-cw-status {
+  display: inline-block;
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #B8232A;
+  background: rgba(184, 35, 42, 0.1);
+  padding: 3px 9px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+.paper-cw-headline {
+  font-family: "Playfair Display", serif;
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  line-height: 1.18;
+}
+.paper-cw-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0 0 8px 0;
+}
+.paper-cw-article {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  color: #B8232A;
+}
+.paper-courtwatch-empty {
+  text-align: center;
+  font-style: italic;
+  color: #666;
+  font-size: 14px;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+/* ─── Rights Corner ──────────────────────────────────────────── */
+.paper-rights-section {
+  background: rgba(245, 185, 58, 0.04);
+  padding: 28px 32px;
+  border-radius: 4px;
+  margin-top: 28px;
+}
+.paper-rights-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+}
+.paper-rights-feature h4 {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 10px 0;
+  color: #0A0A0A;
+}
+.paper-rights-feature p {
+  font-size: 14.5px;
+  line-height: 1.65;
+  margin: 0 0 14px 0;
+}
+.paper-rights-action {
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  padding: 10px 14px;
+  background: rgba(245, 185, 58, 0.12);
+  border-left: 3px solid #F5B93A;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.5;
+}
+.paper-rights-action strong {
+  color: #0A0A0A;
+}
+.paper-rights-helplines {
+  background: #0A0A0A;
+  color: #FAFAF7;
+  padding: 20px 18px;
+  border-radius: 4px;
+}
+.paper-rights-helplines h4 {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 12px 0;
+  color: #F5B93A;
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
+}
+.paper-rights-helplines dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 8px;
+  column-gap: 12px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+}
+.paper-rights-helplines dt {
+  font-weight: 600;
+  color: #e5e5e5;
+}
+.paper-rights-helplines dd {
+  margin: 0;
+  font-weight: 800;
+  color: #F5B93A;
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 13px;
+}
+
+/* ─── States Roundup ─────────────────────────────────────────── */
+.paper-roundup-section {
+  margin-top: 28px;
+}
+.paper-roundup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 32px;
+  font-family: "Inter", sans-serif;
+  font-size: 11.5px;
+}
+.paper-roundup-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1.4fr;
+  gap: 10px;
+  padding: 6px 8px;
+  align-items: center;
+  border-bottom: 1px dashed #ddd;
+}
+.paper-roundup-state {
+  font-weight: 700;
+  color: #0A0A0A;
+}
+.paper-roundup-score {
+  font-family: "Playfair Display", serif;
+  font-size: 16px;
+  font-weight: 900;
+  min-width: 28px;
+  text-align: right;
+}
+.paper-roundup-high { color: #27500A; }
+.paper-roundup-low  { color: #B8232A; }
+.paper-roundup-mid  { color: #4A4A4A; }
+.paper-roundup-note {
+  color: #666;
+  font-size: 10.5px;
+  font-style: italic;
+}
+
+/* ─── International ──────────────────────────────────────────── */
+.paper-international-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+}
+.paper-international-story {
+  border-top: 1px solid #bbb;
+  padding-top: 12px;
+}
+.paper-intl-label {
+  margin-bottom: 6px;
+}
+.paper-intl-headline {
+  font-family: "Playfair Display", serif;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 8px 0;
+}
+.paper-intl-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ─── Constitution Primer ────────────────────────────────────── */
+.paper-primer-section {
+  background: linear-gradient(to bottom, #FAF7F0 0%, #FAFAF7 100%);
+  padding: 28px 36px;
+  border-radius: 4px;
+  margin-top: 28px;
+  border-left: 6px solid #F5B93A;
+}
+.paper-primer-body {
+  max-width: 740px;
+  margin: 0 auto;
+}
+.paper-primer-title {
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: #0A0A0A;
+  margin: 0 0 14px 0;
+  text-align: center;
+}
+.paper-primer-text {
+  font-family: "Playfair Display", serif;
+  font-size: 17.5px;
+  font-style: italic;
+  line-height: 1.6;
+  color: #333;
+  margin: 0 0 20px 0;
+  padding: 14px 24px;
+  border-top: 1px solid #d0b676;
+  border-bottom: 1px solid #d0b676;
+  text-align: center;
+}
+.paper-primer-explain {
+  font-size: 14.5px;
+  line-height: 1.65;
+  text-align: justify;
+  column-count: 1;
+  margin: 0;
+}
+
+/* ─── Historical Footer ──────────────────────────────────────── */
+.paper-history-section {
+  background: #0A0A0A;
+  color: #FAFAF7;
+  padding: 28px 32px;
+  border-radius: 4px;
+  margin-top: 28px;
+}
+.paper-history-section .paper-section-header {
+  border-top-color: #F5B93A;
+  border-bottom-color: #F5B93A;
+}
+.paper-history-section .paper-section-title,
+.paper-history-section .paper-section-sub {
+  color: #FAFAF7;
+}
+.paper-history-body {
+  max-width: 740px;
+  margin: 0 auto;
+  text-align: center;
+}
+.paper-history-year {
+  font-family: "Playfair Display", serif;
+  font-size: 56px;
+  font-weight: 900;
+  color: #F5B93A;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.paper-history-headline {
+  font-family: "Playfair Display", serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #FAFAF7;
+  margin: 0 0 14px 0;
+  line-height: 1.2;
+}
+.paper-history-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: #d5d5d5;
+  margin: 0 0 16px 0;
+}
+.paper-history-tag {
+  display: inline-block;
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #F5B93A;
+  border: 1px solid #F5B93A;
+  padding: 4px 12px;
+  border-radius: 2px;
+}
+
+/* ─── Methodology in footer ──────────────────────────────────── */
+.paper-footer-methodology {
+  max-width: 720px;
+  margin: 14px auto 0;
+  font-size: 11.5px;
+  color: #555;
+  line-height: 1.65;
+  font-style: italic;
+  text-align: center;
+}
+.paper-footer-methodology strong {
+  font-style: normal;
+  color: #0A0A0A;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRINT — tighter sizes for paper fit, force page breaks
+   ═══════════════════════════════════════════════════════════════ */
+
+@media print {
+  .paper-title { font-size: 78px !important; }
+  .paper-lead-headline { font-size: 42px !important; }
+  .paper-lead-body { font-size: 13.5px !important; line-height: 1.55 !important; }
+  .paper-lead-body::first-letter { font-size: 64px !important; }
+  .paper-front-headline { font-size: 20px !important; }
+  .paper-section-title { font-size: 30px !important; }
+  .paper-policy-headline { font-size: 18px !important; }
+  .paper-editorial-lead { font-size: 17px !important; padding: 0 !important; }
+  .paper-editorial-cols { font-size: 12px !important; line-height: 1.55 !important; }
+  .paper-cw-headline { font-size: 15px !important; }
+  .paper-intl-headline { font-size: 16px !important; }
+  .paper-primer-title { font-size: 22px !important; }
+  .paper-primer-text { font-size: 14px !important; padding: 10px 16px !important; }
+  .paper-history-year { font-size: 44px !important; }
+  .paper-history-headline { font-size: 20px !important; }
+
+  /* Force section breaks for predictable 5-6 page output */
+  .paper-editorial-section,
+  .paper-rights-section,
+  .paper-primer-section,
+  .paper-history-section,
+  .paper-roundup-section,
+  .paper-opinion {
+    break-inside: avoid-page;
+  }
+  .paper-courtwatch-grid,
+  .paper-international-grid,
+  .paper-states-grid,
+  .paper-policy-grid,
+  .paper-front-grid,
+  .paper-inside-grid {
+    break-inside: auto;
+  }
+  .paper-courtwatch-story,
+  .paper-international-story,
+  .paper-states-story,
+  .paper-policy-story,
+  .paper-front-story,
+  .paper-inside-story,
+  .paper-opinion-stat {
+    break-inside: avoid;
+  }
+  .paper-roundup-grid {
+    grid-template-columns: 1fr;
+  }
+  .paper-rights-grid {
+    grid-template-columns: 1fr;
+  }
+  /* Ensure dark sections print their background */
+  .paper-rights-helplines,
+  .paper-history-section {
+    background: #0A0A0A !important;
+    color: #FAFAF7 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Mobile — stack everything cleanly */
+@media (max-width: 720px) {
+  .paper-title { font-size: 54px !important; }
+  .paper-lead-headline { font-size: 28px !important; }
+  .paper-lead-body::first-letter { font-size: 56px !important; }
+  .paper-section-title { font-size: 24px !important; }
+  .paper-courtwatch-grid,
+  .paper-international-grid,
+  .paper-rights-grid,
+  .paper-roundup-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .paper-editorial-cols {
+    column-count: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   v12.3 — BIGGER TYPOGRAPHY + NEW SECTIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Masthead — dramatically bigger */
+.paper-title {
+  font-size: 110px !important;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+}
+.paper-tagline { font-size: 16px; }
+.paper-masthead-topline { font-size: 12px; padding-bottom: 14px; }
+.paper-score-strip { font-size: 13px; padding-top: 12px; }
+.paper-score-strip strong { font-size: 15px; }
+
+/* Lead story — much bigger */
+.paper-lead-headline {
+  font-size: 60px !important;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+}
+.paper-lead-eyebrow { font-size: 13px; letter-spacing: 0.12em; }
+.paper-lead-body { font-size: 18.5px; line-height: 1.7; column-gap: 36px; }
+.paper-lead-body::first-letter {
+  font-size: 88px !important;
+  padding: 6px 14px 0 0;
+}
+
+/* Front page stories bigger */
+.paper-front-headline { font-size: 28px !important; line-height: 1.12; }
+.paper-front-meta { font-size: 12px; }
+.paper-front-body { font-size: 16px; line-height: 1.6; }
+
+/* Section headers bigger */
+.paper-section-title { font-size: 38px !important; margin-bottom: 6px !important; }
+.paper-section-sub { font-size: 12px; }
+
+/* Policy section bigger */
+.paper-policy-headline { font-size: 22px; line-height: 1.18; }
+.paper-policy-body { font-size: 15px; line-height: 1.6; }
+
+/* States section bigger */
+.paper-states-headline { font-size: 17px; }
+.paper-states-body { font-size: 13.5px; }
+.paper-states-region { font-size: 11px; }
+
+/* Inside digest bigger */
+.paper-inside-headline { font-size: 16px; line-height: 1.28; }
+.paper-inside-meta { font-size: 11px; }
+
+/* Empty section state */
+.paper-section-empty {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #555;
+  font-style: italic;
+  padding: 28px 20px;
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 28px;
+  border-top: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+}
+
+/* ─── Editorial block ───────────────────────────────────────── */
+.paper-editorial {
+  margin-top: 32px;
+  padding: 28px 32px;
+  background: rgba(10, 10, 10, 0.03);
+  border-left: 4px solid #0A0A0A;
+  border-radius: 0 6px 6px 0;
+  break-inside: avoid;
+}
+.paper-editorial-label {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #B8232A;
+  margin-bottom: 8px;
+}
+.paper-editorial-hed {
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.15;
+  margin: 0 0 14px;
+  letter-spacing: -0.01em;
+}
+.paper-editorial-body {
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0 0 12px;
+  color: #1a1a1a;
+}
+.paper-editorial-sig {
+  font-size: 12px;
+  font-style: italic;
+  color: #555;
+  text-align: right;
+}
+
+/* ─── Court Watch ───────────────────────────────────────────── */
+.paper-courts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+  margin-bottom: 32px;
+}
+.paper-court-story {
+  border: 1px solid #c5c5c5;
+  border-left: 4px solid #0A0A0A;
+  padding: 16px 18px;
+  break-inside: avoid;
+}
+.paper-court-status {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #B8232A;
+  margin-bottom: 8px;
+}
+.paper-court-headline {
+  font-family: "Playfair Display", serif;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 6px;
+}
+.paper-court-meta {
+  font-size: 11px;
+  font-family: "Inter", sans-serif;
+  color: #666;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.paper-court-body {
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ─── Rights Corner ──────────────────────────────────────────── */
+.paper-rights-corner {
+  margin-top: 32px;
+  padding: 28px 28px 32px;
+  background: rgba(245, 185, 58, 0.08);
+  border: 2px solid rgba(245, 185, 58, 0.4);
+  border-radius: 6px;
+  break-inside: avoid;
+}
+.paper-rights-label {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #B8232A;
+  margin-bottom: 4px;
+}
+.paper-rights-hed {
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 18px;
+}
+.paper-rights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+.paper-rights-item {
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid rgba(245, 185, 58, 0.3);
+  border-radius: 4px;
+  break-inside: avoid;
+}
+.paper-rights-num {
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: #B8232A;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+.paper-rights-title {
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0A0A0A;
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.paper-rights-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #444;
+}
+
+/* ─── States Roundup ─────────────────────────────────────────── */
+.paper-roundup {
+  margin-top: 32px;
+  padding: 24px 28px;
+  background: #0A0A0A;
+  color: #FAFAF7;
+  border-radius: 4px;
+  break-inside: avoid;
+}
+.paper-roundup-hed {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 16px;
+  color: #FAFAF7;
+  letter-spacing: 0.01em;
+}
+.paper-roundup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px 24px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+}
+.paper-roundup-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dotted rgba(250, 250, 247, 0.15);
+}
+.paper-roundup-state { font-weight: 500; color: #d0d0d0; }
+.paper-roundup-count { font-weight: 700; color: #888; font-size: 11px; }
+.paper-roundup-item.has-stories .paper-roundup-state { color: #F5B93A; font-weight: 700; }
+.paper-roundup-item.has-stories .paper-roundup-count { color: #F5B93A; }
+
+/* ─── Constitution Feature ───────────────────────────────────── */
+.paper-article-feature {
+  margin-top: 32px;
+  padding: 32px 36px;
+  background: #FAFAF7;
+  border: 3px double #0A0A0A;
+  border-radius: 2px;
+  text-align: center;
+  break-inside: avoid;
+}
+.paper-article-feature-label {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #B8232A;
+  margin-bottom: 14px;
+}
+.paper-article-feature-num {
+  font-family: "Playfair Display", serif;
+  font-size: 36px;
+  font-weight: 900;
+  color: #0A0A0A;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+.paper-article-feature-title {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 18px;
+  font-style: italic;
+}
+.paper-article-feature-text {
+  font-family: "PT Serif", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.7;
+  color: #0A0A0A;
+  margin: 0 0 14px;
+  padding: 0 24px;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.paper-article-feature-src {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+/* ─── On This Day ────────────────────────────────────────────── */
+.paper-on-this-day {
+  margin: 28px auto 24px;
+  padding: 22px 28px;
+  background: rgba(245, 185, 58, 0.1);
+  border-left: 4px solid #F5B93A;
+  max-width: 560px;
+  break-inside: avoid;
+}
+.paper-on-this-day-label {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #B8232A;
+  margin-bottom: 8px;
+}
+.paper-on-this-day-date {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0A0A0A;
+  margin-bottom: 8px;
+}
+.paper-on-this-day-event {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRINT — adjust all new bigger sizes to A4 scale
+   ═══════════════════════════════════════════════════════════════ */
+@media print {
+  .paper-title { font-size: 82px !important; }
+  .paper-lead-headline { font-size: 42px !important; }
+  .paper-lead-body { font-size: 14px !important; column-count: 2; }
+  .paper-lead-body::first-letter { font-size: 66px !important; }
+  .paper-front-headline { font-size: 20px !important; }
+  .paper-front-body { font-size: 12px !important; }
+  .paper-section-title { font-size: 28px !important; }
+  .paper-policy-headline { font-size: 16px !important; }
+  .paper-policy-body { font-size: 12px !important; }
+  .paper-court-headline { font-size: 15px !important; }
+  .paper-court-body { font-size: 12px !important; }
+  .paper-editorial-hed { font-size: 22px !important; }
+  .paper-editorial-body { font-size: 13px !important; }
+  .paper-rights-hed { font-size: 20px !important; }
+  .paper-rights-num { font-size: 20px !important; }
+  .paper-rights-grid { grid-template-columns: 1fr 1fr 1fr !important; }
+  .paper-roundup-grid { grid-template-columns: 1fr 1fr 1fr 1fr !important; font-size: 10px !important; }
+  .paper-article-feature-num { font-size: 28px !important; }
+  .paper-article-feature-text { font-size: 15px !important; }
+  .paper-on-this-day-date { font-size: 18px !important; }
+  .paper-courts { grid-template-columns: 1fr 1fr !important; }
+  .paper-editorial, .paper-rights-corner, .paper-roundup, .paper-article-feature, .paper-on-this-day, .paper-court-story {
+    break-inside: avoid !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 720px) {
+  .paper-title { font-size: 64px !important; }
+  .paper-lead-headline { font-size: 34px !important; }
+  .paper-rights-grid, .paper-roundup-grid, .paper-courts { grid-template-columns: 1fr 1fr !important; }
+  .paper-section-title { font-size: 26px !important; }
+}

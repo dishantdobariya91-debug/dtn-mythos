@@ -4,6 +4,7 @@ import{BroadcastMasthead,BreakingBanner,KineticTicker,ListenButton,AnimatedIllus
 import{NewspaperView}from"./components/NewspaperView";
 import{SuggestPage}from"./components/SuggestPage";
 const GROQ=import.meta.env.VITE_GROQ_KEY||"";
+const GEMINI=import.meta.env.VITE_GEMINI_KEY||"";
 
 // ── MULTI-LANGUAGE ────────────────────────────────────────────
 const LANG={
@@ -335,7 +336,14 @@ function classify(h,b){
 }
 
 
-let _rlu=0;const isRL=()=>Date.now()<_rlu;const setRL=ms=>{_rlu=Date.now()+ms;};
+// v12.3 — separate rate-limit tracking per provider, Gemini fallback
+let _rluGroq=0, _rluGemini=0;
+const isRL=()=>Date.now()<_rluGroq && Date.now()<_rluGemini;
+const setRL=ms=>{_rluGroq=Date.now()+ms;};  // back-compat alias
+const isRLGroq=()=>Date.now()<_rluGroq;
+const isRLGemini=()=>Date.now()<_rluGemini;
+const setRLGroq=ms=>{_rluGroq=Date.now()+ms;};
+const setRLGemini=ms=>{_rluGemini=Date.now()+ms;};
 
 // Primary: our own Vercel serverless function at /api/rss (no CORS issues, reliable)
 // Fallbacks: public CORS proxies (used only if our own function is down)
@@ -434,9 +442,71 @@ async function fetchRSS(scope,state,district){
   }catch(e){console.error("[fetchRSS] unexpected error:",e);return[];}
 }
 
+// v12.3 — dual-provider call: tries Groq first, falls back to Gemini on 429/error
+// Returns parsed JSON object from AI response, or null if both providers fail
+async function callAI(systemPrompt, userPrompt){
+  const messages=[{role:"system",content:systemPrompt},{role:"user",content:userPrompt}];
+
+  // Provider 1: Groq (Llama 3.3 70B, fastest when available)
+  if(GROQ && !isRLGroq()){
+    try{
+      const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ},
+        body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:1800,temperature:0.15,messages})
+      });
+      if(r.status===429){
+        setRLGroq(30000);
+        console.log("[ai] Groq 429 — falling back to Gemini");
+      }else if(r.ok){
+        const d=await r.json();
+        const txt=d.choices?.[0]?.message?.content||"";
+        const parsed=extractJson(txt);
+        if(parsed){console.log("[ai] ✓ Groq");return parsed;}
+      }
+    }catch(e){console.log("[ai] Groq error — falling back to Gemini:",e.message);}
+  }
+
+  // Provider 2: Gemini 2.0 Flash (generous free tier)
+  if(GEMINI && !isRLGemini()){
+    try{
+      // Gemini API: combine system + user into a single prompt since their format differs
+      const combined=systemPrompt+"\n\n---\n\n"+userPrompt+"\n\nReturn ONLY valid JSON, no other text, no markdown fences.";
+      const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+GEMINI,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          contents:[{parts:[{text:combined}]}],
+          generationConfig:{temperature:0.15,maxOutputTokens:1800,responseMimeType:"application/json"}
+        })
+      });
+      if(r.status===429){setRLGemini(60000);console.log("[ai] Gemini 429");return null;}
+      if(!r.ok){console.log("[ai] Gemini error",r.status);return null;}
+      const d=await r.json();
+      const txt=d.candidates?.[0]?.content?.parts?.[0]?.text||"";
+      const parsed=extractJson(txt);
+      if(parsed){console.log("[ai] ✓ Gemini");return parsed;}
+    }catch(e){console.log("[ai] Gemini exception:",e.message);}
+  }
+
+  return null;
+}
+
+function extractJson(txt){
+  if(!txt)return null;
+  try{
+    const clean=txt.replace(/```json|```/g,"").trim();
+    const si=clean.indexOf("{"),ei=clean.lastIndexOf("}");
+    if(si<0||ei<0)return null;
+    return JSON.parse(clean.slice(si,ei+1));
+  }catch(e){return null;}
+}
+
 async function aiUpgrade(s){
-  if(!GROQ||isRL())return s;
-  try{const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ},body:JSON.stringify({model:"llama-3.3-70b-versatile",max_tokens:1800,temperature:0.15,messages:[{role:"system",content:`You are India's top constitutional law expert and investigative journalist. You will analyse ONLY what is stated in the provided headline and body text. You must NEVER invent, assume, or extrapolate events that aren't written in the text.
+  // v12.3 — at least one provider must be configured and not rate-limited
+  if((!GROQ||isRLGroq())&&(!GEMINI||isRLGemini()))return s;
+  try{
+    const systemPrompt=`You are India's top constitutional law expert and investigative journalist. You will analyse ONLY what is stated in the provided headline and body text. You must NEVER invent, assume, or extrapolate events that aren't written in the text.
 
 === HARD RULES — READ BEFORE ANALYSING ===
 
@@ -516,10 +586,10 @@ GOOD: supports:[{"a":"Art.50","title":"Separation of Powers","who":"Indian Air F
 === ARTICLE LIBRARY ===
 Indian Constitution articles you may cite: Art.1 (Union), Art.14 (Equality), Art.15-17 (No discrimination), Art.19 (Speech/Assembly), Art.21 (Life/Liberty), Art.21A (Education), Art.22 (Arrest), Art.25-28 (Religion), Art.29-30 (Minority), Art.32 (Remedies), Art.39-47 (DPSP), Art.50 (Separation), Art.81-82 (Lok Sabha/Delimitation), Art.170 (State Assembly), Art.226 (HC writs), Art.243 (Panchayat), Art.246 (Union/State list), Art.253 (Treaties), Art.265 (Tax), Art.300A (Property), Art.301 (Free trade), Art.324-329 (Elections), Art.350A (Mother tongue), Art.355 (State protection), Art.368 (Amendment), 5th Sch (Tribal), 6th Sch (NE), 10th Sch (Defection).
 
-REMEMBER: Better to skip a story than to hallucinate. Your output will be PUBLISHED to thousands of Indian citizens. Accuracy over coverage.`},{role:"user",content:"Scope:"+s.scope+" State:"+s.state+" EvidenceLevel:"+s.evidenceLevel+" Headline:"+s.headline+" Context:"+(s.body||"").slice(0,400)}]})});
-  if(r.status===429){setRL(30000);return s;}if(!r.ok)return s;
-  const d=await r.json();const txt=d.choices?.[0]?.message?.content||"";const clean=txt.replace(/```json|```/g,"").trim();const si=clean.indexOf("{"),ei=clean.lastIndexOf("}");if(si<0||ei<0)return s;
-  const j=JSON.parse(clean.slice(si,ei+1));
+REMEMBER: Better to skip a story than to hallucinate. Your output will be PUBLISHED to thousands of Indian citizens. Accuracy over coverage.`;
+    const userPrompt="Scope:"+s.scope+" State:"+s.state+" EvidenceLevel:"+s.evidenceLevel+" Headline:"+s.headline+" Context:"+(s.body||"").slice(0,400);
+    const j=await callAI(systemPrompt,userPrompt);
+    if(!j)return s;
 
   // === FIX 2: HANDLE SKIP DECISION ===
   if(j.skip===true){
@@ -1752,9 +1822,11 @@ export default function App(){
   useEffect(()=>{try{localStorage.setItem(SK,JSON.stringify(stories));}catch{}},[stories]);
 
   const runUpgrades=useCallback(async(list)=>{
-    const todo=list.filter(s=>s.approved&&!s.aiDone&&!isRL()&&GROQ);
+    // v12.3 — enrich if either Groq or Gemini is available
+    const canEnrich=()=>((GROQ&&!isRLGroq())||(GEMINI&&!isRLGemini()));
+    const todo=list.filter(s=>s.approved&&!s.aiDone&&canEnrich());
     for(let i=0;i<todo.length;i++){
-      if(isRL())break;
+      if(!canEnrich())break;
       const u=await aiUpgrade(todo[i]);
       setStories(p=>p.map(s=>s.id===u.id?u:s));
       if(i<todo.length-1)await new Promise(r=>setTimeout(r,5000));
@@ -1766,7 +1838,8 @@ export default function App(){
     setFetching(true);
     try{
       const items=await fetchRSS(fScope,fState,fDist);
-      if(isRL()){setRlState(true);setTimeout(()=>setRlState(false),31000);toast("Rate limited — retry in 30s","error");return;}
+      // v12.3 — only show the rate-limit toast if BOTH providers are blocked
+      if(isRLGroq()&&isRLGemini()){setRlState(true);setTimeout(()=>setRlState(false),31000);toast("Both AI providers rate limited — retry in 30s","error");return;}
       if(!items.length){toast("No constitutional stories found — try a different scope","info");return;}
       const fresh=items.map((item,i)=>{
         const cls=classify(item.headline,item.body||"");
