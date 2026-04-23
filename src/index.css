@@ -3926,3 +3926,53 @@ main, .container, [class*="page-wrap"] {
 }
 .story-card-score.pos { color: var(--support) !important; }
 .story-card-score.neg { color: var(--violation) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   v12.4.2 — Legacy var aliases + dark mode fixes
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --surface: var(--bg);
+  --surface2: var(--bg-elevated);
+  --card: var(--bg);
+  --ink-pure: var(--text);
+  --red: var(--violation);
+  --green: var(--support);
+  --blue: var(--accent);
+  --purple: #7C5CFC;
+  --purple-s: rgba(124,92,252,0.08);
+  --purple-t: #9B7DFF;
+  --purple-b: rgba(124,92,252,0.2);
+  --cyan: #06B6D4;
+  --grad: var(--text);
+}
+
+html[data-theme="dark"] {
+  --surface: #1C1C1C;
+  --surface2: #242424;
+  --card: #1C1C1C;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --surface: #1C1C1C;
+    --surface2: #242424;
+    --card: #1C1C1C;
+  }
+}
+
+/* Any element with hardcoded white bg in inline styles — override in dark */
+html[data-theme="dark"] [style*="background:#fff"],
+html[data-theme="dark"] [style*="background: #fff"],
+html[data-theme="dark"] [style*="background:\"#fff\""],
+html[data-theme="dark"] [style*="rgb(255, 255, 255)"] {
+  background: var(--bg-elevated) !important;
+  color: var(--text) !important;
+}
+
+/* Kill inline white backgrounds everywhere */
+html[data-theme="dark"] .rights-item,
+html[data-theme="dark"] .paper-rights-item {
+  background: var(--bg-elevated) !important;
+  color: var(--text) !important;
+}

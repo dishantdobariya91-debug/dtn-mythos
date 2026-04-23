@@ -757,7 +757,7 @@ function StoryCardBB({s,t,onSelect,hero}){
         <h1 className="hero-headline" onClick={onClick}>{s.headline}</h1>
         {s.citizenExplanation&&<p className="hero-summary">{s.citizenExplanation.slice(0,220)}{s.citizenExplanation.length>220?"…":""}</p>}
         <div className="badge-row">
-          <span className={"bb-badge "+lab.cls}>{lab.label}{isNeutral?"":" · "+scoreText}</span>
+          <span className={"bb-badge "+lab.cls}>{lab.label} · {scoreText}</span>
           {d&&<span className="bb-badge dept">{d.icon?d.icon+" ":""}{d.name}</span>}
           {ev&&<span className="bb-badge warning">{ev.label} · {Math.round((ev.weight||0.4)*100)}%</span>}
           {s.courtStatus&&s.courtStatus!=="none"&&<span className="bb-badge info">{COURT_STATUSES[s.courtStatus]?.label||s.courtStatus}</span>}
