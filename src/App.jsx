@@ -611,7 +611,11 @@ REMEMBER: Better to skip a story than to hallucinate. Your output will be PUBLIS
                (j.confidence==="high"?0.85:j.confidence==="moderate"?0.55:j.confidence==="low"?0.3:j.confidence==="developing"?0.4:s.confidence||0.5);
   const finalConf=Math.max(0,Math.min(1,aiConf));
   const aiLabel=j.label&&["support","potential_violation","neutral","uncertain"].includes(j.label)?j.label:s.label||"neutral";
-  return{...s,aiScore:Number(j.score)||s.delta,institution:j.department||s.institution,evidenceLevel:j.evidenceLevel||s.evidenceLevel,storyType:j.storyType||s.storyType,confidence:finalConf,label:aiLabel,reviewNeeded:finalConf<0.6,courtStatus:j.courtStatus||s.courtStatus,nationalImpact:Number(j.national_impact)||null,stateImpact:Number(j.state_impact)||null,localImpact:Number(j.local_impact)||null,violations:j.violations?.length?j.violations:s.violations,supports:j.supports?.length?j.supports:s.supports,govResponse:j.govResponse||s.govResponse,aiAnalysis:j.analysis||null,mythos:j.mythos||null,citizenExplanation:j.citizenExplanation||s.citizenExplanation,aiDone:true};}catch{return s;}}
+  // v12.4.1 FIX: Use ?? (nullish) not || — legitimate score:0 is falsy but valid.
+  // Also derive direction from label so neutral stories don't default to "-" sign.
+  const aiScoreNum=j.score!==undefined&&j.score!==null&&!isNaN(Number(j.score))?Number(j.score):(s.aiScore??s.delta??0);
+  const aiDirection=aiLabel==="support"?"positive":aiLabel==="potential_violation"?"negative":aiLabel==="neutral"?"neutral":s.direction||"neutral";
+  return{...s,aiScore:aiScoreNum,direction:aiDirection,institution:j.department||s.institution,evidenceLevel:j.evidenceLevel||s.evidenceLevel,storyType:j.storyType||s.storyType,confidence:finalConf,label:aiLabel,reviewNeeded:finalConf<0.6,courtStatus:j.courtStatus||s.courtStatus,nationalImpact:Number(j.national_impact)||null,stateImpact:Number(j.state_impact)||null,localImpact:Number(j.local_impact)||null,violations:j.violations?.length?j.violations:s.violations,supports:j.supports?.length?j.supports:s.supports,govResponse:j.govResponse||s.govResponse,aiAnalysis:j.analysis||null,mythos:j.mythos||null,citizenExplanation:j.citizenExplanation||s.citizenExplanation,aiDone:true};}catch{return s;}}
 
 function useToasts(){const[toasts,setToasts]=useState([]);const add=useCallback((msg,type="info")=>{const id=Date.now();setToasts(p=>[...p,{id,msg,type}]);setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4500);},[]);return{toasts,add};}
 
@@ -730,9 +734,13 @@ function StoryCardBB({s,t,onSelect,hero}){
   const lab=storyLabel(s,t);
   const d=s.institution?DEPT[s.institution]:null;
   const dept=d?.name||(s.storyType?(t?.storyTypes?.[s.storyType]||s.storyType[0].toUpperCase()+s.storyType.slice(1)):(t?.generalLabel||"General"));
-  const wt=Math.abs(s.aiScore||s.delta||0);
-  const scoreSign=s.direction==="positive"?"+":"-";
-  const scoreClass=s.direction==="positive"?"pos":"neg";
+  // v12.4.1 FIX: proper score display — 0 = "Neutral", >0 = "+N pts", <0 = "−N pts"
+  const rawScore=s.aiScore??s.delta??0;
+  const wt=Math.abs(rawScore);
+  const isNeutral=Math.abs(rawScore)<0.05;  // treat very small as 0
+  const isPos=rawScore>=0.05;
+  const scoreText=isNeutral?"Neutral":(isPos?"+":"−")+wt.toFixed(1)+" pts";
+  const scoreClass=isNeutral?"neu":(isPos?"pos":"neg");
   const ev=EVIDENCE_LEVELS[s.evidenceLevel||"single_source"];
   const time=new Date(s.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
   const onClick=()=>{if(onSelect)onSelect(s);else if(s.link){try{window.open(s.link,"_blank","noopener");}catch{}}};
@@ -749,7 +757,7 @@ function StoryCardBB({s,t,onSelect,hero}){
         <h1 className="hero-headline" onClick={onClick}>{s.headline}</h1>
         {s.citizenExplanation&&<p className="hero-summary">{s.citizenExplanation.slice(0,220)}{s.citizenExplanation.length>220?"…":""}</p>}
         <div className="badge-row">
-          <span className={"bb-badge "+lab.cls}>{lab.label} · {scoreSign}{wt} pts</span>
+          <span className={"bb-badge "+lab.cls}>{lab.label}{isNeutral?"":" · "+scoreText}</span>
           {d&&<span className="bb-badge dept">{d.icon?d.icon+" ":""}{d.name}</span>}
           {ev&&<span className="bb-badge warning">{ev.label} · {Math.round((ev.weight||0.4)*100)}%</span>}
           {s.courtStatus&&s.courtStatus!=="none"&&<span className="bb-badge info">{COURT_STATUSES[s.courtStatus]?.label||s.courtStatus}</span>}
@@ -770,7 +778,7 @@ function StoryCardBB({s,t,onSelect,hero}){
     <div className={"story-card-label lbl-"+lab.cls}>{lab.label}{d?" · "+d.name:""}</div>
     <h3 className="story-card-headline">{s.headline}</h3>
     <div className="story-card-meta">
-      <span className={"story-card-score "+scoreClass}>{scoreSign}{wt} pts</span>
+      <span className={"story-card-score "+scoreClass}>{scoreText}</span>
       <span>·</span>
       <span>{ev?.label||"Single Source"}</span>
       <span>·</span>
@@ -975,7 +983,7 @@ function StoryCard({s,t,mode,onReview,compact,onSelect}){
             {s.storyType&&!compact&&<StoryTypeBadge type={s.storyType} t={t}/>}
             {s.state&&<Pill color="var(--blue)">{s.state}</Pill>}
             <div style={{marginLeft:"auto",padding:"2px 8px",borderRadius:6,background:col+"14",border:"1px solid "+col+"28"}}>
-              <span style={{fontFamily:"var(--font-m)",fontSize:11,fontWeight:800,color:col,letterSpacing:"-0.02em"}}>{isPos?"+":""}{wt} pts</span>
+              <span style={{fontFamily:"var(--font-m)",fontSize:11,fontWeight:800,color:col,letterSpacing:"-0.02em"}}>{wt<0.05?"Neutral":(isPos?"+":"−")+wt.toFixed(1)+" pts"}</span>
             </div>
           </div>
           <h3 style={{fontSize:13,fontWeight:600,color:"var(--t1)",lineHeight:1.55,marginBottom:6,wordBreak:"break-word"}}>{s.headline}</h3>
@@ -1201,7 +1209,7 @@ function LiveTicker({stories,natScore,stScore,distScore,countdown,autoOn}){
       <span style={{fontSize:8,fontWeight:800,color:"var(--red)",letterSpacing:"0.15em",fontFamily:"var(--font-m)"}}>LIVE</span>
     </div>
     {s?(<>
-      <span style={{fontFamily:"var(--font-m)",fontSize:8.5,fontWeight:700,color:col,flexShrink:0}}>{(s.aiScore||s.delta)>0?"+":""}{s.aiScore||s.delta}</span>
+      <span style={{fontFamily:"var(--font-m)",fontSize:8.5,fontWeight:700,color:col,flexShrink:0}}>{(()=>{const v=s.aiScore??s.delta??0;if(Math.abs(v)<0.05)return"±0";return(v>0?"+":"")+v.toFixed(1);})()}</span>
       {s.evidenceLevel&&<span style={{fontSize:8,color:EVIDENCE_LEVELS[s.evidenceLevel]?.color||"var(--t3)",flexShrink:0,fontWeight:700,fontFamily:"var(--font-m)"}}>[{s.evidenceLevel?.replace(/_/g,"-")}]</span>}
       <span style={{fontSize:10.5,color:"var(--t2)",flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.headline}</span>
     </>):(<span style={{fontSize:10.5,color:"var(--t3)",flex:1}}>Fetching live constitutional intelligence...</span>)}

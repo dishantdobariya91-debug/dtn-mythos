@@ -3914,3 +3914,15 @@ main, .container, [class*="page-wrap"] {
 /* ═══════════════════════════════════════════════════════════════
    END v12.4 NYT Edition overrides
    ═══════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════
+   v12.4.1 — Neutral score styling
+   ═══════════════════════════════════════════════════════════════ */
+
+.story-card-score.neu {
+  color: var(--text-2) !important;
+  font-weight: 500 !important;
+  font-style: italic;
+}
+.story-card-score.pos { color: var(--support) !important; }
+.story-card-score.neg { color: var(--violation) !important; }
