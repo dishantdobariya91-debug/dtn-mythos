@@ -3098,3 +3098,819 @@ body:has(.shell) #initial-loader { display: none !important; }
   .paper-rights-grid, .paper-roundup-grid, .paper-courts { grid-template-columns: 1fr 1fr !important; }
   .paper-section-title { font-size: 26px !important; }
 }
+/* ═══════════════════════════════════════════════════════════════
+   DTN Mythos v12.4 — NYT EDITION
+   Clean editorial UI inspired by nytimes.com
+   Light / Dark with system-preference default + user toggle
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── ROOT TOKENS ─────────────────────────────────────────────── */
+
+:root {
+  /* Type families */
+  --font-display: "Playfair Display", "Georgia", serif;       /* DTN MYTHOS masthead only */
+  --font-serif:   "Crimson Pro", "Georgia", "Times New Roman", serif;  /* Headlines + body */
+  --font-sans:    "Source Sans 3", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;  /* UI + metadata */
+  --font-mono:    "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+
+  /* Light mode palette — NYT white */
+  --bg:           #FFFFFF;
+  --bg-elevated:  #FAFAFA;
+  --bg-section:   #F7F7F7;
+  --text:         #121212;
+  --text-2:       #5A5A5A;
+  --text-3:       #8B8B8B;
+  --border:       #E2E2E2;
+  --border-2:     #C7C7C7;
+  --accent:       #B22234;              /* NYT red — sparingly */
+  --accent-hover: #8F1B2A;
+  --link:         #121212;
+  --live-dot:     #B22234;
+
+  /* Semantic (label pills) */
+  --support:      #1A5928;
+  --violation:    #B22234;
+  --neutral:      #5A5A5A;
+  --uncertain:    #8A6F2A;
+
+  /* Legacy aliases so old components still work */
+  --t1: var(--text);
+  --t2: var(--text-2);
+  --t3: var(--text-3);
+  --border2: var(--border-2);
+  --amber-signature: var(--accent);
+  --amber: var(--accent);
+  --font-h: var(--font-serif);
+  --font-b: var(--font-sans);
+  --font-m: var(--font-mono);
+
+  --radius-sm: 2px;
+  --radius:    3px;
+  --radius-lg: 4px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  color-scheme: light;
+}
+
+/* Dark mode via data-theme attribute (set by JS toggle) */
+html[data-theme="dark"] {
+  --bg:           #121212;
+  --bg-elevated:  #1C1C1C;
+  --bg-section:   #0A0A0A;
+  --text:         #F0F0F0;
+  --text-2:       #AAAAAA;
+  --text-3:       #777777;
+  --border:       #2A2A2A;
+  --border-2:     #444444;
+  --accent:       #EF4455;
+  --accent-hover: #F56677;
+  --link:         #F0F0F0;
+  --live-dot:     #EF4455;
+  --support:      #4ADE80;
+  --violation:    #EF4455;
+  --neutral:      #AAAAAA;
+  --uncertain:    #E5B84B;
+  color-scheme: dark;
+}
+
+/* System preference fallback (before user toggles) */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --bg:           #121212;
+    --bg-elevated:  #1C1C1C;
+    --bg-section:   #0A0A0A;
+    --text:         #F0F0F0;
+    --text-2:       #AAAAAA;
+    --text-3:       #777777;
+    --border:       #2A2A2A;
+    --border-2:     #444444;
+    --accent:       #EF4455;
+    --accent-hover: #F56677;
+    --link:         #F0F0F0;
+    --live-dot:     #EF4455;
+    color-scheme: dark;
+  }
+}
+
+/* ─── RESET + BASE ────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.55;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern", "liga";
+  transition: background-color 0.15s, color 0.15s;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+a:hover { border-bottom-color: var(--link); }
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--text);
+}
+
+button {
+  font-family: var(--font-sans);
+}
+
+/* ─── MASTHEAD (top bar with DTN MYTHOS logo) ─────────────────── */
+
+.dtn-masthead-bar,
+header[class*="broadcast"],
+.bloomberg-header,
+[class*="Masthead"] {
+  background: var(--bg) !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 24px 0 20px !important;
+  box-shadow: none !important;
+}
+
+.dtn-logo,
+[class*="masthead-title"],
+h1[class*="title"] {
+  font-family: var(--font-display) !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.03em !important;
+  color: var(--text) !important;
+  font-size: clamp(36px, 5.5vw, 56px) !important;
+  line-height: 0.95 !important;
+}
+
+.india-edition,
+[class*="edition"] {
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+  color: var(--text-2) !important;
+}
+
+/* Kill the amber top strip */
+body::before,
+[class*="top-strip"],
+[class*="amber-strip"] {
+  display: none !important;
+}
+
+/* ─── HEADER ACTIONS (Alerts / Sound / Fetch) ────────────────── */
+
+button[class*="alerts"],
+button[class*="sound"],
+button[class*="fetch"],
+.dtn-header-action {
+  font-family: var(--font-sans) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  padding: 6px 12px !important;
+  border-radius: var(--radius) !important;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s, background 0.15s !important;
+}
+
+button[class*="alerts"]:hover,
+button[class*="sound"]:hover,
+button[class*="fetch"]:hover {
+  border-color: var(--text) !important;
+}
+
+/* Fetch is the primary action — slightly stronger */
+button[class*="fetch"] {
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  border-color: var(--text) !important;
+}
+button[class*="fetch"]:hover {
+  background: var(--text-2) !important;
+  border-color: var(--text-2) !important;
+}
+
+/* ─── NAV (Dashboard · Live Newsroom ...) ─────────────────────── */
+
+nav[class*="nav"],
+.bloomberg-nav,
+[class*="primary-nav"] {
+  border-top: 1px solid var(--border) !important;
+  border-bottom: 3px solid var(--text) !important;
+  padding: 0 !important;
+  background: var(--bg) !important;
+  overflow-x: auto !important;
+}
+
+nav button,
+nav a {
+  font-family: var(--font-sans) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  color: var(--text) !important;
+  padding: 14px 0 !important;
+  margin-right: 22px !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  position: relative !important;
+  white-space: nowrap !important;
+}
+
+nav button:hover,
+nav a:hover {
+  color: var(--text) !important;
+  border-bottom-color: var(--border-2) !important;
+}
+
+nav button[class*="active"],
+nav a[class*="active"],
+nav .active {
+  font-weight: 700 !important;
+  border-bottom: 2px solid var(--accent) !important;
+  color: var(--text) !important;
+}
+
+/* Kill dot separators between nav items */
+nav span[class*="separator"],
+nav [class*="divider"] {
+  display: none !important;
+}
+
+/* ─── LIVE TICKER ─────────────────────────────────────────────── */
+
+[class*="ticker"],
+[class*="breaking"],
+.kinetic-ticker {
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  border: none !important;
+  padding: 10px 20px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+[class*="live-pill"],
+[class*="LIVE"] {
+  background: var(--accent) !important;
+  color: #fff !important;
+  font-family: var(--font-sans) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  padding: 3px 8px !important;
+  border-radius: 2px !important;
+  border: none !important;
+}
+
+/* ─── LEAD STORY / HERO ───────────────────────────────────────── */
+
+[class*="hero"],
+[class*="lead-story"],
+article[class*="main"] {
+  padding: var(--space-6) 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* Story headline — NYT style */
+article h1,
+article h2,
+h1[class*="headline"],
+h2[class*="headline"],
+[class*="story-headline"] {
+  font-family: var(--font-serif) !important;
+  font-weight: 700 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.015em !important;
+  color: var(--text) !important;
+}
+
+/* Story eyebrow (JUDICIARY · SINGLE SOURCE · 40%) */
+[class*="eyebrow"],
+[class*="byline-top"],
+.story-meta-top {
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--accent) !important;
+  margin-bottom: 10px !important;
+}
+
+/* Story body text */
+[class*="story-body"],
+[class*="lead-body"],
+article p {
+  font-family: var(--font-serif) !important;
+  font-size: 18px !important;
+  line-height: 1.55 !important;
+  color: var(--text) !important;
+  font-weight: 400 !important;
+}
+
+/* KILL the three amber pills (Update · pts · Finance · 40%) */
+[class*="pill-row"] {
+  display: none !important;
+}
+
+/* Replace with subtle metadata below headline */
+.story-meta-line {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.story-meta-line > span::after {
+  content: "·";
+  margin-left: 10px;
+  color: var(--border-2);
+}
+.story-meta-line > span:last-child::after { display: none; }
+
+/* ─── LABEL PILLS (support / potential_violation / neutral / uncertain) ── */
+
+[class*="label-pill"],
+[class*="paper-label"],
+.label-pill {
+  font-family: var(--font-sans) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  padding: 3px 8px !important;
+  border-radius: 2px !important;
+  border: none !important;
+  background: transparent !important;
+  display: inline-block !important;
+}
+
+[class*="label-support"]      { color: var(--support) !important; border-left: 3px solid var(--support) !important; padding-left: 8px !important; }
+[class*="label-potential"]    { color: var(--violation) !important; border-left: 3px solid var(--violation) !important; padding-left: 8px !important; }
+[class*="label-neutral"]      { color: var(--neutral) !important; border-left: 3px solid var(--neutral) !important; padding-left: 8px !important; }
+[class*="label-uncertain"]    { color: var(--uncertain) !important; border-left: 3px solid var(--uncertain) !important; padding-left: 8px !important; }
+
+/* Legacy CONCERN/UPDATE/CRITICAL (for cached pre-v12.1 stories) */
+[class*="concern"]    { color: var(--violation) !important; }
+[class*="update"]     { color: var(--neutral) !important; }
+[class*="critical"]   { color: var(--violation) !important; }
+
+/* ─── EMPTY HERO IMAGE — replace with illustration ───────────── */
+
+[class*="hero-image"]:empty,
+[class*="story-image"]:empty,
+.empty-hero {
+  background: var(--bg-section) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  position: relative;
+  min-height: 280px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+[class*="hero-image"]:empty::before,
+.empty-hero::before {
+  content: "";
+  display: block;
+  width: 120px;
+  height: 120px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none'><rect width='120' height='120' fill='transparent'/><path d='M60 18 L18 42 L60 36 L102 42 Z' stroke='%23999' stroke-width='1.5' fill='none'/><rect x='22' y='42' width='5' height='50' fill='%23999' opacity='0.4'/><rect x='36' y='42' width='5' height='50' fill='%23999' opacity='0.4'/><rect x='50' y='42' width='5' height='50' fill='%23999' opacity='0.4'/><rect x='64' y='42' width='5' height='50' fill='%23999' opacity='0.4'/><rect x='78' y='42' width='5' height='50' fill='%23999' opacity='0.4'/><rect x='92' y='42' width='5' height='50' fill='%23999' opacity='0.4'/><rect x='18' y='94' width='84' height='4' fill='%23999' opacity='0.4'/><rect x='16' y='100' width='88' height='4' fill='%23999' opacity='0.6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.5;
+}
+
+/* ─── DEMOCRACY SCORE PANEL ───────────────────────────────────── */
+
+[class*="democracy-score"],
+[class*="score-panel"] {
+  background: var(--bg) !important;
+  border: 1px solid var(--border) !important;
+  padding: var(--space-5) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: none !important;
+}
+
+[class*="score-panel"] h2,
+[class*="score-panel"] h3 {
+  font-family: var(--font-serif) !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  padding-bottom: 12px !important;
+  border-bottom: 2px solid var(--text) !important;
+  margin-bottom: 16px !important;
+}
+
+[class*="score-circle"],
+[class*="score-number"] {
+  font-family: var(--font-serif) !important;
+  font-weight: 800 !important;
+  color: var(--accent) !important;
+}
+
+[class*="score-label"] {
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: var(--text-2) !important;
+}
+
+/* ─── LATEST SIDEBAR ──────────────────────────────────────────── */
+
+[class*="latest"],
+[class*="sidebar"] h2,
+[class*="sidebar"] h3 {
+  font-family: var(--font-serif) !important;
+}
+
+[class*="latest-item"],
+[class*="sidebar-story"] {
+  border-bottom: 1px solid var(--border) !important;
+  padding: 14px 0 !important;
+  background: transparent !important;
+}
+
+[class*="latest-item"] h4,
+[class*="sidebar-story"] h4 {
+  font-family: var(--font-serif) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  color: var(--text) !important;
+}
+
+[class*="latest-time"],
+[class*="story-time"] {
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--text-3) !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* ─── LISTEN / AI VOICE BUTTON ───────────────────────────────── */
+
+button[class*="listen"],
+[class*="audio-btn"] {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 6px 12px !important;
+  border-radius: var(--radius) !important;
+}
+
+button[class*="listen"]:hover {
+  background: var(--bg-elevated) !important;
+  border-color: var(--text) !important;
+}
+
+/* The amber "AI VOICE" badge → subtle grey */
+[class*="ai-voice"],
+[class*="voice-badge"] {
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  padding: 2px 6px !important;
+  border-radius: 2px !important;
+}
+
+/* ─── SUBMIT BUTTONS / REVIEW ACTIONS ─────────────────────────── */
+
+button[class*="approve"] {
+  background: transparent !important;
+  border: 1px solid var(--support) !important;
+  color: var(--support) !important;
+}
+
+button[class*="reject"] {
+  background: transparent !important;
+  border: 1px solid var(--violation) !important;
+  color: var(--violation) !important;
+}
+
+button[class*="hold"] {
+  background: transparent !important;
+  border: 1px solid var(--text-2) !important;
+  color: var(--text-2) !important;
+}
+
+/* ─── STORY CARD (Live Newsroom, Review Queue) ────────────────── */
+
+.story-card,
+[class*="story-card"],
+article[class*="card"] {
+  background: var(--bg) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  padding: var(--space-5) 0 !important;
+  box-shadow: none !important;
+  margin-bottom: 0 !important;
+}
+
+.story-card h3,
+.story-card h4,
+[class*="story-card"] h3,
+[class*="story-card"] h4 {
+  font-family: var(--font-serif) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.008em !important;
+  line-height: 1.18 !important;
+}
+
+/* ─── CONSTITUTIONAL STORIES section banner ──────────────────── */
+
+[class*="constitutional-stories"] h2,
+[class*="section-heading"] {
+  font-family: var(--font-serif) !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  padding-bottom: 16px !important;
+  border-bottom: 3px double var(--text) !important;
+  margin-bottom: var(--space-5) !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Filter chip row (All · Critical · Support · National · ...) */
+[class*="filter-chips"] button,
+[class*="filter-tag"] {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 6px 12px !important;
+  border-radius: 20px !important;
+  letter-spacing: 0.01em !important;
+  transition: all 0.12s !important;
+}
+
+[class*="filter-chips"] button:hover,
+[class*="filter-tag"]:hover {
+  border-color: var(--text) !important;
+}
+
+[class*="filter-chips"] button[class*="active"],
+[class*="filter-tag"][class*="active"] {
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  border-color: var(--text) !important;
+}
+
+/* ─── SUGGEST PAGE ────────────────────────────────────────────── */
+
+.suggest-hero {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border) !important;
+  border-left: 4px solid var(--accent) !important;
+  border-radius: var(--radius) !important;
+  padding: 28px 30px !important;
+}
+
+.suggest-input {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 15px !important;
+  padding: 12px 14px !important;
+}
+.suggest-input:focus {
+  border-color: var(--text) !important;
+  outline: none !important;
+}
+
+.suggest-btn {
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  border: 1px solid var(--text) !important;
+  border-radius: var(--radius) !important;
+  font-weight: 600 !important;
+  padding: 12px 20px !important;
+  letter-spacing: 0.02em !important;
+}
+.suggest-btn:hover:not(:disabled) {
+  background: var(--text-2) !important;
+  border-color: var(--text-2) !important;
+  transform: none !important;
+}
+
+.suggest-example-chip {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-2) !important;
+  border-radius: 20px !important;
+  font-size: 12px !important;
+}
+.suggest-example-chip:hover {
+  color: var(--text) !important;
+  border-color: var(--text) !important;
+}
+
+.suggest-result {
+  background: var(--bg) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  padding: 18px 0 !important;
+}
+.suggest-result:hover { border-color: var(--border) !important; }
+
+.suggest-result-source {
+  color: var(--accent) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+}
+
+.suggest-result-headline {
+  font-family: var(--font-serif) !important;
+  font-weight: 700 !important;
+  color: var(--text) !important;
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+}
+
+.suggest-add-btn {
+  background: transparent !important;
+  border: 1px solid var(--text) !important;
+  color: var(--text) !important;
+  border-radius: var(--radius) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+}
+.suggest-add-btn:hover:not(:disabled) {
+  background: var(--text) !important;
+  color: var(--bg) !important;
+}
+.suggest-add-btn.added {
+  background: var(--support) !important;
+  border-color: var(--support) !important;
+  color: #fff !important;
+}
+
+.suggest-disclaimer {
+  background: var(--bg-elevated) !important;
+  border-left: 3px solid var(--accent) !important;
+  color: var(--text-2) !important;
+  font-family: var(--font-serif) !important;
+  font-size: 14px !important;
+}
+
+/* ─── THEME TOGGLE BUTTON ─────────────────────────────────────── */
+
+.dtn-theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: transform 0.15s, border-color 0.15s;
+}
+.dtn-theme-toggle:hover {
+  transform: scale(1.05);
+  border-color: var(--text);
+}
+
+/* ─── "Reading now" + counters ────────────────────────────────── */
+
+[class*="reading-now"],
+[class*="viewer-count"] {
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: var(--text-3) !important;
+  background: transparent !important;
+  padding: 6px 10px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 20px !important;
+}
+
+[class*="reading-now"]::before {
+  content: "●";
+  color: #22C55E;
+  font-size: 8px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ─── KILL DROP SHADOWS + GRADIENTS EVERYWHERE ───────────────── */
+
+* {
+  background-image: none !important;
+}
+*[style*="gradient"],
+*[class*="gradient"] {
+  background-image: none !important;
+  background: var(--bg) !important;
+}
+
+[style*="box-shadow"]:not(.dtn-theme-toggle) {
+  box-shadow: none !important;
+}
+
+/* ─── CONTAINER CONSTRAINTS — NYT grid ───────────────────────── */
+
+main, .container, [class*="page-wrap"] {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Narrower reading measure for article bodies */
+[class*="story-body"], article p {
+  max-width: 720px;
+}
+
+/* Dashboard 8/4 column grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 8fr 4fr;
+  gap: 48px;
+}
+@media (max-width: 960px) {
+  .dashboard-grid { grid-template-columns: 1fr; gap: 24px; }
+}
+
+/* ─── MOBILE POLISH ──────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  body { font-size: 16px; }
+  nav { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  nav button, nav a { margin-right: 16px !important; font-size: 12px !important; }
+  h1, h2 { letter-spacing: -0.02em !important; }
+  main, .container { padding: 0 16px; }
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   END v12.4 NYT Edition overrides
+   ═══════════════════════════════════════════════════════════════ */

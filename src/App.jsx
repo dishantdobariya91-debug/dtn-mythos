@@ -2029,9 +2029,32 @@ export default function App(){
   const latestFive=useMemo(()=>[...stories].filter(s=>s.approved).sort((a,b)=>b.ts-a.ts).slice(0,5),[stories]);
   const topStory=latestFive[0];
 
+  // v12.4: theme toggle — reads system pref on mount, persists user choice
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem("dtn_theme");
+      if (saved === "dark" || saved === "light") return saved;
+    } catch(e){}
+    return typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("dtn_theme", theme); } catch(e){}
+  }, [theme]);
+
   // ── MAIN SHELL — Bloomberg stacked layout ────────────────────
   return(
     <div className="shell">
+      {/* v12.4: Theme toggle — NYT light/dark switcher */}
+      <button
+        className="dtn-theme-toggle"
+        onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
+        aria-label={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"}
+        title={"Switch to " + (theme === "dark" ? "light" : "dark") + " mode"}
+      >
+        {theme === "dark" ? "☀" : "☾"}
+      </button>
       {/* v12: Broadcast masthead — replaces v11 top-strip + black masthead */}
       <BroadcastMasthead today={today} stories={stories}>
         <select value={lang} onChange={e=>setLang(e.target.value)} style={{background:"#fff",color:"var(--ink-pure)",border:"1px solid var(--border2)",fontSize:12,padding:"5px 8px",borderRadius:3,fontFamily:"var(--font-b)",cursor:"pointer"}}>
