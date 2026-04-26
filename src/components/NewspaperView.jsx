@@ -121,6 +121,7 @@ export function NewspaperView({ stories, natScore }) {
               <span className="paper-lead-eyebrow">
                 {institutionName(lead.institution)} · Evidence: {evidenceName(lead.evidenceLevel)}
                 {lead.confidence != null && " · Confidence: " + Math.round(lead.confidence * 100) + "%"}
+                {lead.impact && " · Impact: " + lead.impact.impactScore + "/100"}
               </span>
             </div>
             <div className="paper-lead-body">

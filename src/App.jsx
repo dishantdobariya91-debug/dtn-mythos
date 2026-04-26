@@ -3,6 +3,9 @@ import{AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,Rad
 import{BroadcastMasthead,BreakingBanner,KineticTicker,ListenButton,AnimatedIllustration,PodcastHub,useSoundAlert,ViewingCounter}from"./components/BroadcastUI";
 import{NewspaperView}from"./components/NewspaperView";
 import{SuggestPage}from"./components/SuggestPage";
+import{ImpactPanel,BiasPanel,ImpactBiasSection}from"./components/ImpactPanel";
+import{scoreImpact}from"./services/impact";
+import{compareBias}from"./services/bias";
 const GROQ=import.meta.env.VITE_GROQ_KEY||"";
 const GEMINI=import.meta.env.VITE_GEMINI_KEY||"";
 
@@ -993,6 +996,7 @@ function StoryCard({s,t,mode,onReview,compact,onSelect}){
             <ConfidenceBadge confidence={s.confidence} t={t}/>
             {s.courtStatus&&s.courtStatus!=="none"&&<CourtBadge status={s.courtStatus}/>}
             {s.aiDone&&<span style={{fontSize:8.5,color:"var(--purple)",background:"var(--purple-s)",border:"1px solid var(--purple-b)",borderRadius:4,padding:"1px 6px",fontWeight:700}}>✦ AI</span>}
+            {s.impact&&<span style={{fontSize:8.5,fontWeight:800,padding:"1px 6px",borderRadius:4,letterSpacing:"0.04em",color:s.impact.impactScore>=75?"var(--accent)":s.impact.impactScore>=50?"#C57E00":"var(--t2)",background:s.impact.impactScore>=75?"rgba(178,34,52,0.08)":s.impact.impactScore>=50?"rgba(197,126,0,0.08)":"rgba(0,0,0,0.04)",border:"1px solid "+(s.impact.impactScore>=75?"rgba(178,34,52,0.25)":s.impact.impactScore>=50?"rgba(197,126,0,0.25)":"var(--border)")}}>IMPACT {s.impact.impactScore}</span>}
             <span style={{fontSize:8.5,color:"var(--t3)",marginLeft:"auto"}}>{new Date(s.ts).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
           </div>
         </div>
@@ -1294,7 +1298,7 @@ function Dashboard({natScore,stScore,distScore,stories,natHistory,fState,fDist,t
   </div>);}
 
 // ── NEWSROOM (Main Intelligence Feed) ──────────────────────────
-function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fState,natScore,stScore,distScore}){
+function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fState,natScore,stScore,distScore,onComputeImpact,onComputeBias,computingImpact,computingBias}){
   const[filter,setFilter]=useState("all");
   const[selStory,setSelStory]=useState(null);
   const sorted=[...stories.filter(s=>s.approved)].sort((a,b)=>b.ts-a.ts);
@@ -1376,40 +1380,48 @@ function NewsroomPage({stories,fetching,onFetch,onAI,autoOn,countdown,t,mode,fSt
       </div>
     </div>}
 
-    {/* Story detail modal */}
-    {selStory&&(<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",overflow:"auto"}} onClick={()=>setSelStory(null)}>
+    {/* Story detail modal — read live story from stories[] so impact/bias updates render */}
+    {selStory&&(()=>{const liveStory=stories.find(s=>s.id===selStory.id)||selStory;return(<div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",overflow:"auto"}} onClick={()=>setSelStory(null)}>
       <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:720,maxHeight:"90vh",overflowY:"auto",background:"#fff",border:"1px solid var(--border)",borderRadius:2,padding:"24px"}}>
-        {selStory.image&&<img src={selStory.image} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover",borderRadius:2,marginBottom:16}} onError={e=>{e.target.style.display="none";}}/>}
+        {liveStory.image&&<img src={liveStory.image} alt="" style={{width:"100%",aspectRatio:"16/9",objectFit:"cover",borderRadius:2,marginBottom:16}} onError={e=>{e.target.style.display="none";}}/>}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:12}}>
           <div style={{flex:1,minWidth:0}}>
             <div className="badge-row">
               <span className={"bb-badge "+storyLabel(selStory,t).cls}>{storyLabel(selStory,t).label}</span>
-              {selStory.institution&&DEPT[selStory.institution]&&<span className="bb-badge dept">{DEPT[selStory.institution].icon} {DEPT[selStory.institution].name}</span>}
-              {EVIDENCE_LEVELS[selStory.evidenceLevel||"single_source"]&&<span className="bb-badge warning">{EVIDENCE_LEVELS[selStory.evidenceLevel||"single_source"].label}</span>}
-              {selStory.courtStatus&&selStory.courtStatus!=="none"&&<span className="bb-badge info">{COURT_STATUSES[selStory.courtStatus]?.label}</span>}
-              {selStory.aiDone&&<span className="bb-badge purple">✦ AI</span>}
+              {liveStory.institution&&DEPT[liveStory.institution]&&<span className="bb-badge dept">{DEPT[liveStory.institution].icon} {DEPT[liveStory.institution].name}</span>}
+              {EVIDENCE_LEVELS[liveStory.evidenceLevel||"single_source"]&&<span className="bb-badge warning">{EVIDENCE_LEVELS[liveStory.evidenceLevel||"single_source"].label}</span>}
+              {liveStory.courtStatus&&liveStory.courtStatus!=="none"&&<span className="bb-badge info">{COURT_STATUSES[liveStory.courtStatus]?.label}</span>}
+              {liveStory.aiDone&&<span className="bb-badge purple">✦ AI</span>}
             </div>
-            <h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(19px,2vw,24px)",fontWeight:700,color:"var(--t1)",lineHeight:1.15,marginBottom:8,letterSpacing:"-0.01em"}}>{selStory.headline}</h2>
-            <div style={{fontSize:11.5,color:"var(--t3)",fontFamily:"var(--font-b)"}}>{new Date(selStory.ts).toLocaleString("en-IN")}</div>
+            <h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(19px,2vw,24px)",fontWeight:700,color:"var(--t1)",lineHeight:1.15,marginBottom:8,letterSpacing:"-0.01em"}}>{liveStory.headline}</h2>
+            <div style={{fontSize:11.5,color:"var(--t3)",fontFamily:"var(--font-b)"}}>{new Date(liveStory.ts).toLocaleString("en-IN")}</div>
           </div>
           <button onClick={()=>setSelStory(null)} style={{background:"transparent",border:"none",color:"var(--t2)",cursor:"pointer",fontSize:24,lineHeight:1,padding:4}}>✕</button>
         </div>
-        {selStory.citizenExplanation&&(<div style={{padding:"14px 16px",background:"var(--bg-soft)",borderLeft:"3px solid var(--blue)",marginBottom:14}}>
+        {liveStory.citizenExplanation&&(<div style={{padding:"14px 16px",background:"var(--bg-soft)",borderLeft:"3px solid var(--blue)",marginBottom:14}}>
           <div style={{fontSize:10.5,color:"var(--blue-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>{t.citizenWhy||"Why it matters"}</div>
-          <p style={{fontSize:14,color:"var(--t1)",lineHeight:1.7,margin:0,fontFamily:"var(--font-h)"}}>{selStory.citizenExplanation}</p>
+          <p style={{fontSize:14,color:"var(--t1)",lineHeight:1.7,margin:0,fontFamily:"var(--font-h)"}}>{liveStory.citizenExplanation}</p>
         </div>)}
         <div style={{marginBottom:14}}><ImpactBar story={selStory} t={t}/></div>
-        <div style={{marginBottom:14}}><ConstitutionPanel violations={selStory.violations} supports={selStory.supports} t={t}/></div>
-        {selStory.govResponse&&(<div style={{padding:"12px 14px",background:"var(--bg-soft)",marginBottom:14,borderLeft:"3px solid var(--amber)"}}>
+        <div style={{marginBottom:14}}><ConstitutionPanel violations={liveStory.violations} supports={liveStory.supports} t={t}/></div>
+        {liveStory.govResponse&&(<div style={{padding:"12px 14px",background:"var(--bg-soft)",marginBottom:14,borderLeft:"3px solid var(--amber)"}}>
           <div style={{fontSize:10.5,color:"var(--amber-t)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{t.govResponse||"Government Response"}</div>
-          <p style={{fontSize:13,color:"var(--t1)",margin:0,lineHeight:1.65}}>{selStory.govResponse}</p>
+          <p style={{fontSize:13,color:"var(--t1)",margin:0,lineHeight:1.65}}>{liveStory.govResponse}</p>
         </div>)}
-        {selStory.mythos&&<div style={{padding:"14px 16px",background:"var(--purple-s)",borderLeft:"3px solid var(--purple)",marginBottom:14}}>
-          <p style={{fontSize:14,color:"var(--purple-t)",fontStyle:"italic",lineHeight:1.7,margin:0,fontFamily:"var(--font-h)"}}>{selStory.mythos}</p>
+        {liveStory.mythos&&<div style={{padding:"14px 16px",background:"var(--purple-s)",borderLeft:"3px solid var(--purple)",marginBottom:14}}>
+          <p style={{fontSize:14,color:"var(--purple-t)",fontStyle:"italic",lineHeight:1.7,margin:0,fontFamily:"var(--font-h)"}}>{liveStory.mythos}</p>
         </div>}
-        {selStory.link&&<a href={selStory.link} target="_blank" rel="noopener noreferrer" className="bb-btn primary" style={{textDecoration:"none",padding:"9px 16px"}}>{t.readOriginal} →</a>}
+        {/* v12.5 — Impact + Bias panels */}
+        <ImpactBiasSection
+          story={selStory}
+          onComputeImpact={()=>onComputeImpact?.(liveStory.id)}
+          onComputeBias={()=>onComputeBias?.(liveStory.id)}
+          computingImpact={!!computingImpact?.[liveStory.id]}
+          computingBias={!!computingBias?.[liveStory.id]}
+        />
+        {liveStory.link&&<a href={liveStory.link} target="_blank" rel="noopener noreferrer" className="bb-btn primary" style={{textDecoration:"none",padding:"9px 16px"}}>{t.readOriginal} →</a>}
       </div>
-    </div>)}
+    </div>);})()}
   </div>);}
 
 
@@ -1654,7 +1666,7 @@ function MyRightsPage({scope,setScope,t}){const states=Object.keys(STATE_BASELIN
 
 function SubmitPage({onSubmit,toast,t}){const[form,setForm]=useState({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});const handle=()=>{if(!form.headline.trim()){toast("Please enter a headline","error");return;}onSubmit(form);setForm({headline:"",body:"",state:"",source:"citizen_unverified",scope:"local",evidenceLevel:"allegation",storyType:"rights"});toast("Report submitted · Evidence level: "+form.evidenceLevel,"success");};return(<div className="fade-up" style={{maxWidth:580}}><div style={{marginBottom:16}}><h2 style={{fontFamily:"var(--font-h)",fontSize:"clamp(16px,3vw,21px)",fontWeight:800,color:"var(--t1)"}}>{t.submit||"Submit Report"}</h2><p style={{fontSize:11,color:"var(--t2)",marginTop:3}}>Include evidence level — helps us weight your report accurately</p></div><Card><div style={{display:"flex",flexDirection:"column",gap:12}}>{[{k:"headline",label:"Headline *",type:"input",ph:"Brief description of the constitutional event"},{k:"body",label:"Details",type:"textarea",ph:"Evidence, source links, location, official notices..."}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.12em",display:"block",marginBottom:5}}>{f.label}</label>{f.type==="textarea"?<textarea value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} rows={3} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",resize:"vertical",fontFamily:"var(--font-b)"}}/>:<input value={form[f.k]} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.ph} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:12,outline:"none",fontFamily:"var(--font-b)"}}/>}</div>))}<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>{[{k:"evidenceLevel",label:"Evidence Level",opts:Object.entries(EVIDENCE_LEVELS).map(([v,l])=>[v,l.label])},{k:"scope",label:"Scope",opts:[["national","National"],["state","State"],["local","Local"]]},{k:"storyType",label:"Story Type",opts:STORY_TYPES.map(s=>[s,s.charAt(0).toUpperCase()+s.slice(1)])},{k:"state",label:"State",opts:[["","All India"],...Object.keys(STATE_BASELINES).sort().map(s=>[s,s])]},{k:"source",label:"Source",opts:[["citizen_unverified","Citizen"],["single_source","Single"],["corroborated","Confirmed"],["verified","Official"]]},{k:"courtStatus",label:"Court Status",opts:Object.entries(COURT_STATUSES).map(([v,cs])=>[v,cs.label])}].map(f=>(<div key={f.k}><label style={{fontSize:8.5,color:"var(--t3)",fontWeight:800,textTransform:"uppercase",letterSpacing:"0.1em",display:"block",marginBottom:4}}>{f.label}</label><select value={form[f.k]||""} onChange={e=>setForm(p=>({...p,[f.k]:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border2)",background:"var(--surface2)",color:"var(--t1)",fontSize:10,outline:"none",fontFamily:"var(--font-b)"}}>{f.opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div><Btn onClick={handle} variant="primary" style={{padding:"10px 22px",fontSize:13,width:"fit-content"}}>{t.submit||"Submit Report"}</Btn></div></Card></div>);}
 
-function ReviewPage({stories,onReview,t,mode,onReclassify,onClearFiltered}){
+function ReviewPage({stories,onReview,t,mode,onReclassify,onClearFiltered,onComputeImpact,onComputeBias,computingImpact,computingBias}){
   // v12.2 — user-suggested stories shown first; exclude from other sections
   const suggested=stories.filter(s=>s.suggestedBy==="user"&&!s.approved&&!s.rejected);
   const suggestedIds=new Set(suggested.map(s=>s.id));
@@ -1940,6 +1952,41 @@ export default function App(){
     toast(action==="approve"?"✓ Approved and scored":"Story "+action+"ed","success");
   },[toast]);
 
+  // v12.5 — Impact scoring + Bias comparison handlers
+  const[computingImpact,setComputingImpact]=useState({});
+  const[computingBias,setComputingBias]=useState({});
+
+  const handleComputeImpact=useCallback(async(id)=>{
+    const story=stories.find(s=>s.id===id);
+    if(!story)return;
+    setComputingImpact(p=>({...p,[id]:true}));
+    try{
+      const impact=await scoreImpact(story,callAI);
+      setStories(p=>p.map(s=>s.id===id?{...s,impact}:s));
+      toast(`Impact score: ${impact.impactScore}/100 (${impact.model})`,"success");
+    }catch(e){
+      toast("Impact scoring failed: "+(e.message||"unknown"),"error");
+    }finally{
+      setComputingImpact(p=>{const n={...p};delete n[id];return n;});
+    }
+  },[stories,toast]);
+
+  const handleComputeBias=useCallback(async(id)=>{
+    const story=stories.find(s=>s.id===id);
+    if(!story)return;
+    setComputingBias(p=>({...p,[id]:true}));
+    try{
+      const bias=await compareBias(story,stories,callAI);
+      setStories(p=>p.map(s=>s.id===id?{...s,bias}:s));
+      const msg=bias.outlets?.length<=1?"No similar coverage from other outlets found":`Bias compared across ${bias.sourceCount} outlets`;
+      toast(msg,bias.outlets?.length<=1?"info":"success");
+    }catch(e){
+      toast("Bias comparison failed: "+(e.message||"unknown"),"error");
+    }finally{
+      setComputingBias(p=>{const n={...p};delete n[id];return n;});
+    }
+  },[stories,toast]);
+
   // Re-classify all existing stories against the current (updated) classifier.
   // Stories the old classifier approved but the new one would skip get moved to the Review Queue.
   const handleReclassify=useCallback(()=>{
@@ -2141,6 +2188,8 @@ export default function App(){
               autoOn={autoOn} countdown={countdown}
               t={t} mode={mode} fState={fState}
               natScore={natScore} stScore={stScore} distScore={distScore}
+              onComputeImpact={handleComputeImpact} onComputeBias={handleComputeBias}
+              computingImpact={computingImpact} computingBias={computingBias}
             />}
           {page==="tracker"&&
             <ConstitutionTrackerPage stories={stories} t={t} mode={mode}/>}
@@ -2176,7 +2225,7 @@ export default function App(){
           {page==="submit"&&
             <SubmitPage onSubmit={handleSubmit} toast={toast} t={t}/>}
           {page==="review"&&
-            <ReviewPage stories={stories} onReview={handleReview} t={t} mode={mode} onReclassify={handleReclassify} onClearFiltered={handleClearFiltered}/>}
+            <ReviewPage stories={stories} onReview={handleReview} t={t} mode={mode} onReclassify={handleReclassify} onClearFiltered={handleClearFiltered} onComputeImpact={handleComputeImpact} onComputeBias={handleComputeBias} computingImpact={computingImpact} computingBias={computingBias}/>}
           {page==="method"&&<MethodPage t={t}/>}
           {page==="about"&&<AboutPage t={t}/>}
       </main>
